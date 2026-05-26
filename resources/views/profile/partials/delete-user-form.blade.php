@@ -1,0 +1,67 @@
+<section class="space-y-6">
+    <p class="text-sm leading-7 text-slate-600">
+        アカウントを削除すると、登録済みデータも含めて復元できません。
+        ポートフォリオ用途では通常この操作は使用しません。
+    </p>
+
+    <button
+        type="button"
+        x-data=""
+        x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
+        class="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white shadow hover:bg-red-700 transition"
+    >
+        アカウントを削除する
+    </button>
+
+    <x-modal name="confirm-user-deletion" :show="$errors->userDeletion->isNotEmpty()" focusable>
+        <form method="post" action="{{ route('profile.destroy') }}" class="p-8">
+            @csrf
+            @method('delete')
+
+            <h2 class="text-xl font-black text-red-700">
+                本当にアカウントを削除しますか？
+            </h2>
+
+            <p class="mt-3 text-sm leading-7 text-slate-600">
+                削除すると復元できません。確認のためパスワードを入力してください。
+            </p>
+
+            <div class="mt-6">
+                <label for="password" class="sr-only">
+                    パスワード
+                </label>
+
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="パスワード"
+                    class="block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-red-500 focus:ring-red-500"
+                >
+
+                @if ($errors->userDeletion->get('password'))
+                    <p class="mt-2 text-sm font-bold text-red-600">
+                        {{ $errors->userDeletion->first('password') }}
+                    </p>
+                @endif
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3">
+                <button
+                    type="button"
+                    x-on:click="$dispatch('close')"
+                    class="rounded-xl bg-slate-100 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200 transition"
+                >
+                    キャンセル
+                </button>
+
+                <button
+                    type="submit"
+                    class="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white hover:bg-red-700 transition"
+                >
+                    削除する
+                </button>
+            </div>
+        </form>
+    </x-modal>
+</section>
