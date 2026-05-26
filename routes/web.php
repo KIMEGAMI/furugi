@@ -21,7 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/auction-items/{auctionItem}', [AuctionItemController::class, 'show'])->name('auction-items.show');
     Route::get('/auction-items/{auctionItem}/edit', [AuctionItemController::class, 'edit'])->name('auction-items.edit');
     Route::patch('/auction-items/{auctionItem}', [AuctionItemController::class, 'update'])->name('auction-items.update');
-    Route::put('/auction-items/{auctionItem}', [AuctionItemController::class, 'update'])->name('auction-items.update');
+
 
     Route::patch('/auction-items/{auctionItem}/sold', [AuctionItemController::class, 'markAsSold'])->name('auction-items.sold');
 
