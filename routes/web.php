@@ -4,6 +4,7 @@ use App\Http\Controllers\AuctionItemController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesController;
 use App\Models\AuctionItem;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -11,11 +12,23 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    $sellingCount = AuctionItem::where('status', 'selling')->count();
-    $soldCount = AuctionItem::where('status', 'sold')->count();
-    $draftCount = AuctionItem::where('status', 'draft')->count();
+    $userId = Auth::id();
 
-    $soldItems = AuctionItem::where('status', 'sold')->get();
+    $sellingCount = AuctionItem::where('user_id', $userId)
+        ->where('status', 'selling')
+        ->count();
+
+    $soldCount = AuctionItem::where('user_id', $userId)
+        ->where('status', 'sold')
+        ->count();
+
+    $draftCount = AuctionItem::where('user_id', $userId)
+        ->where('status', 'draft')
+        ->count();
+
+    $soldItems = AuctionItem::where('user_id', $userId)
+        ->where('status', 'sold')
+        ->get();
 
     $totalSales = $soldItems->sum(fn ($item) => (int) ($item->sold_price ?? 0));
 
@@ -40,7 +53,7 @@ Route::get('/dashboard', function () {
         return $soldPrice - $purchasePrice - $salesFee - $shippingFee;
     });
 
-    $recentItems = AuctionItem::query()
+    $recentItems = AuctionItem::where('user_id', $userId)
         ->latest('updated_at')
         ->take(5)
         ->get();
