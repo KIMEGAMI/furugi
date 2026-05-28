@@ -12,11 +12,15 @@ class AuctionItem extends Model
         'management_id',
         'title',
         'comment',
+        'platform',
         'image_path',
         'sold_image_path',
         'status',
         'purchase_price',
         'sold_price',
+        'sales_fee_rate',
+        'sales_fee',
+        'shipping_fee',
         'profit',
         'sold_at',
     ];
@@ -24,6 +28,9 @@ class AuctionItem extends Model
     protected $casts = [
         'purchase_price' => 'integer',
         'sold_price' => 'integer',
+        'sales_fee_rate' => 'decimal:2',
+        'sales_fee' => 'integer',
+        'shipping_fee' => 'integer',
         'profit' => 'integer',
         'sold_at' => 'date',
     ];

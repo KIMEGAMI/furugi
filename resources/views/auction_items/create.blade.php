@@ -1,78 +1,52 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <h2 class="text-2xl font-black text-blue-900">
-                出品登録
-            </h2>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-2xl font-black text-blue-900">
+                    出品登録
+                </h2>
 
-            <p class="mt-1 text-sm text-slate-500">
-                ヤフオク出品データを登録します。
-            </p>
+                <p class="mt-1 text-sm text-slate-500">
+                    フリマ・オークション出品情報を登録します。
+                </p>
+            </div>
+
+            <a
+                href="{{ route('auction-items.index') }}"
+                class="inline-flex items-center justify-center rounded-xl bg-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-300 transition"
+            >
+                一覧へ戻る
+            </a>
         </div>
     </x-slot>
 
-    <div class="min-h-screen bg-slate-100 py-10">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-slate-100 py-8">
+        <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
 
-            @if(session('success'))
-                <div class="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5">
-                    <p class="font-bold text-blue-700">
-                        {{ session('success') }}
-                    </p>
+            @if ($errors->any())
+                <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <ul class="space-y-1 text-sm font-bold text-red-600">
+                        @foreach ($errors->all() as $error)
+                            <li>・{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
             @endif
 
-            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                <div class="px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-blue-700 to-blue-500">
-                    <h3 class="text-2xl font-black text-white">
-                        商品情報入力
-                    </h3>
+            <form
+                action="{{ route('auction-items.store') }}"
+                method="POST"
+                enctype="multipart/form-data"
+                class="rounded-3xl bg-white p-6 shadow-xl"
+            >
+                @csrf
 
-                    <p class="mt-2 text-sm text-blue-100">
-                        管理ID・画像・タイトル・コメント・仕入れ値を登録します。
-                    </p>
-                </div>
+                <div class="grid grid-cols-1 gap-5">
 
-                <form
-                    method="POST"
-                    action="{{ route('auction-items.store') }}"
-                    enctype="multipart/form-data"
-                    class="p-8 space-y-8"
-                >
-                    @csrf
-
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700">
-                            商品画像
-                        </label>
-
-                        <div class="mt-4">
-                            <img
-                                id="image-preview"
-                                src="https://placehold.co/800x500/e2e8f0/64748b?text=NO+IMAGE"
-                                class="w-full max-w-xl h-[320px] object-cover rounded-2xl border border-slate-200"
-                            >
-                        </div>
-
-                        <input
-                            type="file"
-                            name="image"
-                            id="image"
-                            accept="image/*"
-                            class="mt-4 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                        >
-
-                        @error('image')
-                            <p class="mt-2 text-sm font-bold text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
 
                         <div>
-                            <label class="block text-sm font-bold text-slate-700">
+                            <label class="block text-xs font-black tracking-wider text-slate-600">
                                 管理ID
                             </label>
 
@@ -80,114 +54,216 @@
                                 type="text"
                                 name="management_id"
                                 value="{{ old('management_id') }}"
-                                placeholder="例：NK-001"
-                                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="FRG-0001"
                             >
-
-                            @error('management_id')
-                                <p class="mt-2 text-sm font-bold text-red-600">
-                                    {{ $message }}
-                                </p>
-                            @enderror
                         </div>
 
                         <div>
-                            <label class="block text-sm font-bold text-slate-700">
-                                仕入れ値
+                            <label class="block text-xs font-black tracking-wider text-slate-600">
+                                出品先
                             </label>
 
-                            <input
-                                type="number"
-                                name="purchase_price"
-                                value="{{ old('purchase_price') }}"
-                                placeholder="3000"
-                                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            <select
+                                name="platform"
+                                id="platform"
+                                class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
+                                <option value="ヤフオク" @selected(old('platform') === 'ヤフオク')>
+                                    ヤフオク
+                                </option>
 
-                            @error('purchase_price')
-                                <p class="mt-2 text-sm font-bold text-red-600">
-                                    {{ $message }}
-                                </p>
-                            @enderror
+                                <option value="メルカリ" @selected(old('platform') === 'メルカリ')>
+                                    メルカリ
+                                </option>
+
+                                <option value="ラクマ" @selected(old('platform') === 'ラクマ')>
+                                    ラクマ
+                                </option>
+
+                                <option value="PayPayフリマ" @selected(old('platform') === 'PayPayフリマ')>
+                                    PayPayフリマ
+                                </option>
+
+                                <option value="その他" @selected(old('platform') === 'その他')>
+                                    その他
+                                </option>
+                            </select>
                         </div>
 
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold text-slate-700">
-                            タイトル
+                        <label class="block text-xs font-black tracking-wider text-slate-600">
+                            商品タイトル
                         </label>
 
                         <input
                             type="text"
                             name="title"
                             value="{{ old('title') }}"
-                            placeholder="商品タイトル"
-                            class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="90s ナイロンジャケット"
                         >
-
-                        @error('title')
-                            <p class="mt-2 text-sm font-bold text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold text-slate-700">
+                        <label class="block text-xs font-black tracking-wider text-slate-600">
                             コメント
                         </label>
 
                         <textarea
                             name="comment"
-                            rows="8"
-                            placeholder="サイズ・カラー・状態など"
-                            class="mt-3 block w-full rounded-2xl border-slate-300 px-4 py-4 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            rows="4"
+                            class="mt-2 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="サイズ感、状態、特徴など"
                         >{{ old('comment') }}</textarea>
-
-                        @error('comment')
-                            <p class="mt-2 text-sm font-bold text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
                     </div>
 
-                    <div class="flex justify-end">
+                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+                        <div>
+                            <label class="block text-xs font-black tracking-wider text-slate-600">
+                                仕入れ値
+                            </label>
+
+                            <div class="relative mt-2">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">
+                                    ¥
+                                </span>
+
+                                <input
+                                    type="number"
+                                    name="purchase_price"
+                                    value="{{ old('purchase_price') }}"
+                                    class="h-11 w-full rounded-xl border-slate-300 pl-8 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="3000"
+                                >
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black tracking-wider text-slate-600">
+                                売値
+                            </label>
+
+                            <div class="relative mt-2">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">
+                                    ¥
+                                </span>
+
+                                <input
+                                    type="number"
+                                    name="sold_price"
+                                    value="{{ old('sold_price') }}"
+                                    class="h-11 w-full rounded-xl border-slate-300 pl-8 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="8500"
+                                >
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+
+                        <div>
+                            <label class="block text-xs font-black tracking-wider text-slate-600">
+                                販売手数料(%)
+                            </label>
+
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="sales_fee_rate"
+                                id="sales_fee_rate"
+                                value="{{ old('sales_fee_rate', 10) }}"
+                                class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            >
+
+                            <p class="mt-1 text-xs font-semibold text-slate-400">
+                                出品先を選ぶと自動で反映されます
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black tracking-wider text-slate-600">
+                                送料
+                            </label>
+
+                            <div class="relative mt-2">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">
+                                    ¥
+                                </span>
+
+                                <input
+                                    type="number"
+                                    name="shipping_fee"
+                                    value="{{ old('shipping_fee', 750) }}"
+                                    class="h-11 w-full rounded-xl border-slate-300 pl-8 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl bg-slate-100 p-4">
+                            <p class="text-xs font-black tracking-wider text-slate-500">
+                                利益計算式
+                            </p>
+
+                            <p class="mt-2 text-sm font-black text-slate-700">
+                                売値 − 仕入 − 手数料 − 送料
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black tracking-wider text-slate-600">
+                            商品画像
+                        </label>
+
+                        <input
+                            type="file"
+                            name="image"
+                            class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500"
+                        >
+
+                        <p class="mt-2 text-xs font-semibold text-slate-400">
+                            JPG / PNG / WEBP 対応・最大10MB
+                        </p>
+                    </div>
+
+                    <div class="pt-2">
                         <button
                             type="submit"
-                            class="rounded-2xl bg-blue-700 px-8 py-4 text-sm font-black text-white shadow-lg hover:bg-blue-800 transition"
+                            class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-3 text-sm font-black text-white shadow hover:bg-blue-800 transition"
                         >
-                            出品データを登録する
+                            登録する
                         </button>
                     </div>
-                </form>
-            </div>
+
+                </div>
+            </form>
 
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
     <script>
         $(function () {
+            const feeRates = {
+                'ヤフオク': 10,
+                'メルカリ': 10,
+                'ラクマ': 10,
+                'PayPayフリマ': 5,
+                'その他': 0
+            };
 
-            $('#image').on('change', function (event) {
+            $('#platform').on('change', function () {
+                const selectedPlatform = $(this).val();
 
-                const file = event.target.files[0];
-
-                if (!file) {
-                    return;
+                if (Object.prototype.hasOwnProperty.call(feeRates, selectedPlatform)) {
+                    $('#sales_fee_rate').val(feeRates[selectedPlatform]);
                 }
-
-                const reader = new FileReader();
-
-                reader.onload = function (e) {
-                    $('#image-preview').attr('src', e.target.result);
-                };
-
-                reader.readAsDataURL(file);
             });
-
         });
     </script>
 </x-app-layout>
