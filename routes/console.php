@@ -144,6 +144,7 @@ Artisan::command('furugi:recalculate-sales', function () {
                 }
 
                 $item->save();
+
                 $updatedCount++;
             }
         });
@@ -151,13 +152,15 @@ Artisan::command('furugi:recalculate-sales', function () {
     $this->info($updatedCount.'件のSOLD商品の手数料・実利益を再計算しました。');
 })->purpose('既存SOLD商品の販売手数料・実利益を再計算します');
 
-function defaultFurugiSalesFeeRate(string $platform): float
-{
-    return match ($platform) {
-        'ヤフオク' => 10.0,
-        'メルカリ' => 10.0,
-        'ラクマ' => 10.0,
-        'PayPayフリマ' => 5.0,
-        default => 0.0,
-    };
+if (! function_exists('defaultFurugiSalesFeeRate')) {
+    function defaultFurugiSalesFeeRate(string $platform): float
+    {
+        return match ($platform) {
+            'ヤフオク' => 10.0,
+            'メルカリ' => 10.0,
+            'ラクマ' => 10.0,
+            'PayPayフリマ' => 5.0,
+            default => 0.0,
+        };
+    }
 }
