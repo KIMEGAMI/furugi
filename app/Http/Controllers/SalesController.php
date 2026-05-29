@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuctionItem;
 use Carbon\Carbon;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -12,15 +13,18 @@ class SalesController extends Controller
 {
     public function index(): View
     {
+        $userId = Auth::id();
         $now = Carbon::now();
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
 
         $soldItems = AuctionItem::query()
+            ->where('user_id', $userId)
             ->where('status', 'sold')
             ->orderByDesc($hasSoldAt ? 'sold_at' : 'updated_at')
             ->get();
 
         $sellingCount = AuctionItem::query()
+            ->where('user_id', $userId)
             ->where('status', 'selling')
             ->count();
 
@@ -144,9 +148,11 @@ class SalesController extends Controller
 
     public function downloadCsv(): Response
     {
+        $userId = Auth::id();
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
 
         $items = AuctionItem::query()
+            ->where('user_id', $userId)
             ->where('status', 'sold')
             ->orderByDesc($hasSoldAt ? 'sold_at' : 'updated_at')
             ->get();
