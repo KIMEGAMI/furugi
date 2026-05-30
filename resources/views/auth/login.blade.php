@@ -144,6 +144,23 @@
                             </a>
                         </div>
                     </form>
+<div class="mt-6">
+    <div class="relative">
+        <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300"></div>
+        </div>
+        <div class="relative flex justify-center text-sm">
+            <span class="bg-white px-2 text-gray-500">または</span>
+        </div>
+    </div>
+
+    <a
+        href="{{ route('google.redirect') }}"
+        class="mt-4 flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+    >
+        Googleでログイン
+    </a>
+</div>
 
                     <p class="mt-8 text-center text-xs text-slate-400">
                         © 2026 古着管理システム All rights reserved.
