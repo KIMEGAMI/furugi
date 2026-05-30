@@ -1,58 +1,239 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+古着販売管理システム（furugi）要求仕様書
+1. システム概要
+1.1 システム名
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+furugi - 古着販売・在庫管理システム
 
-## About Laravel
+1.2 目的
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+個人または小規模事業者が複数のフリマサービス・オークションサイトで販売している古着商品の管理を効率化するWebアプリケーション。
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+従来、Excelや手作業で管理していた商品情報、販売状況、売上、利益計算を一元管理することで、出品業務の効率化と販売状況の可視化を目的とする。
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+2. 開発背景
 
-## Learning Laravel
+近年、個人によるリユース販売、副業としての古着販売需要が増加している。
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+しかし複数サービスへ出品すると、
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+商品管理
+販売状況確認
+売上計算
+利益管理
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+が煩雑になる問題がある。
 
-## Agentic Development
+そこで各販売サービスの商品状態・収益情報をまとめて管理できるシステムを開発した。
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+3. 使用技術
+バックエンド
+技術	内容
+PHP	8.4
+Laravel	13
+MySQL	データ管理
+Laravel Authentication	ユーザー認証
+フロントエンド
+技術	内容
+Blade	テンプレート
+Tailwind CSS	UI
+JavaScript	動的処理
+jQuery	手数料自動計算
+インフラ・開発環境
+技術	内容
+Ubuntu VPS	本番環境
+Apache	Webサーバ
+GitHub	ソース管理
+Git	バージョン管理
+4. システム構成
+利用者
+ ↓
+Browser
+ ↓
+Laravel
+ ↓
+Controller
+ ↓
+Model
+ ↓
+MySQL
+5. 機能要件
+5.1 ユーザー管理機能
+概要
 
-```bash
-composer require laravel/boost --dev
+利用者ごとにデータを分離し、個人の商品情報を安全に管理する。
 
-php artisan boost:install
-```
+機能
+新規登録
+ログイン
+ログアウト
+Googleログイン
+ユーザー別データ管理
+5.2 商品管理機能
+概要
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+販売する古着商品の登録・管理を行う。
 
-## Contributing
+登録項目
+項目	内容
+管理ID	商品識別番号
+商品名	出品タイトル
+商品画像	商品写真
+コメント	商品説明
+仕入価格	購入価格
+販売価格	売却金額
+出品先	販売サービス
+機能
+商品登録
+商品一覧
+商品詳細
+商品編集
+商品削除
+画像アップロード
+検索
+5.3 出品サービス管理
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+対応サービス：
 
-## Code of Conduct
+ヤフオク
+メルカリ
+PayPayフリマ
+ラクマ
+その他
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+サービスごとに表示カラーを変更し、一覧画面で判別しやすいUIを実装。
 
-## Security Vulnerabilities
+5.4 SOLD管理機能
+概要
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+販売済み商品の状態管理を行う。
 
-## License
+機能
+出品中
+SOLD変更
+SOLD解除
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+販売完了時には商品画像へ自動的に
+
+SOLD
+
+文字を合成。
+
+販売状態を視覚的に確認可能。
+
+5.5 利益計算機能
+
+販売価格だけではなく、実利益を自動計算する。
+
+計算式：
+
+利益 =
+販売価格
+- 仕入価格
+- 販売手数料
+- 送料
+販売手数料
+サービス	手数料
+ヤフオク	10%
+メルカリ	10%
+ラクマ	10%
+PayPayフリマ	5%
+その他	0%
+5.6 売上管理機能
+概要
+
+販売実績を集計し、利益状況を確認する。
+
+機能
+累計売上
+月別売上
+月別利益
+販売サービス別分析
+グラフ表示
+5.7 CSV機能
+CSV出力
+
+商品データを外部管理可能。
+
+出力内容：
+
+商品名
+価格
+販売状態
+利益情報
+CSV取込
+
+大量の商品データ登録に対応。
+
+6. 非機能要件
+セキュリティ
+ログイン必須
+他ユーザーの商品閲覧防止
+CSRF対策
+バリデーション
+保守性
+
+MVC構成を採用。
+
+Controller
+Model
+View
+
+で責務を分離。
+
+データ保護
+
+ユーザーIDによる所有者管理。
+
+例：
+
+user_id
+
+で全データを分離。
+
+7. 工夫した点
+7.1 実際の業務を想定した設計
+
+単純なCRUDではなく、
+
+在庫
+売上
+利益
+
+まで管理できる業務システムとして設計。
+
+7.2 自動利益計算
+
+販売サイトごとに異なる手数料を自動反映。
+
+入力ミス削減を実現。
+
+7.3 SOLD画像自動生成
+
+画像処理を利用し、販売済み状態を直感的に表示。
+
+7.4 マルチユーザー対応
+
+個人利用だけではなく、小規模事業者利用も想定。
+
+8. 今後追加予定
+利益ランキング
+赤字商品警告
+AI価格提案
+バーコード管理
+スマートフォンUI強化
+Docker対応
+GitHub Actions自動デプロイ
+9. 開発目的
+
+Laravelを使用した実践的なWebアプリケーション開発能力を証明するため制作。
+
+特に、
+
+データベース設計
+認証
+CRUD
+ファイル処理
+集計処理
+本番環境公開
+
+を重点的に実装した。
