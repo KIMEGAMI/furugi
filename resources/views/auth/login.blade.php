@@ -134,7 +134,7 @@
                             </p>
 
                             <p class="mt-2 text-slate-700 font-semibold">
-                                ID：user　PW：12345678　です
+                                ID：user@shinji.work　PW：12345678　です
                             </p>
                         </div>
 
