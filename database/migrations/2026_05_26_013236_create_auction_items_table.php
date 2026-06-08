@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('auction_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('management_id')->unique();
+            $table->string('management_id');
             $table->string('title');
             $table->text('comment')->nullable();
             $table->string('image_path')->nullable();
@@ -22,6 +22,8 @@ return new class extends Migration
             $table->integer('profit')->nullable();
             $table->date('sold_at')->nullable();
             $table->timestamps();
+
+            $table->unique(['user_id', 'management_id'], 'auction_items_user_management_unique');
         });
     }
 

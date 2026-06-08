@@ -59,7 +59,8 @@ class AuctionItemController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('auction_items', 'management_id'),
+                Rule::unique('auction_items', 'management_id')
+                    ->where(fn ($query) => $query->where('user_id', Auth::id())),
             ],
             'title' => ['required', 'string', 'max:255'],
             'comment' => ['nullable', 'string'],
@@ -201,7 +202,11 @@ class AuctionItemController extends Controller
                 continue;
             }
 
-            if (AuctionItem::where('management_id', $managementId)->exists()) {
+            if (
+                AuctionItem::where('user_id', Auth::id())
+                    ->where('management_id', $managementId)
+                    ->exists()
+            ) {
                 $skippedCount++;
 
                 continue;
@@ -283,7 +288,9 @@ class AuctionItemController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('auction_items', 'management_id')->ignore($auctionItem->id),
+                Rule::unique('auction_items', 'management_id')
+                    ->where(fn ($query) => $query->where('user_id', Auth::id()))
+                    ->ignore($auctionItem->id),
             ],
             'title' => ['required', 'string', 'max:255'],
             'comment' => ['nullable', 'string'],
