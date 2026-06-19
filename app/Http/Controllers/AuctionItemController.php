@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuctionItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -237,6 +238,12 @@ class AuctionItemController extends Controller
                 ? $this->calculateProfit($soldPrice, $purchasePrice, $salesFee, $shippingFee)
                 : 0;
 
+            $soldAt = null;
+
+            if ($status === 'sold') {
+                $soldAt = $this->parseCsvSoldAt($data['sold_at'] ?? null) ?? now();
+            }
+
             AuctionItem::create([
                 'user_id' => Auth::id(),
                 'management_id' => $managementId,
@@ -251,7 +258,7 @@ class AuctionItemController extends Controller
                 'sales_fee' => $salesFee,
                 'shipping_fee' => $shippingFee,
                 'profit' => $profit,
-                'sold_at' => $status === 'sold' ? now() : null,
+                'sold_at' => $soldAt,
                 'status' => $status,
             ]);
 
@@ -444,6 +451,21 @@ class AuctionItemController extends Controller
     private function calculateProfit(int $soldPrice, int $purchasePrice, int $salesFee, int $shippingFee): int
     {
         return $soldPrice - $purchasePrice - $salesFee - $shippingFee;
+    }
+
+    private function parseCsvSoldAt(mixed $value): ?Carbon
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     private function createSoldImage(string $imagePath, ?string $oldSoldImagePath = null): ?string

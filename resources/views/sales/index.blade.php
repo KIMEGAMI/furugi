@@ -7,7 +7,7 @@
                 </h2>
 
                 <p class="mt-1 text-sm text-gray-500">
-                    SOLD商品の売上・手数料・送料・実利益を確認できます。
+                    累計売上・実利益・出品先別集計を確認できます。
                 </p>
             </div>
 
@@ -74,42 +74,14 @@
                 </div>
 
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">今月の売上</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
-                        ¥{{ number_format($thisMonthSales) }}
-                    </p>
-                </div>
-
-                <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">今月の実利益</p>
-                    <p class="mt-2 text-2xl font-bold {{ $thisMonthProfit < 0 ? 'text-red-600' : 'text-green-700' }}">
-                        ¥{{ number_format($thisMonthProfit) }}
-                    </p>
-                </div>
-
-                <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">今月の販売手数料</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
-                        ¥{{ number_format($thisMonthSalesFee) }}
-                    </p>
-                </div>
-
-                <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">今月の送料</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
-                        ¥{{ number_format($thisMonthShippingFee) }}
-                    </p>
-                </div>
-
-                <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">SOLD件数</p>
+                    <p class="text-sm text-gray-500">累計SOLD件数</p>
                     <p class="mt-2 text-2xl font-bold text-gray-900">
                         {{ number_format($soldCount) }}件
                     </p>
                 </div>
 
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">出品中件数</p>
+                    <p class="text-sm text-gray-500">現在の出品中件数</p>
                     <p class="mt-2 text-2xl font-bold text-gray-900">
                         {{ number_format($sellingCount) }}件
                     </p>
@@ -118,12 +90,30 @@
 
             <div class="mt-8 grid gap-6 lg:grid-cols-2">
                 <div class="rounded-2xl bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">
-                        月別 売上・実利益グラフ
-                    </h3>
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <a href="{{ route('sales.index', ['month' => $previousMonth]) }}"
+                           class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-4 py-2 text-sm font-black text-white hover:bg-gray-700">
+                            ← 前の月
+                        </a>
 
-                    <p class="mt-1 text-sm text-gray-500">
-                        SOLD商品の月別推移です。
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                月別 売上・実利益グラフ
+                            </h3>
+
+                            <p class="mt-1 text-sm text-gray-500">
+                                {{ $periodStart->format('Y年n月') }}〜{{ $periodEnd->format('Y年n月') }}
+                            </p>
+                        </div>
+
+                        <a href="{{ route('sales.index', ['month' => $nextMonth]) }}"
+                           class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white hover:bg-blue-800">
+                            次の月 →
+                        </a>
+                    </div>
+
+                    <p class="mt-4 text-sm text-gray-500">
+                        表示期間内のSOLD商品の月別推移です。データが無い月は0円で表示します。
                     </p>
 
                     <div class="mt-6 h-80">
@@ -137,7 +127,7 @@
                     </h3>
 
                     <p class="mt-1 text-sm text-gray-500">
-                        ヤフオク・メルカリなど出品先ごとの売上です。
+                        全期間の出品先ごとの売上です。凡例とツールチップに売上割合を表示します。
                     </p>
 
                     <div class="mt-6 h-80">
@@ -166,7 +156,7 @@
                             </thead>
 
                             <tbody class="divide-y divide-gray-100 bg-white">
-                                @forelse ($platformSales as $row)
+                                @foreach ($platformSales as $row)
                                     <tr>
                                         <td class="px-4 py-3 font-medium text-gray-900">
                                             {{ $row['platform'] }}
@@ -192,13 +182,7 @@
                                             ¥{{ number_format($row['profit']) }}
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                            SOLD済みの商品がまだありません。
-                                        </td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -208,6 +192,10 @@
                     <h3 class="text-lg font-semibold text-gray-900">
                         月別売上一覧
                     </h3>
+
+                    <p class="mt-1 text-sm text-gray-500">
+                        {{ $periodStart->format('Y年n月') }}〜{{ $periodEnd->format('Y年n月') }} の月別集計です。
+                    </p>
 
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -223,7 +211,7 @@
                             </thead>
 
                             <tbody class="divide-y divide-gray-100 bg-white">
-                                @forelse ($monthlySales as $row)
+                                @foreach ($monthlySales as $row)
                                     <tr>
                                         <td class="px-4 py-3 font-medium text-gray-900">
                                             {{ $row['month'] }}
@@ -249,13 +237,7 @@
                                             ¥{{ number_format($row['profit']) }}
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                            月別売上データがまだありません。
-                                        </td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -276,6 +258,18 @@
 
         const monthlyCanvas = document.getElementById('monthlySalesChart');
         const platformCanvas = document.getElementById('platformSalesChart');
+
+        const calculatePercentage = function(value, data) {
+            const total = data.reduce(function(sum, current) {
+                return sum + Number(current);
+            }, 0);
+
+            if (total <= 0) {
+                return '0.0';
+            }
+
+            return ((Number(value) / total) * 100).toFixed(1);
+        };
 
         if (monthlyCanvas) {
             new Chart(monthlyCanvas, {
@@ -338,10 +332,35 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
+                        legend: {
+                            labels: {
+                                generateLabels: function(chart) {
+                                    const data = chart.data.datasets[0].data;
+                                    const defaultLabels = Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart);
+
+                                    return defaultLabels.map(function(label) {
+                                        const value = data[label.index] ?? 0;
+                                        const percentage = calculatePercentage(value, data);
+
+                                        label.text = label.text + '（' + percentage + '%）';
+
+                                        return label;
+                                    });
+                                }
+                            }
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.label + ': ¥' + Number(context.raw).toLocaleString();
+                                    const data = context.dataset.data;
+                                    const percentage = calculatePercentage(context.raw, data);
+
+                                    return context.label
+                                        + ': ¥'
+                                        + Number(context.raw).toLocaleString()
+                                        + '（'
+                                        + percentage
+                                        + '%）';
                                 }
                             }
                         }
