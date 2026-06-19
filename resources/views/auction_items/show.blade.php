@@ -6,7 +6,7 @@
                     出品詳細
                 </h2>
 
-                <p class="mt-1 text-sm text-slate-500">
+                <p class="mt-1 text-sm text-cyan-200">
                     商品情報・販売状況・利益を確認できます。
                 </p>
             </div>
@@ -85,7 +85,7 @@
                                 class="h-full min-h-[420px] w-full object-cover"
                             >
                         @else
-                            <div class="flex min-h-[420px] w-full items-center justify-center bg-slate-200 text-slate-500 font-black">
+                            <div class="flex min-h-[420px] w-full items-center justify-center bg-slate-200 text-cyan-200 font-black">
                                 NO IMAGE
                             </div>
                         @endif
@@ -134,31 +134,31 @@
 
                             <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div class="rounded-2xl bg-slate-50 p-4">
-                                    <p class="text-xs font-black text-slate-500">仕入れ値</p>
+                                    <p class="text-xs font-black text-cyan-200">仕入れ値</p>
                                     <p class="mt-2 text-xl font-black text-slate-900">
                                         ¥{{ number_format($purchasePrice) }}
                                     </p>
                                 </div>
 
                                 <div class="rounded-2xl bg-slate-50 p-4">
-                                    <p class="text-xs font-black text-slate-500">売値</p>
+                                    <p class="text-xs font-black text-cyan-200">売値</p>
                                     <p class="mt-2 text-xl font-black text-slate-900">
                                         ¥{{ number_format($soldPrice) }}
                                     </p>
                                 </div>
 
                                 <div class="rounded-2xl bg-slate-50 p-4">
-                                    <p class="text-xs font-black text-slate-500">販売手数料</p>
+                                    <p class="text-xs font-black text-cyan-200">販売手数料</p>
                                     <p class="mt-2 text-xl font-black text-slate-900">
                                         ¥{{ number_format($salesFee) }}
                                     </p>
-                                    <p class="mt-1 text-xs font-bold text-slate-500">
+                                    <p class="mt-1 text-xs font-bold text-cyan-200">
                                         {{ rtrim(rtrim(number_format($salesFeeRate, 2), '0'), '.') }}%
                                     </p>
                                 </div>
 
                                 <div class="rounded-2xl bg-slate-50 p-4">
-                                    <p class="text-xs font-black text-slate-500">送料</p>
+                                    <p class="text-xs font-black text-cyan-200">送料</p>
                                     <p class="mt-2 text-xl font-black text-slate-900">
                                         ¥{{ number_format($shippingFee) }}
                                     </p>

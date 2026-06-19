@@ -42,11 +42,11 @@
                             古着管理システム
                         </h1>
 
-                        <p class="mt-3 text-sm tracking-[0.25em] text-slate-400 font-bold">
+                        <p class="mt-3 text-sm tracking-[0.25em] text-cyan-300 font-bold">
                             CLOTHING MANAGEMENT SYSTEM
                         </p>
 
-                        <p class="mt-6 text-slate-500 font-semibold">
+                        <p class="mt-6 text-cyan-200 font-semibold">
                             在庫・入出庫・販売を、もっとスマートに。
                         </p>
 
@@ -139,7 +139,7 @@
                         </div>
 
                         <div class="mt-6 text-center">
-                            <a href="{{ route('register') }}" class="text-sm font-bold text-slate-500 hover:text-blue-700">
+                            <a href="{{ route('register') }}" class="text-sm font-bold text-cyan-200 hover:text-blue-700">
                                 アカウントを新規作成する
                             </a>
                         </div>
@@ -150,19 +150,19 @@
             <div class="w-full border-t border-gray-300"></div>
         </div>
         <div class="relative flex justify-center text-sm">
-            <span class="bg-white px-2 text-gray-500">または</span>
+            <span class="bg-white px-2 text-cyan-200">または</span>
         </div>
     </div>
 
     <a
         href="{{ route('google.redirect') }}"
-        class="mt-4 flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+        class="mt-4 flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-cyan-100 shadow-sm hover:bg-gray-50"
     >
         Googleでログイン
     </a>
 </div>
 
-                    <p class="mt-8 text-center text-xs text-slate-400">
+                    <p class="mt-8 text-center text-xs text-cyan-300">
                         © 2026 古着管理システム All rights reserved.
                     </p>
                 </div>

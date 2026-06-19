@@ -1,10 +1,10 @@
-<nav x-data="{ open: false }" class="border-b border-gray-100 bg-white">
+<nav x-data="{ open: false }" class="border-b border-cyan-300/20 bg-slate-950/45 text-white shadow-2xl backdrop-blur-md">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 justify-between">
             <div class="flex">
                 <div class="flex shrink-0 items-center">
                     <a href="{{ route('dashboard') }}">
-                        <span class="text-xl font-bold text-gray-900">
+                        <span class="text-xl font-black text-white">
                             FURUGI
                         </span>
                     </a>
@@ -36,7 +36,7 @@
             </div>
 
             <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                <div class="text-sm text-gray-700">
+                <div class="text-sm font-bold text-slate-200">
                     {{ Auth::user()->name }}
                 </div>
 
@@ -55,7 +55,7 @@
             <div class="-me-2 flex items-center sm:hidden">
                 <button
                     @click="open = ! open"
-                    class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
+                    class="inline-flex items-center justify-center rounded-md p-2 text-slate-300 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-slate-300 focus:bg-gray-100 focus:text-slate-300 focus:outline-none"
                 >
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path
@@ -106,13 +106,13 @@
 
         </div>
 
-        <div class="border-t border-gray-200 pb-1 pt-4">
+        <div class="border-t border-cyan-300/20 pb-1 pt-4">
             <div class="px-4">
-                <div class="text-base font-medium text-gray-800">
+                <div class="text-base font-medium text-white">
                     {{ Auth::user()->name }}
                 </div>
 
-                <div class="text-sm font-medium text-gray-500">
+                <div class="text-sm font-medium text-slate-300">
                     {{ Auth::user()->email }}
                 </div>
             </div>

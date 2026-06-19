@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 class="text-2xl font-black text-blue-900">出品編集</h2>
-                <p class="mt-1 text-sm text-slate-500">登録済み商品の内容を編集できます。</p>
+                <p class="mt-1 text-sm text-cyan-200">登録済み商品の内容を編集できます。</p>
             </div>
 
             <a href="{{ route('auction-items.index') }}"
@@ -77,7 +77,7 @@
                         <div>
                             <label class="block text-xs font-black tracking-wider text-slate-600">仕入れ値</label>
                             <div class="relative mt-2">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">¥</span>
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-cyan-200">¥</span>
                                 <input type="number"
                                        name="purchase_price"
                                        value="{{ old('purchase_price', $auctionItem->purchase_price) }}"
@@ -88,7 +88,7 @@
                         <div>
                             <label class="block text-xs font-black tracking-wider text-slate-600">売値</label>
                             <div class="relative mt-2">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">¥</span>
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-cyan-200">¥</span>
                                 <input type="number"
                                        name="sold_price"
                                        value="{{ old('sold_price', $auctionItem->sold_price) }}"
@@ -107,7 +107,7 @@
                                    value="{{ old('sales_fee_rate', $auctionItem->sales_fee_rate ?? 10) }}"
                                    class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
 
-                            <p class="mt-1 text-xs font-semibold text-slate-400">
+                            <p class="mt-1 text-xs font-semibold text-cyan-300">
                                 出品先を選ぶと自動で反映されます
                             </p>
                         </div>
@@ -115,7 +115,7 @@
                         <div>
                             <label class="block text-xs font-black tracking-wider text-slate-600">送料</label>
                             <div class="relative mt-2">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">¥</span>
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-cyan-200">¥</span>
                                 <input type="number"
                                        name="shipping_fee"
                                        value="{{ old('shipping_fee', $auctionItem->shipping_fee ?? 0) }}"
@@ -124,7 +124,7 @@
                         </div>
 
                         <div class="rounded-2xl bg-slate-100 p-4">
-                            <p class="text-xs font-black tracking-wider text-slate-500">計算式</p>
+                            <p class="text-xs font-black tracking-wider text-cyan-200">計算式</p>
                             <p class="mt-2 text-sm font-black text-slate-700">
                                 売値 − 仕入 − 手数料 − 送料
                             </p>
@@ -135,7 +135,7 @@
                         <label class="block text-xs font-black tracking-wider text-slate-600">商品画像</label>
                         <input type="file"
                                name="image"
-                               class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+                               class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-cyan-200">
 
                         @if($auctionItem->image_path)
                             <div class="mt-5">

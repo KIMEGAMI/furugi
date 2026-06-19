@@ -20,19 +20,22 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
 
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
+    <body class="font-sans text-cyan-50 antialiased">
+        <div
+            class="flex min-h-screen flex-col items-center pt-6 text-white sm:justify-center sm:pt-0"
+            style="background-image: linear-gradient(rgba(2, 6, 23, 0.28), rgba(2, 6, 23, 0.52)), url('{{ asset('images/bg.png') }}?v={{ time() }}'); background-size: cover; background-position: center; background-attachment: fixed;"
+        >
             <div>
                 <a href="/">
                     <img
                         src="{{ asset('images/logo.png') }}"
                         alt="古着管理システム"
-                        class="w-40 h-auto mx-auto"
+                        class="mx-auto h-auto w-40 drop-shadow-2xl"
                     >
                 </a>
             </div>
 
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
+            <div class="mt-6 w-full overflow-hidden bg-slate-950/45 px-6 py-4 text-white shadow-2xl backdrop-blur-md sm:max-w-md sm:rounded-3xl border border-cyan-300/20">
                 {{ $slot }}
             </div>
         </div>

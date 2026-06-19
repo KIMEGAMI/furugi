@@ -1,5 +1,5 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
+    <div class="mb-4 text-sm text-cyan-200">
         {{ __('安全確認のため、続行する前にパスワードを入力してください') }}
     </div>
 

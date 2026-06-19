@@ -2,11 +2,11 @@
     <x-slot name="header">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-xl font-semibold leading-tight text-gray-800">
+                <h2 class="text-xl font-semibold leading-tight text-cyan-100">
                     売上管理
                 </h2>
 
-                <p class="mt-1 text-sm text-gray-500">
+                <p class="mt-1 text-sm text-cyan-200">
                     累計売上・実利益・出品先別集計を確認できます。
                 </p>
             </div>
@@ -46,43 +46,43 @@
 
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">累計売上</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
+                    <p class="text-sm text-cyan-200">累計売上</p>
+                    <p class="mt-2 text-2xl font-bold text-cyan-50">
                         ¥{{ number_format($totalSales) }}
                     </p>
                 </div>
 
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">累計実利益</p>
+                    <p class="text-sm text-cyan-200">累計実利益</p>
                     <p class="mt-2 text-2xl font-bold {{ $totalProfit < 0 ? 'text-red-600' : 'text-green-700' }}">
                         ¥{{ number_format($totalProfit) }}
                     </p>
                 </div>
 
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">累計販売手数料</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
+                    <p class="text-sm text-cyan-200">累計販売手数料</p>
+                    <p class="mt-2 text-2xl font-bold text-cyan-50">
                         ¥{{ number_format($totalSalesFee) }}
                     </p>
                 </div>
 
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">累計送料</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
+                    <p class="text-sm text-cyan-200">累計送料</p>
+                    <p class="mt-2 text-2xl font-bold text-cyan-50">
                         ¥{{ number_format($totalShippingFee) }}
                     </p>
                 </div>
 
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">累計SOLD件数</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
+                    <p class="text-sm text-cyan-200">累計SOLD件数</p>
+                    <p class="mt-2 text-2xl font-bold text-cyan-50">
                         {{ number_format($soldCount) }}件
                     </p>
                 </div>
 
                 <div class="rounded-2xl bg-white p-5 shadow-sm">
-                    <p class="text-sm text-gray-500">現在の出品中件数</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">
+                    <p class="text-sm text-cyan-200">現在の出品中件数</p>
+                    <p class="mt-2 text-2xl font-bold text-cyan-50">
                         {{ number_format($sellingCount) }}件
                     </p>
                 </div>
@@ -97,11 +97,11 @@
                         </a>
 
                         <div class="text-center">
-                            <h3 class="text-lg font-semibold text-gray-900">
+                            <h3 class="text-lg font-semibold text-cyan-50">
                                 月別 売上・実利益グラフ
                             </h3>
 
-                            <p class="mt-1 text-sm text-gray-500">
+                            <p class="mt-1 text-sm text-cyan-200">
                                 {{ $periodStart->format('Y年n月') }}〜{{ $periodEnd->format('Y年n月') }}
                             </p>
                         </div>
@@ -112,7 +112,7 @@
                         </a>
                     </div>
 
-                    <p class="mt-4 text-sm text-gray-500">
+                    <p class="mt-4 text-sm text-cyan-200">
                         表示期間内のSOLD商品の月別推移です。データが無い月は0円で表示します。
                     </p>
 
@@ -122,11 +122,11 @@
                 </div>
 
                 <div class="rounded-2xl bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">
+                    <h3 class="text-lg font-semibold text-cyan-50">
                         出品先別 売上グラフ
                     </h3>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-cyan-200">
                         全期間の出品先ごとの売上です。凡例とツールチップに売上割合を表示します。
                     </p>
 
@@ -138,7 +138,7 @@
 
             <div class="mt-8 grid gap-6 lg:grid-cols-2">
                 <div class="rounded-2xl bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">
+                    <h3 class="text-lg font-semibold text-cyan-50">
                         出品先別 売上集計
                     </h3>
 
@@ -146,35 +146,35 @@
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">出品先</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">件数</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">売上</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">手数料</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">送料</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">実利益</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-cyan-200">出品先</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">件数</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">売上</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">手数料</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">送料</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">実利益</th>
                                 </tr>
                             </thead>
 
                             <tbody class="divide-y divide-gray-100 bg-white">
                                 @foreach ($platformSales as $row)
                                     <tr>
-                                        <td class="px-4 py-3 font-medium text-gray-900">
+                                        <td class="px-4 py-3 font-medium text-cyan-50">
                                             {{ $row['platform'] }}
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             {{ number_format($row['count']) }}件
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             ¥{{ number_format($row['sales']) }}
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             ¥{{ number_format($row['sales_fee']) }}
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             ¥{{ number_format($row['shipping_fee']) }}
                                         </td>
 
@@ -189,11 +189,11 @@
                 </div>
 
                 <div class="rounded-2xl bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">
+                    <h3 class="text-lg font-semibold text-cyan-50">
                         月別売上一覧
                     </h3>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-cyan-200">
                         {{ $periodStart->format('Y年n月') }}〜{{ $periodEnd->format('Y年n月') }} の月別集計です。
                     </p>
 
@@ -201,35 +201,35 @@
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">月</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">SOLD件数</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">売上</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">手数料</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">送料</th>
-                                    <th class="px-4 py-3 text-right font-semibold text-gray-600">実利益</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-cyan-200">月</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">SOLD件数</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">売上</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">手数料</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">送料</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-cyan-200">実利益</th>
                                 </tr>
                             </thead>
 
                             <tbody class="divide-y divide-gray-100 bg-white">
                                 @foreach ($monthlySales as $row)
                                     <tr>
-                                        <td class="px-4 py-3 font-medium text-gray-900">
+                                        <td class="px-4 py-3 font-medium text-cyan-50">
                                             {{ $row['month'] }}
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             {{ number_format($row['count']) }}件
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             ¥{{ number_format($row['sales']) }}
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             ¥{{ number_format($row['sales_fee']) }}
                                         </td>
 
-                                        <td class="px-4 py-3 text-right text-gray-700">
+                                        <td class="px-4 py-3 text-right text-cyan-100">
                                             ¥{{ number_format($row['shipping_fee']) }}
                                         </td>
 

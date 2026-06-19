@@ -55,11 +55,11 @@
                             アカウント作成
                         </h1>
 
-                        <p class="mt-3 text-sm tracking-[0.25em] text-slate-400 font-bold">
+                        <p class="mt-3 text-sm tracking-[0.25em] text-cyan-300 font-bold">
                             CREATE ACCOUNT
                         </p>
 
-                        <p class="mt-6 text-slate-500 font-semibold">
+                        <p class="mt-6 text-cyan-200 font-semibold">
                             古着管理システムをはじめましょう。
                         </p>
 
@@ -131,7 +131,7 @@
                                 <div id="password-strength-bar" class="h-full w-0 bg-blue-600 transition-all duration-300"></div>
                             </div>
 
-                            <p id="password-strength-text" class="mt-2 text-xs font-bold text-slate-400">
+                            <p id="password-strength-text" class="mt-2 text-xs font-bold text-cyan-300">
                                 パスワード強度：未入力
                             </p>
 
@@ -155,7 +155,7 @@
                                 class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
 
-                            <p id="password-match-text" class="mt-2 text-xs font-bold text-slate-400">
+                            <p id="password-match-text" class="mt-2 text-xs font-bold text-cyan-300">
                                 パスワード確認を入力してください
                             </p>
                         </div>
@@ -168,13 +168,13 @@
                         </button>
 
                         <div class="mt-6 text-center">
-                            <a href="{{ route('login') }}" class="text-sm font-bold text-slate-500 hover:text-blue-700">
+                            <a href="{{ route('login') }}" class="text-sm font-bold text-cyan-200 hover:text-blue-700">
                                 すでにアカウントをお持ちの方はこちら
                             </a>
                         </div>
                     </form>
 
-                    <p class="mt-8 text-center text-xs text-slate-400">
+                    <p class="mt-8 text-center text-xs text-cyan-300">
                         © 2026 古着管理システム All rights reserved.
                     </p>
                 </div>
@@ -212,7 +212,7 @@
 
                 if (!value) {
                     $strengthBar.css('width', '0%')
-                    $strengthText.text('パスワード強度：未入力').removeClass().addClass('mt-2 text-xs font-bold text-slate-400')
+                    $strengthText.text('パスワード強度：未入力').removeClass().addClass('mt-2 text-xs font-bold text-cyan-300')
                     return
                 }
 
@@ -237,7 +237,7 @@
                 const confirmation = $passwordConfirmation.val()
 
                 if (!confirmation) {
-                    $matchText.text('パスワード確認を入力してください').removeClass().addClass('mt-2 text-xs font-bold text-slate-400')
+                    $matchText.text('パスワード確認を入力してください').removeClass().addClass('mt-2 text-xs font-bold text-cyan-300')
                     return
                 }
 

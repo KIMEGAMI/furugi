@@ -6,7 +6,7 @@
                     出品登録
                 </h2>
 
-                <p class="mt-1 text-sm text-slate-500">
+                <p class="mt-1 text-sm text-cyan-200">
                     フリマ・オークション出品情報を登録します。
                 </p>
             </div>
@@ -128,7 +128,7 @@
                             </label>
 
                             <div class="relative mt-2">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-cyan-200">
                                     ¥
                                 </span>
 
@@ -148,7 +148,7 @@
                             </label>
 
                             <div class="relative mt-2">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-cyan-200">
                                     ¥
                                 </span>
 
@@ -180,7 +180,7 @@
                                 class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
 
-                            <p class="mt-1 text-xs font-semibold text-slate-400">
+                            <p class="mt-1 text-xs font-semibold text-cyan-300">
                                 出品先を選ぶと自動で反映されます
                             </p>
                         </div>
@@ -191,7 +191,7 @@
                             </label>
 
                             <div class="relative mt-2">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-cyan-200">
                                     ¥
                                 </span>
 
@@ -205,7 +205,7 @@
                         </div>
 
                         <div class="rounded-2xl bg-slate-100 p-4">
-                            <p class="text-xs font-black tracking-wider text-slate-500">
+                            <p class="text-xs font-black tracking-wider text-cyan-200">
                                 利益計算式
                             </p>
 
@@ -224,10 +224,10 @@
                         <input
                             type="file"
                             name="image"
-                            class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500"
+                            class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-cyan-200"
                         >
 
-                        <p class="mt-2 text-xs font-semibold text-slate-400">
+                        <p class="mt-2 text-xs font-semibold text-cyan-300">
                             JPG / PNG / WEBP 対応・最大10MB
                         </p>
                     </div>

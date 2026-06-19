@@ -6,7 +6,7 @@
                     出品一覧
                 </h2>
 
-                <p class="mt-1 text-sm text-slate-500">
+                <p class="mt-1 text-sm text-cyan-200">
                     登録したフリマアプリ・オークション出品データを一覧で管理します。
                 </p>
             </div>
@@ -69,7 +69,7 @@
                             class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600"
                         >
 
-                        <p class="mt-2 text-xs font-semibold text-slate-500">
+                        <p class="mt-2 text-xs font-semibold text-cyan-200">
                             ヘッダー例：management_id,title,comment,platform,purchase_price,sold_price,shipping_fee,sales_fee_rate,status
                         </p>
                     </div>
@@ -219,7 +219,7 @@
                                         class="w-full h-64 object-cover"
                                     >
                                 @else
-                                    <div class="w-full h-64 flex items-center justify-center bg-slate-200 text-slate-500 font-bold">
+                                    <div class="w-full h-64 flex items-center justify-center bg-slate-200 text-cyan-200 font-bold">
                                         NO IMAGE
                                     </div>
                                 @endif
@@ -278,31 +278,31 @@
                                 <div class="mt-5 rounded-2xl bg-white/85 border border-white p-4">
                                     <div class="grid grid-cols-2 gap-3 text-sm">
                                         <div>
-                                            <p class="text-xs font-black text-slate-500">売値</p>
+                                            <p class="text-xs font-black text-cyan-200">売値</p>
                                             <p class="mt-1 font-black text-slate-800">
                                                 ¥{{ number_format($soldPrice) }}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-slate-500">販売手数料</p>
+                                            <p class="text-xs font-black text-cyan-200">販売手数料</p>
                                             <p class="mt-1 font-black text-slate-800">
                                                 ¥{{ number_format($salesFee) }}
-                                                <span class="text-xs text-slate-500">
+                                                <span class="text-xs text-cyan-200">
                                                     / {{ rtrim(rtrim(number_format($salesFeeRate, 2), '0'), '.') }}%
                                                 </span>
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-slate-500">送料</p>
+                                            <p class="text-xs font-black text-cyan-200">送料</p>
                                             <p class="mt-1 font-black text-slate-800">
                                                 ¥{{ number_format($shippingFee) }}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-slate-500">実利益</p>
+                                            <p class="text-xs font-black text-cyan-200">実利益</p>
                                             <p class="mt-1 font-black {{ $profit < 0 ? 'text-red-700' : 'text-green-700' }}">
                                                 ¥{{ number_format($profit) }}
                                             </p>
@@ -396,7 +396,7 @@
                         表示できる出品データがありません
                     </h3>
 
-                    <p class="mt-3 text-slate-500 font-semibold">
+                    <p class="mt-3 text-cyan-200 font-semibold">
                         条件を変更するか、新しい出品を登録してください。
                     </p>
 

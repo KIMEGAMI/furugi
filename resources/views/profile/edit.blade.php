@@ -4,7 +4,7 @@
             <h2 class="text-2xl font-black text-blue-900">
                 プロフィール設定
             </h2>
-            <p class="mt-1 text-sm text-slate-500">
+            <p class="mt-1 text-sm text-cyan-200">
                 アカウント情報、メールアドレス、パスワードを管理します。
             </p>
         </div>
@@ -33,7 +33,7 @@
                     <h3 class="text-xl font-black text-slate-900">
                         パスワード変更
                     </h3>
-                    <p class="mt-1 text-sm text-slate-500">
+                    <p class="mt-1 text-sm text-cyan-200">
                         安全のため、定期的なパスワード変更をおすすめします。
                     </p>
                 </div>

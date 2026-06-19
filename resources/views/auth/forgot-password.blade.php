@@ -1,5 +1,5 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
+    <div class="mb-4 text-sm text-cyan-200">
         {{ __('登録済みのメールアドレスを入力してください。パスワード再設定用のリンクをメールで送信します。') }}
     </div>
 
