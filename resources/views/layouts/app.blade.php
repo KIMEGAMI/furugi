@@ -38,12 +38,11 @@
             backdrop-filter: blur(12px);
         }
 
-        .furugi-app-shell main .bg-white {
-            background-color: rgba(0, 0, 0, 0.25) !important;
-            border-color: rgba(255, 255, 255, 0.10) !important;
-            color: #f8fafc;
-            backdrop-filter: blur(12px);
-        }
+.furugi-app-shell main .bg-white {
+    background-color: rgba(0, 0, 0, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    backdrop-filter: blur(12px);
+}
 
         .furugi-app-shell main .bg-blue-50,
         .furugi-app-shell main .bg-red-50,

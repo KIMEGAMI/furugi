@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-2xl font-black text-blue-900">
+                <h2 class="text-2xl font-black text-blue-400">
                     出品登録
                 </h2>
 
@@ -217,21 +217,23 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-black tracking-wider text-slate-600">
-                            商品画像
-                        </label>
+    <label class="block text-xs font-black tracking-wider text-cyan-100">
+        商品画像
+    </label>
 
-                        <input
-                            type="file"
-                            name="image"
-                            class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-cyan-200"
-                        >
+    <div class="mt-2 rounded-2xl border border-cyan-300/20 bg-slate-950/45 p-4">
+        <input
+            type="file"
+            name="image"
+            accept="image/jpeg,image/png,image/webp"
+            class="block w-full cursor-pointer rounded-xl border border-cyan-300/20 bg-slate-900/80 p-3 text-sm text-white file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-500/25 file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:file:bg-cyan-400/30"
+        >
 
-                        <p class="mt-2 text-xs font-semibold text-cyan-300">
-                            JPG / PNG / WEBP 対応・最大10MB
-                        </p>
-                    </div>
-
+        <p class="mt-2 text-xs font-semibold text-cyan-200">
+            JPG / PNG / WEBP 対応・最大10MB
+        </p>
+    </div>
+</div>
                     <div class="pt-2">
                         <button
                             type="submit"

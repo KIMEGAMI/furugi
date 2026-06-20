@@ -53,10 +53,10 @@ class SalesController extends Controller
             ->where('status', 'selling')
             ->count();
 
-        // ここから下の累計系は全期間
         $soldCount = $soldItems->count();
 
         $totalSales = $soldItems->sum(fn ($item) => (int) ($item->sold_price ?? 0));
+        $totalPurchase = $soldItems->sum(fn ($item) => (int) ($item->purchase_price ?? 0));
 
         $totalProfit = $soldItems->sum(function ($item) {
             return $this->calculateItemProfit($item);
@@ -72,7 +72,6 @@ class SalesController extends Controller
 
         $totalShippingFee = $soldItems->sum(fn ($item) => (int) ($item->shipping_fee ?? 0));
 
-        // 月別 売上・実利益グラフだけ、基準月を右端にした12か月表示
         $monthlySales = collect();
 
         for ($month = $periodStart->copy(); $month->lte($periodEnd); $month->addMonth()) {
@@ -90,6 +89,7 @@ class SalesController extends Controller
                 'month' => $monthKey,
                 'count' => $items->count(),
                 'sales' => $items->sum(fn ($item) => (int) ($item->sold_price ?? 0)),
+                'purchase' => $items->sum(fn ($item) => (int) ($item->purchase_price ?? 0)),
                 'sales_fee' => $items->sum(function ($item) {
                     return $this->calculateSalesFee(
                         (int) ($item->sold_price ?? 0),
@@ -102,7 +102,6 @@ class SalesController extends Controller
             ]);
         }
 
-        // 出品先別も全期間
         $platformNames = ['メルカリ', 'ヤフオク', 'ラクマ', 'PayPayフリマ', 'その他'];
 
         $platformSales = collect($platformNames)->map(function ($platform) use ($soldItems) {
@@ -112,6 +111,7 @@ class SalesController extends Controller
                 'platform' => $platform,
                 'count' => $items->count(),
                 'sales' => $items->sum(fn ($item) => (int) ($item->sold_price ?? 0)),
+                'purchase' => $items->sum(fn ($item) => (int) ($item->purchase_price ?? 0)),
                 'sales_fee' => $items->sum(function ($item) {
                     return $this->calculateSalesFee(
                         (int) ($item->sold_price ?? 0),
@@ -138,6 +138,7 @@ class SalesController extends Controller
             'previousMonth',
             'nextMonth',
             'totalSales',
+            'totalPurchase',
             'totalProfit',
             'totalSalesFee',
             'totalShippingFee',

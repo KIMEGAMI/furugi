@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-2xl font-black text-blue-900">
+                <h2 class="text-2xl font-black text-blue-400">
                     出品一覧
                 </h2>
 
@@ -86,7 +86,7 @@
             </div>
 
             <div class="mb-6 rounded-3xl bg-white p-4 shadow border border-slate-200">
-                <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <a
                         href="{{ route('auction-items.index', array_filter(['platform' => $platform, 'keyword' => $keyword])) }}"
                         class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ empty($status) ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
@@ -106,13 +106,6 @@
                         class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'sold' ? 'bg-red-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
                     >
                         SOLD
-                    </a>
-
-                    <a
-                        href="{{ route('auction-items.index', array_filter(['status' => 'draft', 'platform' => $platform, 'keyword' => $keyword])) }}"
-                        class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'draft' ? 'bg-slate-700 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
-                    >
-                        下書き
                     </a>
                 </div>
             </div>
@@ -219,7 +212,7 @@
                                         class="w-full h-64 object-cover"
                                     >
                                 @else
-                                    <div class="w-full h-64 flex items-center justify-center bg-slate-200 text-cyan-200 font-bold">
+                                    <div class="w-full h-64 flex items-center justify-center bg-slate-200 text-slate-700 font-bold">
                                         NO IMAGE
                                     </div>
                                 @endif
@@ -236,10 +229,6 @@
                                     @if($item->status === 'sold')
                                         <span class="rounded-full bg-red-600 px-4 py-2 text-xs font-black text-white shadow">
                                             SOLD
-                                        </span>
-                                    @elseif($item->status === 'draft')
-                                        <span class="rounded-full bg-slate-600 px-4 py-2 text-xs font-black text-white shadow">
-                                            下書き
                                         </span>
                                     @else
                                         <span class="rounded-full bg-blue-700 px-4 py-2 text-xs font-black text-white shadow">
@@ -267,9 +256,9 @@
                                     </p>
                                 </div>
 
-                                <h3 class="mt-3 text-xl font-black text-slate-900 line-clamp-2">
-                                    {{ $item->title }}
-                                </h3>
+ <h3 style="font-size:20px;font-weight:900;color:#000000 !important;">
+    {{ $item->title }}
+</h3>
 
                                 <p class="mt-3 text-sm leading-6 text-slate-700 line-clamp-3">
                                     {{ $item->comment ?: 'コメントはありません。' }}
@@ -278,31 +267,31 @@
                                 <div class="mt-5 rounded-2xl bg-white/85 border border-white p-4">
                                     <div class="grid grid-cols-2 gap-3 text-sm">
                                         <div>
-                                            <p class="text-xs font-black text-cyan-200">売値</p>
+                                            <p class="text-xs font-black text-slate-600">売値</p>
                                             <p class="mt-1 font-black text-slate-800">
                                                 ¥{{ number_format($soldPrice) }}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-cyan-200">販売手数料</p>
+                                            <p class="text-xs font-black text-slate-600">販売手数料</p>
                                             <p class="mt-1 font-black text-slate-800">
                                                 ¥{{ number_format($salesFee) }}
-                                                <span class="text-xs text-cyan-200">
+                                                <span class="text-xs text-slate-600">
                                                     / {{ rtrim(rtrim(number_format($salesFeeRate, 2), '0'), '.') }}%
                                                 </span>
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-cyan-200">送料</p>
+                                            <p class="text-xs font-black text-slate-600">送料</p>
                                             <p class="mt-1 font-black text-slate-800">
                                                 ¥{{ number_format($shippingFee) }}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-cyan-200">実利益</p>
+                                            <p class="text-xs font-black text-slate-600">実利益</p>
                                             <p class="mt-1 font-black {{ $profit < 0 ? 'text-red-700' : 'text-green-700' }}">
                                                 ¥{{ number_format($profit) }}
                                             </p>
