@@ -81,41 +81,7 @@
                 </section>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <section class="rounded-3xl border border-cyan-300/20 bg-slate-950/45 p-6 shadow-2xl backdrop-blur-md">
-                    <h2 class="text-xl font-black">コストサマリー</h2>
-
-                    <div class="mt-5 space-y-4">
-                        <div class="rounded-2xl bg-white/10 p-5">
-                            <div class="text-sm font-bold text-cyan-300">販売手数料</div>
-                            <div class="mt-2 text-2xl font-black">¥{{ number_format($totalSalesFee ?? 0) }}</div>
-                        </div>
-
-                        <div class="rounded-2xl bg-white/10 p-5">
-                            <div class="text-sm font-bold text-cyan-300">送料</div>
-                            <div class="mt-2 text-2xl font-black">¥{{ number_format($totalShippingFee ?? 0) }}</div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="rounded-3xl border border-cyan-300/20 bg-slate-950/45 p-6 shadow-2xl backdrop-blur-md lg:col-span-2">
-                    <h2 class="text-xl font-black">出品先割合</h2>
-
-                    <div class="mt-5 space-y-4">
-                        @foreach ($platformStats as $platform)
-                            <div>
-                                <div class="mb-1 flex justify-between text-sm font-bold text-slate-300">
-                                    <span>{{ $platform['name'] }}：{{ number_format($platform['count']) }}件</span>
-                                    <span>{{ $platform['percent'] }}%</span>
-                                </div>
-                                <div class="h-3 overflow-hidden rounded-full bg-white/10">
-                                    <div class="h-full rounded-full bg-cyan-400" style="width: {{ $platform['percent'] }}%;"></div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </section>
-            </div>
+            
 
             <section class="mt-8 rounded-3xl border border-cyan-300/20 bg-slate-950/45 p-6 shadow-2xl backdrop-blur-md">
                 <div class="mb-5 flex items-center justify-between">

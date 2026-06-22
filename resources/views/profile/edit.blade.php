@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <h2 class="text-2xl font-black text-blue-900">
+            <h2 class="text-2xl font-black text-blue-400">
                 プロフィール設定
             </h2>
             <p class="mt-1 text-sm text-cyan-200">

@@ -99,7 +99,7 @@ Route::get('/dashboard', function () {
     ));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/auction-items/import', [AuctionItemController::class, 'importCsv'])
         ->name('auction-items.import');
 

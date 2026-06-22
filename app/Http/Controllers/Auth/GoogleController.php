@@ -27,11 +27,23 @@ class GoogleController extends Controller
                 'name' => $googleUser->getName() ?? 'Google User',
                 'email' => $googleUser->getEmail(),
                 'google_id' => $googleUser->getId(),
+                'email_verified_at' => now(),
                 'password' => bcrypt(str()->random(32)),
             ]);
         } else {
+            $updated = false;
+
             if (! $user->google_id) {
                 $user->google_id = $googleUser->getId();
+                $updated = true;
+            }
+
+            if (! $user->email_verified_at) {
+                $user->email_verified_at = now();
+                $updated = true;
+            }
+
+            if ($updated) {
                 $user->save();
             }
         }
