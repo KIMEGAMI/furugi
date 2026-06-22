@@ -139,8 +139,8 @@
                         </div>
 
                         <div class="mt-6 text-center">
-                            <a href="{{ route('register') }}" class="text-sm font-bold text-cyan-200 hover:text-blue-700">
-                                アカウントを新規作成する
+                            <a href="{{ route('register') }}" class="text-sm font-bold text-black hover:text-blue-700">
+                                [アカウントを新規作成する]
                             </a>
                         </div>
                     </form>
@@ -150,13 +150,13 @@
             <div class="w-full border-t border-gray-300"></div>
         </div>
         <div class="relative flex justify-center text-sm">
-            <span class="bg-white px-2 text-cyan-200">または</span>
+            <span class="bg-white px-2 text-black">または</span>
         </div>
     </div>
 
     <a
         href="{{ route('google.redirect') }}"
-        class="mt-4 flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-cyan-100 shadow-sm hover:bg-gray-50"
+        class="mt-4 flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-gray-50"
     >
         Googleでログイン
     </a>
