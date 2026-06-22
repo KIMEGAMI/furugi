@@ -199,7 +199,7 @@ class SalesController extends Controller
             ];
 
             $csv .= collect($row)
-                ->map(fn ($value) => '"'.str_replace('"', '""', (string) $value).'"')
+                ->map(fn ($value) => $this->escapeCsvCell($value))
                 ->implode(',')."\n";
         }
 
@@ -209,6 +209,17 @@ class SalesController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+    }
+
+    private function escapeCsvCell(mixed $value): string
+    {
+        $value = (string) $value;
+
+        if ($value !== '' && preg_match('/^[=+\-@\t\r]/', $value) === 1) {
+            $value = "'".$value;
+        }
+
+        return '"'.str_replace('"', '""', $value).'"';
     }
 
     private function calculateItemProfit(AuctionItem $item): int
