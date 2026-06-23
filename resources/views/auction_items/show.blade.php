@@ -58,6 +58,9 @@
         $salesFee = (int) ($auctionItem->sales_fee ?? round($soldPrice * ($salesFeeRate / 100)));
         $shippingFee = (int) ($auctionItem->shipping_fee ?? 0);
         $profit = (int) ($auctionItem->profit ?? ($soldPrice - $purchasePrice - $salesFee - $shippingFee));
+        $categoryLabel = $auctionItem->category
+            ? (($auctionItem->category->parent?->name ? $auctionItem->category->parent->name.' / ' : '').$auctionItem->category->name)
+            : '未設定';
     @endphp
 
     <div class="min-h-screen bg-slate-100 py-10">
@@ -122,6 +125,10 @@
                         <h3 class="mt-3 text-3xl font-black leading-tight text-slate-900">
                             {{ $auctionItem->title }}
                         </h3>
+
+                        <p class="mt-3 inline-flex rounded-full bg-white/80 px-4 py-2 text-sm font-black text-slate-800 shadow">
+                            ジャンル: {{ $categoryLabel }}
+                        </p>
 
                         <p class="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">
                             {{ $auctionItem->comment ?: 'コメントはありません。' }}

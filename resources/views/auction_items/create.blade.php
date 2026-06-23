@@ -93,6 +93,12 @@
 
                     </div>
 
+                    @include('auction_items.partials.category-selects', [
+                        'parentCategories' => $parentCategories,
+                        'parentSelectId' => 'create_parent_category_id',
+                        'categorySelectId' => 'create_category_id',
+                    ])
+
                     <div>
                         <label class="block text-xs font-black tracking-wider text-slate-600">
                             商品タイトル

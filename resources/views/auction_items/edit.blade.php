@@ -58,6 +58,14 @@
                         </div>
                     </div>
 
+                    @include('auction_items.partials.category-selects', [
+                        'parentCategories' => $parentCategories,
+                        'parentSelectId' => 'edit_parent_category_id',
+                        'categorySelectId' => 'edit_category_id',
+                        'selectedParentId' => old('parent_category_id', optional($auctionItem->category?->parent)->id),
+                        'selectedCategoryId' => old('category_id', $auctionItem->category_id),
+                    ])
+
                     <div>
                         <label class="block text-xs font-black tracking-wider text-slate-600">商品タイトル</label>
                         <input type="text"

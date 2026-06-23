@@ -13,6 +13,7 @@ class AuctionItem extends Model
         'title',
         'comment',
         'platform',
+        'category_id',
         'image_path',
         'sold_image_path',
         'status',
@@ -27,6 +28,7 @@ class AuctionItem extends Model
 
     protected $casts = [
         'purchase_price' => 'integer',
+        'category_id' => 'integer',
         'sold_price' => 'integer',
         'sales_fee_rate' => 'decimal:2',
         'sales_fee' => 'integer',
@@ -38,6 +40,11 @@ class AuctionItem extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function isSold(): bool

@@ -70,7 +70,7 @@
                         >
 
                         <p class="mt-2 text-xs font-semibold text-cyan-200">
-                            ヘッダー例：management_id,title,comment,platform,purchase_price,sold_price,shipping_fee,sales_fee_rate,status
+                            ヘッダー例：management_id,title,comment,platform,大ジャンル,小ジャンル,purchase_price,sold_price,shipping_fee,sales_fee_rate,status
                         </p>
                     </div>
 
@@ -88,21 +88,21 @@
             <div class="mb-6 rounded-3xl bg-white p-4 shadow border border-slate-200">
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <a
-                        href="{{ route('auction-items.index', array_filter(['platform' => $platform, 'keyword' => $keyword])) }}"
+                        href="{{ route('auction-items.index', array_filter(['platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}"
                         class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ empty($status) ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
                     >
                         ALL
                     </a>
 
                     <a
-                        href="{{ route('auction-items.index', array_filter(['status' => 'selling', 'platform' => $platform, 'keyword' => $keyword])) }}"
+                        href="{{ route('auction-items.index', array_filter(['status' => 'selling', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}"
                         class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'selling' ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
                     >
                         出品中
                     </a>
 
                     <a
-                        href="{{ route('auction-items.index', array_filter(['status' => 'sold', 'platform' => $platform, 'keyword' => $keyword])) }}"
+                        href="{{ route('auction-items.index', array_filter(['status' => 'sold', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}"
                         class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'sold' ? 'bg-red-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}"
                     >
                         SOLD
@@ -129,6 +129,18 @@
                             <option value="PayPayフリマ" @selected($platform === 'PayPayフリマ')>PayPayフリマ</option>
                             <option value="その他" @selected($platform === 'その他')>その他</option>
                         </select>
+                    </div>
+
+                    <div class="lg:col-span-6">
+                        @include('auction_items.partials.category-selects', [
+                            'parentCategories' => $parentCategories,
+                            'parentSelectId' => 'filter_parent_category_id',
+                            'categorySelectId' => 'filter_category_id',
+                            'parentPlaceholder' => 'すべて',
+                            'categoryPlaceholder' => 'すべて',
+                            'selectedParentId' => $parentCategoryId,
+                            'selectedCategoryId' => $categoryId,
+                        ])
                     </div>
 
                     <div class="lg:col-span-6">
@@ -198,6 +210,9 @@
                             $salesFee = (int) ($item->sales_fee ?? round($soldPrice * ($salesFeeRate / 100)));
                             $shippingFee = (int) ($item->shipping_fee ?? 0);
                             $profit = (int) ($item->profit ?? ($soldPrice - $purchasePrice - $salesFee - $shippingFee));
+                            $categoryLabel = $item->category
+                                ? (($item->category->parent?->name ? $item->category->parent->name.' / ' : '').$item->category->name)
+                                : '未設定';
                         @endphp
 
                         <article
@@ -259,6 +274,10 @@
  <h3 style="font-size:20px;font-weight:900;color:#000000 !important;">
     {{ $item->title }}
 </h3>
+
+                                <p class="mt-2 text-xs font-black text-slate-700">
+                                    ジャンル: {{ $categoryLabel }}
+                                </p>
 
                                 <p class="mt-3 text-sm leading-6 text-slate-700 line-clamp-3">
                                     {{ $item->comment ?: 'コメントはありません。' }}

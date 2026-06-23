@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuctionItem;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -16,8 +17,11 @@ class AuctionItemController extends Controller
         $status = $request->get('status');
         $platform = $request->get('platform');
         $keyword = $request->get('keyword');
+        $parentCategoryId = $request->integer('parent_category_id') ?: null;
+        $categoryId = $request->integer('category_id') ?: null;
 
-        $query = AuctionItem::where('user_id', Auth::id());
+        $query = AuctionItem::with(['category.parent'])
+            ->where('user_id', Auth::id());
 
         if (in_array($status, ['selling', 'sold', 'draft'], true)) {
             $query->where('status', $status);
@@ -35,22 +39,38 @@ class AuctionItemController extends Controller
             });
         }
 
+        if ($categoryId) {
+            $query->where('category_id', $categoryId);
+        } elseif ($parentCategoryId) {
+            $childCategoryIds = Category::query()
+                ->where('parent_id', $parentCategoryId)
+                ->pluck('id');
+
+            $query->whereIn('category_id', $childCategoryIds);
+        }
+
         $auctionItems = $query
             ->latest()
             ->paginate(12)
             ->withQueryString();
+        $parentCategories = $this->parentCategories();
 
         return view('auction_items.index', [
             'auctionItems' => $auctionItems,
             'status' => $status,
             'platform' => $platform,
             'keyword' => $keyword,
+            'parentCategoryId' => $parentCategoryId,
+            'categoryId' => $categoryId,
+            'parentCategories' => $parentCategories,
         ]);
     }
 
     public function create()
     {
-        return view('auction_items.create');
+        return view('auction_items.create', [
+            'parentCategories' => $this->parentCategories(),
+        ]);
     }
 
     public function store(Request $request)
@@ -70,6 +90,10 @@ class AuctionItemController extends Controller
             'sold_price' => ['nullable', 'integer', 'min:0'],
             'shipping_fee' => ['nullable', 'integer', 'min:0'],
             'sales_fee_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'category_id' => [
+                'nullable',
+                Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
+            ],
             'image' => ['nullable', 'image', 'max:10240'],
         ], [
             'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
@@ -95,6 +119,7 @@ class AuctionItemController extends Controller
             'title' => $validated['title'],
             'comment' => $validated['comment'] ?? null,
             'platform' => $platform,
+            'category_id' => $validated['category_id'] ?? null,
             'image_path' => $imagePath,
             'sold_image_path' => null,
             'purchase_price' => $purchasePrice,
@@ -227,6 +252,10 @@ class AuctionItemController extends Controller
                 : $this->defaultSalesFeeRate($platform);
 
             $salesFee = $this->calculateSalesFee($soldPrice, $salesFeeRate);
+            $categoryId = $this->resolveCsvCategoryId(
+                $data['大ジャンル'] ?? $data['parent_category'] ?? null,
+                $data['小ジャンル'] ?? $data['category'] ?? null
+            );
 
             $status = trim((string) ($data['status'] ?? 'selling'));
 
@@ -250,6 +279,7 @@ class AuctionItemController extends Controller
                 'title' => $title,
                 'comment' => trim((string) ($data['comment'] ?? '')) ?: null,
                 'platform' => $platform,
+                'category_id' => $categoryId,
                 'image_path' => null,
                 'sold_image_path' => null,
                 'purchase_price' => $purchasePrice,
@@ -275,6 +305,7 @@ class AuctionItemController extends Controller
     public function show(AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
+        $auctionItem->load('category.parent');
 
         return view('auction_items.show', compact('auctionItem'));
     }
@@ -282,8 +313,12 @@ class AuctionItemController extends Controller
     public function edit(AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
+        $auctionItem->load('category.parent');
 
-        return view('auction_items.edit', compact('auctionItem'));
+        return view('auction_items.edit', [
+            'auctionItem' => $auctionItem,
+            'parentCategories' => $this->parentCategories(),
+        ]);
     }
 
     public function update(Request $request, AuctionItem $auctionItem)
@@ -306,6 +341,10 @@ class AuctionItemController extends Controller
             'sold_price' => ['nullable', 'integer', 'min:0'],
             'shipping_fee' => ['nullable', 'integer', 'min:0'],
             'sales_fee_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'category_id' => [
+                'nullable',
+                Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
+            ],
             'image' => ['nullable', 'image', 'max:10240'],
         ], [
             'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
@@ -328,6 +367,7 @@ class AuctionItemController extends Controller
         $auctionItem->title = $validated['title'];
         $auctionItem->comment = $validated['comment'] ?? null;
         $auctionItem->platform = $validated['platform'];
+        $auctionItem->category_id = $validated['category_id'] ?? null;
         $auctionItem->purchase_price = (int) ($validated['purchase_price'] ?? 0);
         $auctionItem->sold_price = (int) ($validated['sold_price'] ?? 0);
         $auctionItem->shipping_fee = (int) ($validated['shipping_fee'] ?? 0);
@@ -430,6 +470,31 @@ class AuctionItemController extends Controller
         if ($auctionItem->user_id !== Auth::id()) {
             abort(403);
         }
+    }
+
+    private function parentCategories()
+    {
+        return Category::query()
+            ->with('children')
+            ->whereNull('parent_id')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function resolveCsvCategoryId(mixed $parentName, mixed $childName): ?int
+    {
+        $parentName = trim((string) $parentName);
+        $childName = trim((string) $childName);
+
+        if ($parentName === '' || $childName === '') {
+            return null;
+        }
+
+        return Category::query()
+            ->where('name', $childName)
+            ->whereHas('parent', fn ($query) => $query->where('name', $parentName))
+            ->value('id');
     }
 
     private function defaultSalesFeeRate(string $platform): float
