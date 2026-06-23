@@ -8,8 +8,8 @@ return new class extends Migration
     public function up(): void
     {
         DB::table('users')
-            ->whereNull('email_verified_at')
-            ->update(['email_verified_at' => now()]);
+            ->whereNull('google_id')
+            ->update(['email_verified_at' => null]);
     }
 
     public function down(): void
