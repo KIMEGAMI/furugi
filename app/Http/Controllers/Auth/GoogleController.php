@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\InvalidStateException;
 
 class GoogleController extends Controller
 {
@@ -18,7 +19,16 @@ class GoogleController extends Controller
 
     public function callback(): RedirectResponse
     {
-        $googleUser = Socialite::driver('google')->user();
+        try {
+            $googleUser = Socialite::driver('google')->user();
+        } catch (InvalidStateException) {
+            return redirect()
+                ->route('login')
+                ->withErrors([
+                    'email' => 'Googleログインの有効期限が切れました。もう一度Googleログインをお試しください。',
+                ]);
+        }
+
         $googleId = (string) $googleUser->getId();
         $email = $googleUser->getEmail();
 
