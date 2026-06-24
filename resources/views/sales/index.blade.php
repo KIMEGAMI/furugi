@@ -261,25 +261,12 @@
                 </div>
             </div>
 
-            <div class="mt-8 grid gap-6 lg:grid-cols-2">
-                @include('sales.partials.category-sales-table', [
-                    'title' => '大ジャンル別 売上集計',
-                    'description' => '全期間のSOLD商品を大ジャンルごとに集計しています。',
-                    'rows' => $parentCategorySales,
-                ])
-
-                @include('sales.partials.category-sales-table', [
-                    'title' => '小ジャンル別 売上集計',
-                    'description' => '全期間のSOLD商品を大ジャンル / 小ジャンルごとに集計しています。',
-                    'rows' => $childCategorySales,
-                ])
-            </div>
-
             <div class="mt-8">
-                @include('sales.partials.category-sales-table', [
-                    'title' => $baseMonth->format('Y年n月').' 小ジャンル別 売上集計',
-                    'description' => '選択中の月にSOLDになった商品だけをジャンル別に集計しています。',
-                    'rows' => $selectedMonthCategorySales,
+                @include('sales.partials.ranking-table', [
+                    'title' => '出品先 売上ランキング',
+                    'description' => '全期間の売上が高い出品先上位10件です。',
+                    'labelHeading' => '出品先',
+                    'rows' => $platformRanking,
                 ])
             </div>
 

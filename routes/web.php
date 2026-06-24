@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuctionItemController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CategorySalesController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesController;
 use App\Models\AuctionItem;
@@ -116,6 +117,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/sales/csv', [SalesController::class, 'downloadCsv'])
         ->name('sales.csv');
+
+    Route::get('/category-sales', [CategorySalesController::class, 'index'])
+        ->name('category-sales.index');
 
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');

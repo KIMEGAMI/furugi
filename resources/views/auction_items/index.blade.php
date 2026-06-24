@@ -262,11 +262,11 @@
 
                             <div class="p-6">
                                 <div class="flex items-center justify-between gap-3">
-                                    <p class="text-xs font-black tracking-widest text-slate-800">
+                                    <p class="text-xs font-black tracking-widest text-slate-950">
                                         {{ $item->management_id }}
                                     </p>
 
-                                    <p class="text-sm font-bold text-slate-700">
+                                    <p class="text-sm font-bold text-slate-950">
                                         仕入れ ¥{{ number_format($purchasePrice) }}
                                     </p>
                                 </div>
@@ -275,42 +275,45 @@
     {{ $item->title }}
 </h3>
 
-                                <p class="mt-2 text-xs font-black text-slate-700">
+                                <p class="mt-2 text-xs font-black text-slate-950">
                                     ジャンル: {{ $categoryLabel }}
                                 </p>
 
-                                <p class="mt-3 text-sm leading-6 text-slate-700 line-clamp-3">
+                                <p
+                                    class="mt-3 text-sm font-medium leading-6 line-clamp-3"
+                                    style="color:#000000 !important;"
+                                >
                                     {{ $item->comment ?: 'コメントはありません。' }}
                                 </p>
 
                                 <div class="mt-5 rounded-2xl bg-white/85 border border-white p-4">
                                     <div class="grid grid-cols-2 gap-3 text-sm">
                                         <div>
-                                            <p class="text-xs font-black text-slate-600">売値</p>
-                                            <p class="mt-1 font-black text-slate-800">
+                                            <p class="text-xs font-black text-slate-900">売値</p>
+                                            <p class="mt-1 font-black text-slate-950">
                                                 ¥{{ number_format($soldPrice) }}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-slate-600">販売手数料</p>
-                                            <p class="mt-1 font-black text-slate-800">
+                                            <p class="text-xs font-black text-slate-900">販売手数料</p>
+                                            <p class="mt-1 font-black text-slate-950">
                                                 ¥{{ number_format($salesFee) }}
-                                                <span class="text-xs text-slate-600">
+                                                <span class="text-xs font-bold text-slate-800">
                                                     / {{ rtrim(rtrim(number_format($salesFeeRate, 2), '0'), '.') }}%
                                                 </span>
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-slate-600">送料</p>
-                                            <p class="mt-1 font-black text-slate-800">
+                                            <p class="text-xs font-black text-slate-900">送料</p>
+                                            <p class="mt-1 font-black text-slate-950">
                                                 ¥{{ number_format($shippingFee) }}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p class="text-xs font-black text-slate-600">実利益</p>
+                                            <p class="text-xs font-black text-slate-900">実利益</p>
                                             <p class="mt-1 font-black {{ $profit < 0 ? 'text-red-700' : 'text-green-700' }}">
                                                 ¥{{ number_format($profit) }}
                                             </p>
@@ -404,7 +407,7 @@
                         表示できる出品データがありません
                     </h3>
 
-                    <p class="mt-3 text-cyan-200 font-semibold">
+                    <p class="mt-3 text-slate-800 font-semibold">
                         条件を変更するか、新しい出品を登録してください。
                     </p>
 

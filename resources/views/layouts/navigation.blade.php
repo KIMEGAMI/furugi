@@ -28,6 +28,10 @@
                         売上管理
                     </x-nav-link>
 
+                    <x-nav-link :href="route('category-sales.index')" :active="request()->routeIs('category-sales.*')">
+                        ジャンル別売上
+                    </x-nav-link>
+
                     <x-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')">
                         プロファイル
                     </x-nav-link>
@@ -98,6 +102,10 @@
 
             <x-responsive-nav-link :href="route('sales.index')" :active="request()->routeIs('sales.*')">
                 売上管理
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('category-sales.index')" :active="request()->routeIs('category-sales.*')">
+                ジャンル別売上
             </x-responsive-nav-link>
 
             <x-responsive-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')">

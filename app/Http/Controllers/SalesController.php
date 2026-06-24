@@ -6,6 +6,7 @@ use App\Models\AuctionItem;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -103,10 +104,13 @@ class SalesController extends Controller
             ]);
         }
 
-        $platformNames = ['メルカリ', 'ヤフオク', 'ラクマ', 'PayPayフリマ', 'その他'];
+        $platformNames = collect(['メルカリ', 'ヤフオク', 'ラクマ', 'PayPayフリマ', 'その他'])
+            ->merge($soldItems->map(fn ($item) => $this->platformLabel($item)))
+            ->unique()
+            ->values();
 
         $platformSales = collect($platformNames)->map(function ($platform) use ($soldItems) {
-            $items = $soldItems->filter(fn ($item) => ($item->platform ?: 'その他') === $platform);
+            $items = $soldItems->filter(fn ($item) => $this->platformLabel($item) === $platform);
 
             return [
                 'platform' => $platform,
@@ -131,21 +135,17 @@ class SalesController extends Controller
 
         $platformChartLabels = $platformSales->pluck('platform')->values();
         $platformChartSales = $platformSales->pluck('sales')->values();
-        $parentCategorySales = $this->summarizeSalesGroups(
-            $soldItems->groupBy(fn ($item) => $item->category?->parent?->name ?? '未設定')
-        );
-        $childCategorySales = $this->summarizeSalesGroups(
-            $soldItems->groupBy(fn ($item) => $this->categoryLabel($item))
-        );
-        $selectedMonthItems = $soldItems->filter(function ($item) use ($baseMonth, $hasSoldAt) {
-            $date = $hasSoldAt && $item->sold_at
-                ? Carbon::parse($item->sold_at)
-                : Carbon::parse($item->updated_at);
-
-            return $date->format('Y-m') === $baseMonth->format('Y-m');
-        });
-        $selectedMonthCategorySales = $this->summarizeSalesGroups(
-            $selectedMonthItems->groupBy(fn ($item) => $this->categoryLabel($item))
+        $platformRanking = $this->addRankingAndShare(
+            $platformSales->map(fn ($row) => [
+                'label' => $row['platform'],
+                'count' => $row['count'],
+                'sales' => $row['sales'],
+                'purchase' => $row['purchase'],
+                'sales_fee' => $row['sales_fee'],
+                'shipping_fee' => $row['shipping_fee'],
+                'profit' => $row['profit'],
+            ]),
+            $totalSales
         );
 
         return view('sales.index', compact(
@@ -168,9 +168,7 @@ class SalesController extends Controller
             'monthlyChartProfit',
             'platformChartLabels',
             'platformChartSales',
-            'parentCategorySales',
-            'childCategorySales',
-            'selectedMonthCategorySales'
+            'platformRanking'
         ));
     }
 
@@ -269,40 +267,25 @@ class SalesController extends Controller
         return (int) round($soldPrice * ($salesFeeRate / 100));
     }
 
-    private function summarizeSalesGroups($groups)
+    private function addRankingAndShare(Collection $rows, int $totalSales): Collection
     {
-        return $groups
-            ->map(function ($items, $label) {
-                return [
-                    'label' => $label,
-                    'count' => $items->count(),
-                    'sales' => $items->sum(fn ($item) => (int) ($item->sold_price ?? 0)),
-                    'purchase' => $items->sum(fn ($item) => (int) ($item->purchase_price ?? 0)),
-                    'sales_fee' => $items->sum(function ($item) {
-                        return $this->calculateSalesFee(
-                            (int) ($item->sold_price ?? 0),
-                            (float) ($item->sales_fee_rate ?? 0),
-                            (int) ($item->sales_fee ?? 0)
-                        );
-                    }),
-                    'shipping_fee' => $items->sum(fn ($item) => (int) ($item->shipping_fee ?? 0)),
-                    'profit' => $items->sum(fn ($item) => $this->calculateItemProfit($item)),
-                ];
-            })
+        return $rows
             ->sortByDesc('sales')
-            ->values();
+            ->values()
+            ->map(function (array $row, int $index) use ($totalSales) {
+                $row['rank'] = $index + 1;
+                $row['share'] = $totalSales > 0
+                    ? round(($row['sales'] / $totalSales) * 100, 1)
+                    : 0.0;
+
+                return $row;
+            });
     }
 
-    private function categoryLabel(AuctionItem $item): string
+    private function platformLabel(AuctionItem $item): string
     {
-        if (! $item->category) {
-            return '未設定';
-        }
+        $platform = trim((string) $item->platform);
 
-        if (! $item->category->parent) {
-            return $item->category->name;
-        }
-
-        return $item->category->parent->name.' / '.$item->category->name;
+        return $platform !== '' ? $platform : '未設定';
     }
 }
