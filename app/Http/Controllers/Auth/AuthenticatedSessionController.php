@@ -8,10 +8,15 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
+    private const DEMO_EMAIL = 'user@shinji.work';
+
+    private const DEMO_PASSWORD = '12345678';
+
     public function create(): View
     {
         return view('auth.login');
@@ -23,17 +28,20 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $user = $request->user();
+        return $this->redirectAfterAuthentication($request);
+    }
 
-        if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
-            $user->sendEmailVerificationNotification();
-
-            return redirect()
-                ->route('verification.notice')
-                ->with('status', 'verification-link-sent');
+    public function demo(Request $request): RedirectResponse
+    {
+        if (! Auth::attempt(['email' => self::DEMO_EMAIL, 'password' => self::DEMO_PASSWORD])) {
+            throw ValidationException::withMessages([
+                'email' => 'デモユーザーにログインできませんでした。管理者にお問い合わせください。',
+            ]);
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $request->session()->regenerate();
+
+        return $this->redirectAfterAuthentication($request);
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -45,5 +53,20 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function redirectAfterAuthentication(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+
+            return redirect()
+                ->route('verification.notice')
+                ->with('status', 'verification-link-sent');
+        }
+
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 }

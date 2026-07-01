@@ -32,6 +32,19 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
+    public function test_users_can_authenticate_using_the_demo_login(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'user@shinji.work',
+            'password' => '12345678',
+        ]);
+
+        $response = $this->post(route('login.demo'));
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
     public function test_unverified_users_receive_a_verification_email_after_login(): void
     {
         Notification::fake();
