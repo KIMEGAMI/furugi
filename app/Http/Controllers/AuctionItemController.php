@@ -12,6 +12,10 @@ use Illuminate\Validation\Rule;
 
 class AuctionItemController extends Controller
 {
+    private const CSV_MAX_ROWS = 5000;
+
+    private const CSV_MAX_CELL_LENGTH = 1000;
+
     public function index(Request $request)
     {
         $status = $request->get('status');
@@ -85,7 +89,7 @@ class AuctionItemController extends Controller
             ],
             'title' => ['required', 'string', 'max:255'],
             'comment' => ['nullable', 'string'],
-            'platform' => ['required', 'string'],
+            'platform' => ['required', 'string', 'max:50'],
             'purchase_price' => ['nullable', 'integer', 'min:0'],
             'sold_price' => ['nullable', 'integer', 'min:0'],
             'shipping_fee' => ['nullable', 'integer', 'min:0'],
@@ -94,12 +98,12 @@ class AuctionItemController extends Controller
                 'nullable',
                 Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
             ],
-            'image' => ['nullable', 'image', 'max:10240'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ], [
             'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
         ]);
 
-        $platform = $validated['platform'];
+        $platform = $this->normalizePlatform($validated['platform']);
         $soldPrice = (int) ($validated['sold_price'] ?? 0);
         $purchasePrice = (int) ($validated['purchase_price'] ?? 0);
         $shippingFee = (int) ($validated['shipping_fee'] ?? 0);
@@ -171,6 +175,13 @@ class AuctionItemController extends Controller
         $csvText = preg_replace('/^\xEF\xBB\xBF/', '', $csvText);
 
         $handle = fopen('php://temp', 'r+');
+
+        if (! $handle) {
+            return redirect()
+                ->route('auction-items.index')
+                ->with('error', 'CSVファイルを処理できませんでした。');
+        }
+
         fwrite($handle, $csvText);
         rewind($handle);
 
@@ -206,12 +217,23 @@ class AuctionItemController extends Controller
         while (($row = fgetcsv($handle)) !== false) {
             $lineNumber++;
 
+            if ($lineNumber > self::CSV_MAX_ROWS + 1) {
+                fclose($handle);
+
+                return redirect()
+                    ->route('auction-items.index')
+                    ->with('error', 'CSVは最大'.number_format(self::CSV_MAX_ROWS).'行まで取り込めます。行数を分けて再実行してください。');
+            }
+
             if (count(array_filter($row, fn ($value) => trim((string) $value) !== '')) === 0) {
                 continue;
             }
 
             $row = array_pad($row, count($headers), null);
-            $data = array_combine($headers, array_slice($row, 0, count($headers)));
+            $data = array_combine($headers, array_map(
+                fn ($value) => $this->sanitizeCsvCell($value),
+                array_slice($row, 0, count($headers))
+            ));
 
             if (! $data) {
                 $skippedCount++;
@@ -243,6 +265,8 @@ class AuctionItemController extends Controller
             if (! in_array($platform, ['ヤフオク', 'メルカリ', 'ラクマ', 'PayPayフリマ', 'その他'], true)) {
                 $platform = 'その他';
             }
+
+            $platform = $this->normalizePlatform($platform);
 
             $purchasePrice = max(0, (int) ($data['purchase_price'] ?? 0));
             $soldPrice = max(0, (int) ($data['sold_price'] ?? 0));
@@ -336,7 +360,7 @@ class AuctionItemController extends Controller
             ],
             'title' => ['required', 'string', 'max:255'],
             'comment' => ['nullable', 'string'],
-            'platform' => ['required', 'string'],
+            'platform' => ['required', 'string', 'max:50'],
             'purchase_price' => ['nullable', 'integer', 'min:0'],
             'sold_price' => ['nullable', 'integer', 'min:0'],
             'shipping_fee' => ['nullable', 'integer', 'min:0'],
@@ -345,18 +369,18 @@ class AuctionItemController extends Controller
                 'nullable',
                 Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
             ],
-            'image' => ['nullable', 'image', 'max:10240'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ], [
             'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
         ]);
 
         if ($request->hasFile('image')) {
             if ($auctionItem->image_path) {
-                Storage::disk('public')->delete($auctionItem->image_path);
+                $this->deleteAuctionItemImage($auctionItem->image_path);
             }
 
             if ($auctionItem->sold_image_path) {
-                Storage::disk('public')->delete($auctionItem->sold_image_path);
+                $this->deleteAuctionItemImage($auctionItem->sold_image_path);
                 $auctionItem->sold_image_path = null;
             }
 
@@ -366,7 +390,7 @@ class AuctionItemController extends Controller
         $auctionItem->management_id = $validated['management_id'];
         $auctionItem->title = $validated['title'];
         $auctionItem->comment = $validated['comment'] ?? null;
-        $auctionItem->platform = $validated['platform'];
+        $auctionItem->platform = $this->normalizePlatform($validated['platform']);
         $auctionItem->category_id = $validated['category_id'] ?? null;
         $auctionItem->purchase_price = (int) ($validated['purchase_price'] ?? 0);
         $auctionItem->sold_price = (int) ($validated['sold_price'] ?? 0);
@@ -431,7 +455,7 @@ class AuctionItemController extends Controller
         $this->authorizeOwner($auctionItem);
 
         if ($auctionItem->sold_image_path) {
-            Storage::disk('public')->delete($auctionItem->sold_image_path);
+            $this->deleteAuctionItemImage($auctionItem->sold_image_path);
         }
 
         $auctionItem->status = 'selling';
@@ -451,11 +475,11 @@ class AuctionItemController extends Controller
         $this->authorizeOwner($auctionItem);
 
         if ($auctionItem->image_path) {
-            Storage::disk('public')->delete($auctionItem->image_path);
+            $this->deleteAuctionItemImage($auctionItem->image_path);
         }
 
         if ($auctionItem->sold_image_path) {
-            Storage::disk('public')->delete($auctionItem->sold_image_path);
+            $this->deleteAuctionItemImage($auctionItem->sold_image_path);
         }
 
         $auctionItem->delete();
@@ -495,6 +519,48 @@ class AuctionItemController extends Controller
             ->where('name', $childName)
             ->whereHas('parent', fn ($query) => $query->where('name', $parentName))
             ->value('id');
+    }
+
+    private function sanitizeCsvCell(mixed $value): string
+    {
+        $value = trim((string) $value);
+        $value = str_replace(["\0", "\r"], ['', "\n"], $value);
+        $value = preg_replace('/[ \t]+/', ' ', $value) ?? $value;
+
+        return mb_substr($value, 0, self::CSV_MAX_CELL_LENGTH);
+    }
+
+    private function normalizePlatform(mixed $platform): string
+    {
+        $platform = trim((string) $platform);
+        $platform = str_replace(["\0", "\r", "\n", "\t"], '', $platform);
+        $platform = mb_substr($platform, 0, 50);
+
+        if ($platform === '' || preg_match('/^[=+\-@]/', $platform) === 1) {
+            return 'その他';
+        }
+
+        return $platform;
+    }
+
+    private function deleteAuctionItemImage(?string $path): void
+    {
+        if ($this->isSafeAuctionItemImagePath($path)) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    private function isSafeAuctionItemImagePath(?string $path): bool
+    {
+        if (! is_string($path) || $path === '') {
+            return false;
+        }
+
+        $path = str_replace('\\', '/', $path);
+
+        return str_starts_with($path, 'auction-items/')
+            && ! str_contains($path, '..')
+            && preg_match('/\Aauction-items\/[A-Za-z0-9._-]+\.(?:jpg|jpeg|png|webp|gif)\z/i', $path) === 1;
     }
 
     private function defaultSalesFeeRate(string $platform): float
@@ -545,7 +611,11 @@ class AuctionItemController extends Controller
         }
 
         if ($oldSoldImagePath) {
-            Storage::disk('public')->delete($oldSoldImagePath);
+            $this->deleteAuctionItemImage($oldSoldImagePath);
+        }
+
+        if (! $this->isSafeAuctionItemImagePath($imagePath)) {
+            return null;
         }
 
         $fullPath = Storage::disk('public')->path($imagePath);
