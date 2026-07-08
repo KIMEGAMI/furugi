@@ -7,6 +7,44 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AuctionItem extends Model
 {
+    public const PLATFORM_YAHOO = 'ヤフオク';
+
+    public const PLATFORM_MERCARI = 'メルカリ';
+
+    public const PLATFORM_RAKUMA = 'ラクマ';
+
+    public const PLATFORM_PAYPAY = 'PayPayフリマ';
+
+    public const PLATFORM_OTHER = 'その他';
+
+    public const STATUS_SELLING = 'selling';
+
+    public const STATUS_SOLD = 'sold';
+
+    public const STATUS_DRAFT = 'draft';
+
+    public const PLATFORMS = [
+        self::PLATFORM_YAHOO,
+        self::PLATFORM_MERCARI,
+        self::PLATFORM_RAKUMA,
+        self::PLATFORM_PAYPAY,
+        self::PLATFORM_OTHER,
+    ];
+
+    public const SALES_FEE_RATES = [
+        self::PLATFORM_YAHOO => 10.0,
+        self::PLATFORM_MERCARI => 10.0,
+        self::PLATFORM_RAKUMA => 10.0,
+        self::PLATFORM_PAYPAY => 5.0,
+        self::PLATFORM_OTHER => 0.0,
+    ];
+
+    public const STATUSES = [
+        self::STATUS_SELLING,
+        self::STATUS_SOLD,
+        self::STATUS_DRAFT,
+    ];
+
     protected $fillable = [
         'user_id',
         'management_id',

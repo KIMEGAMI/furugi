@@ -15,172 +15,84 @@ class SalesController extends Controller
 {
     public function index(Request $request): View
     {
-        $userId = Auth::id();
+        $userId = (int) Auth::id();
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
-
-        $selectedMonth = $request->query('month');
-
-        if ($selectedMonth) {
-            try {
-                $baseMonth = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
-            } catch (\Throwable $e) {
-                $baseMonth = Carbon::now()->startOfMonth();
-            }
-        } else {
-            $baseMonth = Carbon::now()->startOfMonth();
-        }
-
+        $baseMonth = $this->baseMonth($request->query('month'));
         $periodStart = $baseMonth->copy()->subMonths(11)->startOfMonth();
         $periodEnd = $baseMonth->copy()->endOfMonth();
-
-        $previousMonth = $baseMonth->copy()->subMonth()->format('Y-m');
-        $nextMonth = $baseMonth->copy()->addMonth()->format('Y-m');
 
         $soldItems = AuctionItem::query()
             ->with(['category.parent'])
             ->where('user_id', $userId)
-            ->where('status', 'sold')
+            ->where('status', AuctionItem::STATUS_SOLD)
             ->get();
 
         $graphSoldItems = $soldItems->filter(function ($item) use ($periodStart, $periodEnd, $hasSoldAt) {
-            $date = $hasSoldAt && $item->sold_at
-                ? Carbon::parse($item->sold_at)
-                : Carbon::parse($item->updated_at);
-
-            return $date->betweenIncluded($periodStart, $periodEnd);
+            return $this->itemDate($item, $hasSoldAt)->betweenIncluded($periodStart, $periodEnd);
         });
-
-        $sellingCount = AuctionItem::query()
-            ->where('user_id', $userId)
-            ->where('status', 'selling')
-            ->count();
-
-        $soldCount = $soldItems->count();
-
-        $totalSales = $soldItems->sum(fn ($item) => (int) ($item->sold_price ?? 0));
-        $totalPurchase = $soldItems->sum(fn ($item) => (int) ($item->purchase_price ?? 0));
-
-        $totalProfit = $soldItems->sum(function ($item) {
-            return $this->calculateItemProfit($item);
-        });
-
-        $totalSalesFee = $soldItems->sum(function ($item) {
-            return $this->calculateSalesFee(
-                (int) ($item->sold_price ?? 0),
-                (float) ($item->sales_fee_rate ?? 0),
-                (int) ($item->sales_fee ?? 0)
-            );
-        });
-
-        $totalShippingFee = $soldItems->sum(fn ($item) => (int) ($item->shipping_fee ?? 0));
 
         $monthlySales = collect();
 
         for ($month = $periodStart->copy(); $month->lte($periodEnd); $month->addMonth()) {
             $monthKey = $month->format('Y-m');
+            $items = $graphSoldItems->filter(fn ($item) => $this->itemDate($item, $hasSoldAt)->format('Y-m') === $monthKey);
 
-            $items = $graphSoldItems->filter(function ($item) use ($monthKey, $hasSoldAt) {
-                $date = $hasSoldAt && $item->sold_at
-                    ? Carbon::parse($item->sold_at)
-                    : Carbon::parse($item->updated_at);
-
-                return $date->format('Y-m') === $monthKey;
-            });
-
-            $monthlySales->push([
-                'month' => $monthKey,
-                'count' => $items->count(),
-                'sales' => $items->sum(fn ($item) => (int) ($item->sold_price ?? 0)),
-                'purchase' => $items->sum(fn ($item) => (int) ($item->purchase_price ?? 0)),
-                'sales_fee' => $items->sum(function ($item) {
-                    return $this->calculateSalesFee(
-                        (int) ($item->sold_price ?? 0),
-                        (float) ($item->sales_fee_rate ?? 0),
-                        (int) ($item->sales_fee ?? 0)
-                    );
-                }),
-                'shipping_fee' => $items->sum(fn ($item) => (int) ($item->shipping_fee ?? 0)),
-                'profit' => $items->sum(fn ($item) => $this->calculateItemProfit($item)),
-            ]);
+            $monthlySales->push($this->salesRow($monthKey, $items));
         }
 
-        $platformNames = collect(['メルカリ', 'ヤフオク', 'ラクマ', 'PayPayフリマ', 'その他'])
+        $platformNames = collect(AuctionItem::PLATFORMS)
             ->merge($soldItems->map(fn ($item) => $this->platformLabel($item)))
             ->unique()
             ->values();
-
-        $platformSales = collect($platformNames)->map(function ($platform) use ($soldItems) {
+        $platformSales = $platformNames->map(function ($platform) use ($soldItems) {
             $items = $soldItems->filter(fn ($item) => $this->platformLabel($item) === $platform);
 
-            return [
-                'platform' => $platform,
-                'count' => $items->count(),
-                'sales' => $items->sum(fn ($item) => (int) ($item->sold_price ?? 0)),
-                'purchase' => $items->sum(fn ($item) => (int) ($item->purchase_price ?? 0)),
-                'sales_fee' => $items->sum(function ($item) {
-                    return $this->calculateSalesFee(
-                        (int) ($item->sold_price ?? 0),
-                        (float) ($item->sales_fee_rate ?? 0),
-                        (int) ($item->sales_fee ?? 0)
-                    );
-                }),
-                'shipping_fee' => $items->sum(fn ($item) => (int) ($item->shipping_fee ?? 0)),
-                'profit' => $items->sum(fn ($item) => $this->calculateItemProfit($item)),
-            ];
+            return $this->salesRow($platform, $items, 'platform');
         });
+        $totalSales = $soldItems->sum(fn ($item) => (int) ($item->sold_price ?? 0));
 
-        $monthlyChartLabels = $monthlySales->pluck('month')->values();
-        $monthlyChartSales = $monthlySales->pluck('sales')->values();
-        $monthlyChartProfit = $monthlySales->pluck('profit')->values();
-
-        $platformChartLabels = $platformSales->pluck('platform')->values();
-        $platformChartSales = $platformSales->pluck('sales')->values();
-        $platformRanking = $this->addRankingAndShare(
-            $platformSales->map(fn ($row) => [
-                'label' => $row['platform'],
-                'count' => $row['count'],
-                'sales' => $row['sales'],
-                'purchase' => $row['purchase'],
-                'sales_fee' => $row['sales_fee'],
-                'shipping_fee' => $row['shipping_fee'],
-                'profit' => $row['profit'],
-            ]),
-            $totalSales
-        );
-
-        return view('sales.index', compact(
-            'periodStart',
-            'periodEnd',
-            'baseMonth',
-            'previousMonth',
-            'nextMonth',
-            'totalSales',
-            'totalPurchase',
-            'totalProfit',
-            'totalSalesFee',
-            'totalShippingFee',
-            'soldCount',
-            'sellingCount',
-            'platformSales',
-            'monthlySales',
-            'monthlyChartLabels',
-            'monthlyChartSales',
-            'monthlyChartProfit',
-            'platformChartLabels',
-            'platformChartSales',
-            'platformRanking'
-        ));
+        return view('sales.index', [
+            'periodStart' => $periodStart,
+            'periodEnd' => $periodEnd,
+            'baseMonth' => $baseMonth,
+            'previousMonth' => $baseMonth->copy()->subMonth()->format('Y-m'),
+            'nextMonth' => $baseMonth->copy()->addMonth()->format('Y-m'),
+            'totalSales' => $totalSales,
+            'totalPurchase' => $soldItems->sum(fn ($item) => (int) ($item->purchase_price ?? 0)),
+            'totalProfit' => $soldItems->sum(fn ($item) => $this->calculateItemProfit($item)),
+            'totalSalesFee' => $soldItems->sum(fn ($item) => $this->calculateSalesFee($item)),
+            'totalShippingFee' => $soldItems->sum(fn ($item) => (int) ($item->shipping_fee ?? 0)),
+            'soldCount' => $soldItems->count(),
+            'sellingCount' => AuctionItem::query()->where('user_id', $userId)->where('status', AuctionItem::STATUS_SELLING)->count(),
+            'platformSales' => $platformSales,
+            'monthlySales' => $monthlySales,
+            'monthlyChartLabels' => $monthlySales->pluck('month')->values(),
+            'monthlyChartSales' => $monthlySales->pluck('sales')->values(),
+            'monthlyChartProfit' => $monthlySales->pluck('profit')->values(),
+            'platformChartLabels' => $platformSales->pluck('platform')->values(),
+            'platformChartSales' => $platformSales->pluck('sales')->values(),
+            'platformRanking' => $this->addRankingAndShare(
+                $platformSales->map(fn ($row) => [
+                    'label' => $row['platform'],
+                    'count' => $row['count'],
+                    'sales' => $row['sales'],
+                    'purchase' => $row['purchase'],
+                    'sales_fee' => $row['sales_fee'],
+                    'shipping_fee' => $row['shipping_fee'],
+                    'profit' => $row['profit'],
+                ]),
+                $totalSales
+            ),
+        ]);
     }
 
     public function downloadCsv(): Response
     {
-        $userId = Auth::id();
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
-
         $items = AuctionItem::query()
             ->with(['category.parent'])
-            ->where('user_id', $userId)
-            ->where('status', 'sold')
+            ->where('user_id', Auth::id())
+            ->where('status', AuctionItem::STATUS_SOLD)
             ->orderByDesc($hasSoldAt ? 'sold_at' : 'updated_at')
             ->get();
 
@@ -188,48 +100,65 @@ class SalesController extends Controller
         $csv .= "管理ID,タイトル,大ジャンル,小ジャンル,出品先,仕入れ値,売値,販売手数料率,販売手数料,送料,実利益,ステータス,SOLD日\n";
 
         foreach ($items as $item) {
-            $purchasePrice = (int) ($item->purchase_price ?? 0);
-            $soldPrice = (int) ($item->sold_price ?? 0);
+            $salesFee = $this->calculateSalesFee($item);
+            $soldDate = $this->itemDate($item, $hasSoldAt)->format('Y-m-d');
             $salesFeeRate = (float) ($item->sales_fee_rate ?? 0);
-            $salesFee = $this->calculateSalesFee(
-                $soldPrice,
-                $salesFeeRate,
-                (int) ($item->sales_fee ?? 0)
-            );
-            $shippingFee = (int) ($item->shipping_fee ?? 0);
-            $profit = $soldPrice - $purchasePrice - $salesFee - $shippingFee;
-
-            $soldDate = $hasSoldAt && $item->sold_at
-                ? Carbon::parse($item->sold_at)->format('Y-m-d')
-                : Carbon::parse($item->updated_at)->format('Y-m-d');
-
             $row = [
                 $item->management_id ?? '',
                 $item->title ?? '',
                 $item->category?->parent?->name ?? '',
                 $item->category?->name ?? '',
-                $item->platform ?? '未設定',
-                $purchasePrice,
-                $soldPrice,
+                $this->platformLabel($item),
+                (int) ($item->purchase_price ?? 0),
+                (int) ($item->sold_price ?? 0),
                 rtrim(rtrim(number_format($salesFeeRate, 2), '0'), '.').'%',
                 $salesFee,
-                $shippingFee,
-                $profit,
+                (int) ($item->shipping_fee ?? 0),
+                $this->calculateItemProfit($item),
                 'SOLD',
                 $soldDate,
             ];
 
-            $csv .= collect($row)
-                ->map(fn ($value) => $this->escapeCsvCell($value))
-                ->implode(',')."\n";
+            $csv .= collect($row)->map(fn ($value) => $this->escapeCsvCell($value))->implode(',')."\n";
         }
-
-        $filename = 'furugi_sales_'.now()->format('Ymd_His').'.csv';
 
         return response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => 'attachment; filename="furugi_sales_'.now()->format('Ymd_His').'.csv"',
         ]);
+    }
+
+    private function baseMonth(mixed $selectedMonth): Carbon
+    {
+        if (is_string($selectedMonth) && $selectedMonth !== '') {
+            try {
+                return Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+            } catch (\Throwable) {
+                return Carbon::now()->startOfMonth();
+            }
+        }
+
+        return Carbon::now()->startOfMonth();
+    }
+
+    private function salesRow(string $label, Collection $items, string $labelKey = 'month'): array
+    {
+        return [
+            $labelKey => $label,
+            'count' => $items->count(),
+            'sales' => $items->sum(fn ($item) => (int) ($item->sold_price ?? 0)),
+            'purchase' => $items->sum(fn ($item) => (int) ($item->purchase_price ?? 0)),
+            'sales_fee' => $items->sum(fn ($item) => $this->calculateSalesFee($item)),
+            'shipping_fee' => $items->sum(fn ($item) => (int) ($item->shipping_fee ?? 0)),
+            'profit' => $items->sum(fn ($item) => $this->calculateItemProfit($item)),
+        ];
+    }
+
+    private function itemDate(AuctionItem $item, bool $hasSoldAt): Carbon
+    {
+        return $hasSoldAt && $item->sold_at
+            ? Carbon::parse($item->sold_at)
+            : Carbon::parse($item->updated_at);
     }
 
     private function escapeCsvCell(mixed $value): string
@@ -245,26 +174,21 @@ class SalesController extends Controller
 
     private function calculateItemProfit(AuctionItem $item): int
     {
-        $soldPrice = (int) ($item->sold_price ?? 0);
-        $purchasePrice = (int) ($item->purchase_price ?? 0);
-        $salesFeeRate = (float) ($item->sales_fee_rate ?? 0);
-        $salesFee = $this->calculateSalesFee(
-            $soldPrice,
-            $salesFeeRate,
-            (int) ($item->sales_fee ?? 0)
-        );
-        $shippingFee = (int) ($item->shipping_fee ?? 0);
-
-        return $soldPrice - $purchasePrice - $salesFee - $shippingFee;
+        return (int) ($item->sold_price ?? 0)
+            - (int) ($item->purchase_price ?? 0)
+            - $this->calculateSalesFee($item)
+            - (int) ($item->shipping_fee ?? 0);
     }
 
-    private function calculateSalesFee(int $soldPrice, float $salesFeeRate, int $storedSalesFee): int
+    private function calculateSalesFee(AuctionItem $item): int
     {
+        $storedSalesFee = (int) ($item->sales_fee ?? 0);
+
         if ($storedSalesFee > 0) {
             return $storedSalesFee;
         }
 
-        return (int) round($soldPrice * ($salesFeeRate / 100));
+        return (int) round((int) ($item->sold_price ?? 0) * ((float) ($item->sales_fee_rate ?? 0) / 100));
     }
 
     private function addRankingAndShare(Collection $rows, int $totalSales): Collection
@@ -274,9 +198,7 @@ class SalesController extends Controller
             ->values()
             ->map(function (array $row, int $index) use ($totalSales) {
                 $row['rank'] = $index + 1;
-                $row['share'] = $totalSales > 0
-                    ? round(($row['sales'] / $totalSales) * 100, 1)
-                    : 0.0;
+                $row['share'] = $totalSales > 0 ? round(($row['sales'] / $totalSales) * 100, 1) : 0.0;
 
                 return $row;
             });

@@ -27,15 +27,16 @@ class AuctionItemController extends Controller
         $query = AuctionItem::with(['category.parent'])
             ->where('user_id', Auth::id());
 
-        if (in_array($status, ['selling', 'sold', 'draft'], true)) {
+        if (in_array($status, AuctionItem::STATUSES, true)) {
             $query->where('status', $status);
         }
 
-        if (in_array($platform, ['ヤフオク', 'メルカリ', 'ラクマ', 'PayPayフリマ', 'その他'], true)) {
+        if (in_array($platform, AuctionItem::PLATFORMS, true)) {
             $query->where('platform', $platform);
         }
 
-        if (! empty($keyword)) {
+        if (is_string($keyword) && trim($keyword) !== '') {
+            $keyword = trim($keyword);
             $query->where(function ($subQuery) use ($keyword) {
                 $subQuery->where('management_id', 'like', '%'.$keyword.'%')
                     ->orWhere('title', 'like', '%'.$keyword.'%')
@@ -53,20 +54,15 @@ class AuctionItemController extends Controller
             $query->whereIn('category_id', $childCategoryIds);
         }
 
-        $auctionItems = $query
-            ->latest()
-            ->paginate(12)
-            ->withQueryString();
-        $parentCategories = $this->parentCategories();
-
         return view('auction_items.index', [
-            'auctionItems' => $auctionItems,
+            'auctionItems' => $query->latest()->paginate(12)->withQueryString(),
             'status' => $status,
             'platform' => $platform,
             'keyword' => $keyword,
             'parentCategoryId' => $parentCategoryId,
             'categoryId' => $categoryId,
-            'parentCategories' => $parentCategories,
+            'parentCategories' => $this->parentCategories(),
+            'platforms' => AuctionItem::PLATFORMS,
         ]);
     }
 
@@ -74,48 +70,24 @@ class AuctionItemController extends Controller
     {
         return view('auction_items.create', [
             'parentCategories' => $this->parentCategories(),
+            'platforms' => AuctionItem::PLATFORMS,
+            'salesFeeRates' => AuctionItem::SALES_FEE_RATES,
         ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'management_id' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('auction_items', 'management_id')
-                    ->where(fn ($query) => $query->where('user_id', Auth::id())),
-            ],
-            'title' => ['required', 'string', 'max:255'],
-            'comment' => ['nullable', 'string'],
-            'platform' => ['required', 'string', 'max:50'],
-            'purchase_price' => ['nullable', 'integer', 'min:0'],
-            'sold_price' => ['nullable', 'integer', 'min:0'],
-            'shipping_fee' => ['nullable', 'integer', 'min:0'],
-            'sales_fee_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'category_id' => [
-                'nullable',
-                Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
-            ],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-        ], [
-            'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
-        ]);
-
+        $validated = $this->validateAuctionItem($request);
         $platform = $this->normalizePlatform($validated['platform']);
         $soldPrice = (int) ($validated['sold_price'] ?? 0);
         $purchasePrice = (int) ($validated['purchase_price'] ?? 0);
         $shippingFee = (int) ($validated['shipping_fee'] ?? 0);
         $salesFeeRate = (float) ($validated['sales_fee_rate'] ?? $this->defaultSalesFeeRate($platform));
         $salesFee = $this->calculateSalesFee($soldPrice, $salesFeeRate);
-        $profit = 0;
 
-        $imagePath = null;
-
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('auction-items', 'public');
-        }
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('auction-items', 'public')
+            : null;
 
         AuctionItem::create([
             'user_id' => Auth::id(),
@@ -131,9 +103,9 @@ class AuctionItemController extends Controller
             'sales_fee_rate' => $salesFeeRate,
             'sales_fee' => $salesFee,
             'shipping_fee' => $shippingFee,
-            'profit' => $profit,
+            'profit' => 0,
             'sold_at' => null,
-            'status' => 'selling',
+            'status' => AuctionItem::STATUS_SELLING,
         ]);
 
         return redirect()
@@ -153,17 +125,13 @@ class AuctionItemController extends Controller
         $filePath = $request->file('csv_file')->getRealPath();
 
         if (! $filePath || ! file_exists($filePath)) {
-            return redirect()
-                ->route('auction-items.index')
-                ->with('error', 'CSVファイルを読み込めませんでした。');
+            return $this->csvImportError('CSVファイルを読み込めませんでした。');
         }
 
         $csvText = file_get_contents($filePath);
 
         if ($csvText === false || trim($csvText) === '') {
-            return redirect()
-                ->route('auction-items.index')
-                ->with('error', 'CSVファイルが空です。');
+            return $this->csvImportError('CSVファイルが空です。');
         }
 
         $encoding = mb_detect_encoding($csvText, ['UTF-8', 'SJIS-win', 'SJIS', 'CP932', 'EUC-JP'], true);
@@ -173,13 +141,10 @@ class AuctionItemController extends Controller
         }
 
         $csvText = preg_replace('/^\xEF\xBB\xBF/', '', $csvText);
-
         $handle = fopen('php://temp', 'r+');
 
         if (! $handle) {
-            return redirect()
-                ->route('auction-items.index')
-                ->with('error', 'CSVファイルを処理できませんでした。');
+            return $this->csvImportError('CSVファイルを処理できませんでした。');
         }
 
         fwrite($handle, $csvText);
@@ -190,24 +155,16 @@ class AuctionItemController extends Controller
         if (! $headers) {
             fclose($handle);
 
-            return redirect()
-                ->route('auction-items.index')
-                ->with('error', 'CSVのヘッダー行を読み込めませんでした。');
+            return $this->csvImportError('CSVのヘッダー行を読み込めませんでした。');
         }
 
-        $headers = array_map(function ($header) {
-            return trim((string) $header);
-        }, $headers);
+        $headers = array_map(fn ($header) => trim((string) $header), $headers);
+        $missingHeaders = array_diff(['management_id', 'title'], $headers);
 
-        $requiredHeaders = ['management_id', 'title'];
-        $missingHeaders = array_diff($requiredHeaders, $headers);
-
-        if (! empty($missingHeaders)) {
+        if ($missingHeaders !== []) {
             fclose($handle);
 
-            return redirect()
-                ->route('auction-items.index')
-                ->with('error', 'CSVには management_id と title のヘッダーが必要です。');
+            return $this->csvImportError('CSVには management_id と title のヘッダーが必要です。');
         }
 
         $importedCount = 0;
@@ -220,9 +177,7 @@ class AuctionItemController extends Controller
             if ($lineNumber > self::CSV_MAX_ROWS + 1) {
                 fclose($handle);
 
-                return redirect()
-                    ->route('auction-items.index')
-                    ->with('error', 'CSVは最大'.number_format(self::CSV_MAX_ROWS).'行まで取り込めます。行数を分けて再実行してください。');
+                return $this->csvImportError('CSVは最大'.number_format(self::CSV_MAX_ROWS).'行まで取り込めます。行数を分けて再実行してください。');
             }
 
             if (count(array_filter($row, fn ($value) => trim((string) $value) !== '')) === 0) {
@@ -250,52 +205,24 @@ class AuctionItemController extends Controller
                 continue;
             }
 
-            if (
-                AuctionItem::where('user_id', Auth::id())
-                    ->where('management_id', $managementId)
-                    ->exists()
-            ) {
+            if (AuctionItem::where('user_id', Auth::id())->where('management_id', $managementId)->exists()) {
                 $skippedCount++;
 
                 continue;
             }
 
-            $platform = trim((string) ($data['platform'] ?? 'その他'));
-
-            if (! in_array($platform, ['ヤフオク', 'メルカリ', 'ラクマ', 'PayPayフリマ', 'その他'], true)) {
-                $platform = 'その他';
-            }
-
-            $platform = $this->normalizePlatform($platform);
-
+            $platform = $this->normalizePlatform($data['platform'] ?? AuctionItem::PLATFORM_OTHER);
             $purchasePrice = max(0, (int) ($data['purchase_price'] ?? 0));
             $soldPrice = max(0, (int) ($data['sold_price'] ?? 0));
             $shippingFee = max(0, (int) ($data['shipping_fee'] ?? 0));
             $salesFeeRate = isset($data['sales_fee_rate']) && $data['sales_fee_rate'] !== ''
                 ? max(0, min(100, (float) $data['sales_fee_rate']))
                 : $this->defaultSalesFeeRate($platform);
-
             $salesFee = $this->calculateSalesFee($soldPrice, $salesFeeRate);
-            $categoryId = $this->resolveCsvCategoryId(
-                $data['大ジャンル'] ?? $data['parent_category'] ?? null,
-                $data['小ジャンル'] ?? $data['category'] ?? null
-            );
-
-            $status = trim((string) ($data['status'] ?? 'selling'));
-
-            if (! in_array($status, ['selling', 'sold', 'draft'], true)) {
-                $status = 'selling';
-            }
-
-            $profit = $status === 'sold'
+            $status = $this->normalizeStatus($data['status'] ?? AuctionItem::STATUS_SELLING);
+            $profit = $status === AuctionItem::STATUS_SOLD
                 ? $this->calculateProfit($soldPrice, $purchasePrice, $salesFee, $shippingFee)
                 : 0;
-
-            $soldAt = null;
-
-            if ($status === 'sold') {
-                $soldAt = $this->parseCsvSoldAt($data['sold_at'] ?? null) ?? now();
-            }
 
             AuctionItem::create([
                 'user_id' => Auth::id(),
@@ -303,7 +230,10 @@ class AuctionItemController extends Controller
                 'title' => $title,
                 'comment' => trim((string) ($data['comment'] ?? '')) ?: null,
                 'platform' => $platform,
-                'category_id' => $categoryId,
+                'category_id' => $this->resolveCsvCategoryId(
+                    $data['大ジャンル'] ?? $data['parent_category'] ?? null,
+                    $data['小ジャンル'] ?? $data['category'] ?? null
+                ),
                 'image_path' => null,
                 'sold_image_path' => null,
                 'purchase_price' => $purchasePrice,
@@ -312,7 +242,9 @@ class AuctionItemController extends Controller
                 'sales_fee' => $salesFee,
                 'shipping_fee' => $shippingFee,
                 'profit' => $profit,
-                'sold_at' => $soldAt,
+                'sold_at' => $status === AuctionItem::STATUS_SOLD
+                    ? ($this->parseCsvSoldAt($data['sold_at'] ?? null) ?? now())
+                    : null,
                 'status' => $status,
             ]);
 
@@ -331,7 +263,9 @@ class AuctionItemController extends Controller
         $this->authorizeOwner($auctionItem);
         $auctionItem->load('category.parent');
 
-        return view('auction_items.show', compact('auctionItem'));
+        return view('auction_items.show', [
+            'auctionItem' => $auctionItem,
+        ]);
     }
 
     public function edit(AuctionItem $auctionItem)
@@ -342,49 +276,21 @@ class AuctionItemController extends Controller
         return view('auction_items.edit', [
             'auctionItem' => $auctionItem,
             'parentCategories' => $this->parentCategories(),
+            'platforms' => AuctionItem::PLATFORMS,
+            'salesFeeRates' => AuctionItem::SALES_FEE_RATES,
         ]);
     }
 
     public function update(Request $request, AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
-
-        $validated = $request->validate([
-            'management_id' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('auction_items', 'management_id')
-                    ->where(fn ($query) => $query->where('user_id', Auth::id()))
-                    ->ignore($auctionItem->id),
-            ],
-            'title' => ['required', 'string', 'max:255'],
-            'comment' => ['nullable', 'string'],
-            'platform' => ['required', 'string', 'max:50'],
-            'purchase_price' => ['nullable', 'integer', 'min:0'],
-            'sold_price' => ['nullable', 'integer', 'min:0'],
-            'shipping_fee' => ['nullable', 'integer', 'min:0'],
-            'sales_fee_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'category_id' => [
-                'nullable',
-                Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
-            ],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-        ], [
-            'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
-        ]);
+        $validated = $this->validateAuctionItem($request, $auctionItem);
 
         if ($request->hasFile('image')) {
-            if ($auctionItem->image_path) {
-                $this->deleteAuctionItemImage($auctionItem->image_path);
-            }
-
-            if ($auctionItem->sold_image_path) {
-                $this->deleteAuctionItemImage($auctionItem->sold_image_path);
-                $auctionItem->sold_image_path = null;
-            }
-
+            $this->deleteAuctionItemImage($auctionItem->image_path);
+            $this->deleteAuctionItemImage($auctionItem->sold_image_path);
             $auctionItem->image_path = $request->file('image')->store('auction-items', 'public');
+            $auctionItem->sold_image_path = null;
         }
 
         $auctionItem->management_id = $validated['management_id'];
@@ -398,20 +304,16 @@ class AuctionItemController extends Controller
         $auctionItem->sales_fee_rate = (float) ($validated['sales_fee_rate'] ?? $this->defaultSalesFeeRate($auctionItem->platform));
         $auctionItem->sales_fee = $this->calculateSalesFee($auctionItem->sold_price, $auctionItem->sales_fee_rate);
 
-        if ($auctionItem->status === 'sold') {
+        if ($auctionItem->status === AuctionItem::STATUS_SOLD) {
             $auctionItem->profit = $this->calculateProfit(
                 $auctionItem->sold_price,
                 $auctionItem->purchase_price,
                 $auctionItem->sales_fee,
                 $auctionItem->shipping_fee
             );
-
-            if ($auctionItem->image_path) {
-                $auctionItem->sold_image_path = $this->createSoldImage(
-                    $auctionItem->image_path,
-                    $auctionItem->sold_image_path
-                );
-            }
+            $auctionItem->sold_image_path = $auctionItem->image_path
+                ? $this->createSoldImage($auctionItem->image_path, $auctionItem->sold_image_path)
+                : null;
         }
 
         $auctionItem->save();
@@ -425,7 +327,7 @@ class AuctionItemController extends Controller
     {
         $this->authorizeOwner($auctionItem);
 
-        $auctionItem->status = 'sold';
+        $auctionItem->status = AuctionItem::STATUS_SOLD;
         $auctionItem->sales_fee_rate = (float) ($auctionItem->sales_fee_rate ?: $this->defaultSalesFeeRate($auctionItem->platform));
         $auctionItem->sales_fee = $this->calculateSalesFee((int) $auctionItem->sold_price, (float) $auctionItem->sales_fee_rate);
         $auctionItem->profit = $this->calculateProfit(
@@ -435,58 +337,78 @@ class AuctionItemController extends Controller
             (int) $auctionItem->shipping_fee
         );
         $auctionItem->sold_at = now();
-
-        if ($auctionItem->image_path) {
-            $auctionItem->sold_image_path = $this->createSoldImage(
-                $auctionItem->image_path,
-                $auctionItem->sold_image_path
-            );
-        }
-
+        $auctionItem->sold_image_path = $auctionItem->image_path
+            ? $this->createSoldImage($auctionItem->image_path, $auctionItem->sold_image_path)
+            : null;
         $auctionItem->save();
 
         return redirect()
             ->route('auction-items.index')
-            ->with('success', '商品をSOLD化しました。');
+            ->with('success', '商品をSOLDにしました。');
     }
 
     public function markAsSelling(AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
+        $this->deleteAuctionItemImage($auctionItem->sold_image_path);
 
-        if ($auctionItem->sold_image_path) {
-            $this->deleteAuctionItemImage($auctionItem->sold_image_path);
-        }
-
-        $auctionItem->status = 'selling';
+        $auctionItem->status = AuctionItem::STATUS_SELLING;
         $auctionItem->sold_at = null;
         $auctionItem->profit = 0;
         $auctionItem->sold_image_path = null;
-
         $auctionItem->save();
 
         return redirect()
             ->route('auction-items.index')
-            ->with('success', '商品を出品中へ戻しました。');
+            ->with('success', '商品を出品中に戻しました。');
     }
 
     public function destroy(AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
-
-        if ($auctionItem->image_path) {
-            $this->deleteAuctionItemImage($auctionItem->image_path);
-        }
-
-        if ($auctionItem->sold_image_path) {
-            $this->deleteAuctionItemImage($auctionItem->sold_image_path);
-        }
-
+        $this->deleteAuctionItemImage($auctionItem->image_path);
+        $this->deleteAuctionItemImage($auctionItem->sold_image_path);
         $auctionItem->delete();
 
         return redirect()
             ->route('auction-items.index')
             ->with('success', '商品を削除しました。');
+    }
+
+    private function validateAuctionItem(Request $request, ?AuctionItem $auctionItem = null): array
+    {
+        $uniqueRule = Rule::unique('auction_items', 'management_id')
+            ->where(fn ($query) => $query->where('user_id', Auth::id()));
+
+        if ($auctionItem) {
+            $uniqueRule->ignore($auctionItem->id);
+        }
+
+        return $request->validate([
+            'management_id' => ['required', 'string', 'max:255', $uniqueRule],
+            'title' => ['required', 'string', 'max:255'],
+            'comment' => ['nullable', 'string'],
+            'platform' => ['required', 'string', Rule::in(AuctionItem::PLATFORMS)],
+            'purchase_price' => ['nullable', 'integer', 'min:0'],
+            'sold_price' => ['nullable', 'integer', 'min:0'],
+            'shipping_fee' => ['nullable', 'integer', 'min:0'],
+            'sales_fee_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'category_id' => [
+                'nullable',
+                Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
+            ],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+        ], [
+            'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
+            'platform.in' => '出品先を選択してください。',
+        ]);
+    }
+
+    private function csvImportError(string $message)
+    {
+        return redirect()
+            ->route('auction-items.index')
+            ->with('error', $message);
     }
 
     private function authorizeOwner(AuctionItem $auctionItem): void
@@ -537,10 +459,21 @@ class AuctionItemController extends Controller
         $platform = mb_substr($platform, 0, 50);
 
         if ($platform === '' || preg_match('/^[=+\-@]/', $platform) === 1) {
-            return 'その他';
+            return AuctionItem::PLATFORM_OTHER;
         }
 
-        return $platform;
+        return in_array($platform, AuctionItem::PLATFORMS, true)
+            ? $platform
+            : AuctionItem::PLATFORM_OTHER;
+    }
+
+    private function normalizeStatus(mixed $status): string
+    {
+        $status = trim((string) $status);
+
+        return in_array($status, AuctionItem::STATUSES, true)
+            ? $status
+            : AuctionItem::STATUS_SELLING;
     }
 
     private function deleteAuctionItemImage(?string $path): void
@@ -565,13 +498,7 @@ class AuctionItemController extends Controller
 
     private function defaultSalesFeeRate(string $platform): float
     {
-        return match ($platform) {
-            'ヤフオク' => 10.0,
-            'メルカリ' => 10.0,
-            'ラクマ' => 10.0,
-            'PayPayフリマ' => 5.0,
-            default => 0.0,
-        };
+        return AuctionItem::SALES_FEE_RATES[$platform] ?? AuctionItem::SALES_FEE_RATES[AuctionItem::PLATFORM_OTHER];
     }
 
     private function calculateSalesFee(int $soldPrice, float $salesFeeRate): int
@@ -594,7 +521,7 @@ class AuctionItemController extends Controller
 
         try {
             return Carbon::parse($value);
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             return null;
         }
     }
@@ -625,7 +552,6 @@ class AuctionItemController extends Controller
         }
 
         $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
-
         $image = match ($extension) {
             'jpg', 'jpeg' => \imagecreatefromjpeg($fullPath),
             'png' => function_exists('imagecreatefrompng') ? \imagecreatefrompng($fullPath) : null,
@@ -648,17 +574,14 @@ class AuctionItemController extends Controller
         \imagefilledrectangle($image, 0, (int) ($height * 0.36), $width, (int) ($height * 0.64), $overlay);
 
         $white = \imagecolorallocate($image, 255, 255, 255);
-
         $fontPath = public_path('fonts/NotoSansJP-Bold.ttf');
 
         if (file_exists($fontPath) && function_exists('imagettfbbox') && function_exists('imagettftext')) {
             $fontSize = max(32, (int) ($width / 7));
             $text = 'SOLD';
-
             $box = \imagettfbbox($fontSize, -12, $fontPath, $text);
             $textWidth = abs($box[4] - $box[0]);
             $textHeight = abs($box[5] - $box[1]);
-
             $x = (int) (($width - $textWidth) / 2);
             $y = (int) (($height + $textHeight) / 2);
 
@@ -668,7 +591,6 @@ class AuctionItemController extends Controller
             $font = 5;
             $textWidth = \imagefontwidth($font) * strlen($text);
             $textHeight = \imagefontheight($font);
-
             $x = (int) (($width - $textWidth) / 2);
             $y = (int) (($height - $textHeight) / 2);
 
