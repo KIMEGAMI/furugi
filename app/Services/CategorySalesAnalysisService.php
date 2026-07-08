@@ -13,13 +13,11 @@ class CategorySalesAnalysisService
     {
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
         $selectedMonth = $this->parseMonth($filters['month'] ?? null);
-
         $allSoldItems = AuctionItem::query()
             ->with(['category.parent'])
             ->where('user_id', $userId)
-            ->where('status', 'sold')
+            ->where('status', AuctionItem::STATUS_SOLD)
             ->get();
-
         $soldItems = $selectedMonth
             ? $allSoldItems->filter(
                 fn ($item) => $this->itemDate($item, $hasSoldAt)->format('Y-m') === $selectedMonth->format('Y-m')
@@ -28,34 +26,26 @@ class CategorySalesAnalysisService
 
         $totalSales = $soldItems->sum(fn ($item) => (int) ($item->sold_price ?? 0));
         $totalProfit = $soldItems->sum(fn ($item) => $this->calculateItemProfit($item));
-        $parentCategorySales = $this->summarizeSalesGroups(
-            $soldItems->groupBy(fn ($item) => $this->parentCategoryLabel($item))
-        );
-        $childCategorySales = $this->summarizeSalesGroups(
-            $soldItems->groupBy(fn ($item) => $this->categoryLabel($item))
-        );
-        $platformNames = collect(['メルカリ', 'ヤフオク', 'ラクマ', 'PayPayフリマ', 'その他'])
+        $parentCategorySales = $this->summarizeSalesGroups($soldItems->groupBy(fn ($item) => $this->parentCategoryLabel($item)));
+        $childCategorySales = $this->summarizeSalesGroups($soldItems->groupBy(fn ($item) => $this->categoryLabel($item)));
+        $platformNames = collect(AuctionItem::PLATFORMS)
             ->merge($soldItems->map(fn ($item) => $this->platformLabel($item)))
             ->unique()
             ->values();
+
         return [
             'summary' => [
                 'sales' => $totalSales,
                 'profit' => $totalProfit,
                 'count' => $soldItems->count(),
-                'profit_rate' => $totalSales > 0
-                    ? round(($totalProfit / $totalSales) * 100, 1)
-                    : 0.0,
+                'profit_rate' => $totalSales > 0 ? round(($totalProfit / $totalSales) * 100, 1) : 0.0,
             ],
             'selectedMonth' => $selectedMonth,
             'parentCategorySales' => $parentCategorySales,
             'childCategorySales' => $childCategorySales,
             'parentCategoryRanking' => $this->addRankingAndShare($parentCategorySales, $totalSales),
             'childCategoryRanking' => $this->addRankingAndShare($childCategorySales, $totalSales),
-            'categoryPlatformCrossSales' => $this->buildCategoryPlatformCrossSales(
-                $soldItems,
-                $platformNames
-            ),
+            'categoryPlatformCrossSales' => $this->buildCategoryPlatformCrossSales($soldItems, $platformNames),
             'platformNames' => $platformNames,
             'chartLabels' => $parentCategorySales->pluck('label')->values(),
             'chartSalesData' => $parentCategorySales->pluck('sales')->values(),
@@ -109,25 +99,19 @@ class CategorySalesAnalysisService
             ->values()
             ->map(function (array $row, int $index) use ($totalSales) {
                 $row['rank'] = $index + 1;
-                $row['share'] = $totalSales > 0
-                    ? round(($row['sales'] / $totalSales) * 100, 1)
-                    : 0.0;
+                $row['share'] = $totalSales > 0 ? round(($row['sales'] / $totalSales) * 100, 1) : 0.0;
 
                 return $row;
             });
     }
 
-    private function buildCategoryPlatformCrossSales(
-        Collection $soldItems,
-        Collection $platformNames
-    ): Collection {
+    private function buildCategoryPlatformCrossSales(Collection $soldItems, Collection $platformNames): Collection
+    {
         return $soldItems
             ->groupBy(fn ($item) => $this->parentCategoryLabel($item))
             ->map(function (Collection $categoryItems, string $category) use ($platformNames) {
                 $platforms = $platformNames->mapWithKeys(function (string $platform) use ($categoryItems) {
-                    $items = $categoryItems->filter(
-                        fn ($item) => $this->platformLabel($item) === $platform
-                    );
+                    $items = $categoryItems->filter(fn ($item) => $this->platformLabel($item) === $platform);
 
                     return [
                         $platform => [
@@ -166,9 +150,7 @@ class CategorySalesAnalysisService
             return $storedSalesFee;
         }
 
-        return (int) round(
-            (int) ($item->sold_price ?? 0) * ((float) ($item->sales_fee_rate ?? 0) / 100)
-        );
+        return (int) round((int) ($item->sold_price ?? 0) * ((float) ($item->sales_fee_rate ?? 0) / 100));
     }
 
     private function categoryLabel(AuctionItem $item): string

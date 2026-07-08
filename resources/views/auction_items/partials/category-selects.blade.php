@@ -47,6 +47,7 @@
             name="{{ $categoryFieldName }}"
             class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
             data-selected-category="{{ $selectedCategoryId }}"
+            data-placeholder="{{ $categoryPlaceholder }}"
         >
             <option value="">{{ $categoryPlaceholder }}</option>
         </select>
@@ -90,7 +91,7 @@
 
                 const selectedGroup = groups.find((group) => String(group.id) === String(parentSelect.value));
                 categorySelect.innerHTML = '';
-                categorySelect.append(new Option(categorySelectId.includes('filter') ? 'すべて' : '小ジャンルを選択', ''));
+                categorySelect.append(new Option(categorySelect.dataset.placeholder || '小ジャンルを選択', ''));
 
                 for (const child of selectedGroup ? selectedGroup.children : []) {
                     const option = new Option(child.name, child.id);
