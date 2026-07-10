@@ -5,7 +5,7 @@
                 プロフィール設定
             </h2>
             <p class="mt-1 text-sm text-cyan-200">
-                アカウント情報、メールアドレス、パスワード、プランを管理します。
+                アカウント情報、メールアドレス、パスワード、プランを確認・変更できます。
             </p>
         </div>
     </x-slot>
@@ -26,13 +26,6 @@
             </div>
 
             <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow">
-                <div class="border-b border-slate-200 px-8 py-6">
-                    <h3 class="text-xl font-black text-slate-900">プラン管理</h3>
-                    <p class="mt-1 text-sm text-cyan-200">
-                        FreeプランとPremiumプランを管理できます。
-                    </p>
-                </div>
-
                 <div class="p-8">
                     @include('profile.partials.subscription-plan-form')
                 </div>
