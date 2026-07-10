@@ -5,7 +5,7 @@
                 プロフィール設定
             </h2>
             <p class="mt-1 text-sm text-cyan-200">
-                アカウント情報、メールアドレス、パスワード、プランを確認・変更できます。
+                アカウント情報、メールアドレス、パスワードを確認・変更できます。
             </p>
         </div>
     </x-slot>
@@ -22,12 +22,6 @@
 
                 <div class="p-8">
                     @include('profile.partials.update-profile-information-form')
-                </div>
-            </div>
-
-            <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow">
-                <div class="p-8">
-                    @include('profile.partials.subscription-plan-form')
                 </div>
             </div>
 

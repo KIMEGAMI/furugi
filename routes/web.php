@@ -6,7 +6,6 @@ use App\Http\Controllers\CategorySalesController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SalesController;
-use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('google.redirect');
@@ -49,11 +48,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 
-    Route::patch('/subscription', [SubscriptionController::class, 'update'])
-        ->name('subscription.update');
-
-    Route::delete('/subscription', [SubscriptionController::class, 'destroy'])
-        ->name('subscription.destroy');
 });
 
 require __DIR__.'/auth.php';
