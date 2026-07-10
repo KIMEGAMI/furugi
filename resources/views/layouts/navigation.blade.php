@@ -4,14 +4,11 @@
             <div class="flex">
                 <div class="flex shrink-0 items-center">
                     <a href="{{ route('dashboard') }}">
-                        <span class="text-xl font-black text-white">
-                            FURUGI
-                        </span>
+                        <span class="text-xl font-black text-white">FURUGI</span>
                     </a>
                 </div>
 
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         HOME
                     </x-nav-link>
@@ -33,9 +30,8 @@
                     </x-nav-link>
 
                     <x-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')">
-                        プロファイル
+                        プロフィール
                     </x-nav-link>
-
                 </div>
             </div>
 
@@ -87,7 +83,6 @@
 
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="space-y-1 pb-3 pt-2">
-
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 HOME
             </x-responsive-nav-link>
@@ -109,9 +104,8 @@
             </x-responsive-nav-link>
 
             <x-responsive-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')">
-                プロファイル
+                プロフィール
             </x-responsive-nav-link>
-
         </div>
 
         <div class="border-t border-cyan-300/20 pb-1 pt-4">

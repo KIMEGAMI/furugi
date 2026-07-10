@@ -60,7 +60,7 @@
         <div class="flex items-center gap-4">
             <button
                 type="submit"
-                class="rounded-xl bg-blue-700 px-6 py-3 text-sm font-bold text-white shadow hover:bg-blue-800 transition"
+                class="rounded-xl bg-blue-700 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-800"
             >
                 パスワードを変更する
             </button>

@@ -48,7 +48,7 @@
             @enderror
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-                <div class="mt-4 rounded-2xl bg-yellow-50 border border-yellow-200 p-4">
+                <div class="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
                     <p class="text-sm font-semibold text-yellow-800">
                         メールアドレスが未確認です。
                     </p>
@@ -72,7 +72,7 @@
         <div class="flex items-center gap-4">
             <button
                 type="submit"
-                class="rounded-xl bg-blue-700 px-6 py-3 text-sm font-bold text-white shadow hover:bg-blue-800 transition"
+                class="rounded-xl bg-blue-700 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-800"
             >
                 保存する
             </button>

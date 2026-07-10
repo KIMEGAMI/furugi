@@ -8,7 +8,7 @@
         type="button"
         x-data=""
         x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
-        class="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white shadow hover:bg-red-700 transition"
+        class="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-red-700"
     >
         アカウントを削除する
     </button>
@@ -50,14 +50,14 @@
                 <button
                     type="button"
                     x-on:click="$dispatch('close')"
-                    class="rounded-xl bg-slate-100 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200 transition"
+                    class="rounded-xl bg-slate-100 px-6 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200"
                 >
                     キャンセル
                 </button>
 
                 <button
                     type="submit"
-                    class="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white hover:bg-red-700 transition"
+                    class="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-red-700"
                 >
                     削除する
                 </button>
