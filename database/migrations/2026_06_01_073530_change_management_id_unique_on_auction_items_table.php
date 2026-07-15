@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         $indexes = collect(DB::select('SHOW INDEX FROM auction_items'));
 
         $singleManagementIndexes = $indexes
@@ -27,6 +31,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         $indexes = collect(DB::select('SHOW INDEX FROM auction_items'));
 
         if ($indexes->where('Key_name', 'auction_items_user_management_unique')->count()) {

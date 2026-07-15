@@ -1,10 +1,6 @@
 name: CI
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -52,11 +48,11 @@ jobs:
           cp .env.example .env
           php artisan key:generate --ansi
 
-      - name: Run PHP tests
-        run: composer test
-
       - name: Build frontend assets
         run: npm run build
+
+      - name: Run PHP tests
+        run: composer test
 
       - name: Audit PHP dependencies
         run: composer audit --locked --no-interaction
