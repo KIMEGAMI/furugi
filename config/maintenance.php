@@ -11,6 +11,7 @@ return [
         'manifest.webmanifest',
         'service-worker.js',
         'login',
+        'login/*',
         'login/demo',
         'logout',
         'admin/maintenance',

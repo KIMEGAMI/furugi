@@ -22,7 +22,7 @@ class MaintenanceMode
             return $next($request);
         }
 
-        if ($this->isExceptedPath($request) || $this->isAllowedIp($request) || $this->isAdmin($request)) {
+        if ($this->isLoginPath($request) || $this->isExceptedPath($request) || $this->isAllowedIp($request) || $this->isAdmin($request)) {
             return $next($request);
         }
 
@@ -46,6 +46,11 @@ class MaintenanceMode
         }
 
         return false;
+    }
+
+    private function isLoginPath(Request $request): bool
+    {
+        return $request->is('login') || $request->is('login/*');
     }
 
     private function isAllowedIp(Request $request): bool
