@@ -2,17 +2,19 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\MaintenanceModeService;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class MaintenanceMode
 {
     public function __construct(
         private readonly MaintenanceModeService $maintenanceMode
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -55,6 +57,25 @@ class MaintenanceMode
 
     private function isAdmin(Request $request): bool
     {
-        return $request->user()?->isAdmin() ?? false;
+        $user = $request->user() ?? Auth::guard('web')->user();
+
+        if ($user instanceof User) {
+            return $user->isAdmin();
+        }
+
+        try {
+            $userId = Auth::guard('web')->id();
+
+            if (! is_int($userId) && ! is_string($userId)) {
+                return false;
+            }
+
+            return User::query()
+                ->whereKey($userId)
+                ->where('is_admin', true)
+                ->exists();
+        } catch (Throwable) {
+            return false;
+        }
     }
 }
