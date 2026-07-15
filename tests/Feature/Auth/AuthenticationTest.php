@@ -45,6 +45,22 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
+    public function test_demo_login_marks_the_demo_user_as_premium(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'user@shinji.work',
+            'password' => '12345678',
+            'subscription_plan' => User::PLAN_FREE,
+            'subscription_status' => null,
+            'premium_started_at' => null,
+            'premium_ends_at' => null,
+        ]);
+
+        $this->post(route('login.demo'));
+
+        $this->assertTrue($user->fresh()->isPremium());
+    }
+
     public function test_unverified_users_receive_a_verification_email_after_login(): void
     {
         Notification::fake();

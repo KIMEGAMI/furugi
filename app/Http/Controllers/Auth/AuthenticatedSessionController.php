@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,8 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        $this->activateDemoPremium();
+
         $request->session()->regenerate();
 
         return $this->redirectAfterAuthentication($request);
@@ -68,5 +71,21 @@ class AuthenticatedSessionController extends Controller
         }
 
         return redirect()->intended(route('dashboard', absolute: false));
+    }
+
+    private function activateDemoPremium(): void
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $user->forceFill([
+            'subscription_plan' => User::PLAN_PREMIUM,
+            'subscription_status' => 'active',
+            'premium_started_at' => $user->premium_started_at ?? now(),
+            'premium_ends_at' => now()->addYears(10),
+        ])->save();
     }
 }
