@@ -6,7 +6,7 @@ The production environment assumed here is:
 
 - Ubuntu
 - Apache
-- PHP 8.3 or newer
+- PHP 8.4.1 or newer
 - Composer
 - Node.js / npm
 - MySQL or MariaDB
@@ -22,7 +22,7 @@ sudo apt install -y apache2 mysql-server git unzip
 sudo apt install -y php php-cli php-fpm php-mysql php-xml php-mbstring php-curl php-zip php-bcmath
 ```
 
-Install Composer and Node.js if they are not already available.
+Install Composer and Node.js if they are not already available. If your OS package repository provides PHP older than 8.4.1, install a supported PHP 8.4 package source before continuing.
 
 ```bash
 composer --version

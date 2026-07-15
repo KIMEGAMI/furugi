@@ -20,6 +20,7 @@ concurrency:
 env:
   DEPLOY_PATH: /var/www/furugi
   DEPLOY_PORT: '22'
+  MIN_PHP_VERSION: 8.4.1
 
 jobs:
   deploy:
@@ -64,13 +65,17 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH || env.DEPLOY_PATH }}
           DEPLOY_PORT: ${{ vars.DEPLOY_PORT || env.DEPLOY_PORT }}
+          MIN_PHP_VERSION: ${{ env.MIN_PHP_VERSION }}
         run: |
           printf -v DEPLOY_PATH_ARG '%q' "$DEPLOY_PATH"
-          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash -s -- $DEPLOY_PATH_ARG" <<'SCRIPT'
+          printf -v MIN_PHP_VERSION_ARG '%q' "$MIN_PHP_VERSION"
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash -s -- $DEPLOY_PATH_ARG $MIN_PHP_VERSION_ARG" <<'SCRIPT'
           set -euo pipefail
 
           DEPLOY_PATH="$1"
+          MIN_PHP_VERSION="$2"
           cd "$DEPLOY_PATH"
+          sudo -u www-data php -r "if (version_compare(PHP_VERSION, '$MIN_PHP_VERSION', '<')) { fwrite(STDERR, 'PHP $MIN_PHP_VERSION or newer is required. Current: '.PHP_VERSION.PHP_EOL); exit(1); }"
           sudo -u www-data git pull origin main
           sudo -u www-data composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
           sudo -u www-data npm ci --ignore-scripts

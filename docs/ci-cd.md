@@ -31,6 +31,8 @@ Optional repository or environment variables:
 - `DEPLOY_PATH`: Application directory on the server. Defaults to `/var/www/furugi`.
 - `DEPLOY_PORT`: SSH port. Defaults to `22`.
 
-The server must already have the production `.env` file, database, web server, Composer, Node.js, npm, and repository checkout prepared as described in `DEPLOY.md`.
+The server must already have the production `.env` file, database, web server, Composer, Node.js, npm, PHP 8.4.1 or newer, and repository checkout prepared as described in `DEPLOY.md`.
+
+The deployment workflow checks the server PHP version before installing Composer dependencies.
 
 The SSH deployment user must be allowed to run the deployment commands as `www-data` and reload Apache. Prefer a restricted passwordless sudo rule for only these commands.
