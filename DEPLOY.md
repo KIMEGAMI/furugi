@@ -103,6 +103,12 @@ Run migrations in production mode.
 sudo -u www-data php artisan migrate --force
 ```
 
+Create or update an admin user in the database. The command asks for the password with hidden input and stores only the hashed password.
+
+```bash
+sudo -u www-data php artisan admin:create admin@shinji.work
+```
+
 The demo login button expects this user to exist:
 
 - Email: `user@shinji.work`

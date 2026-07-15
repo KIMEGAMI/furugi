@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Console\Commands\CreateAdminUser;
 use App\Console\Commands\CreateDummySalesData;
 use App\Console\Commands\DeleteDummySalesData;
 use Illuminate\Console\Scheduling\Schedule;
@@ -15,6 +16,7 @@ class Kernel extends ConsoleKernel
      * @var array<int, class-string>
      */
     protected $commands = [
+        CreateAdminUser::class,
         CreateDummySalesData::class,
         DeleteDummySalesData::class,
     ];
