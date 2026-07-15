@@ -103,15 +103,35 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-black tracking-wider text-slate-600">商品画像</label>
-                        <input type="file" name="image" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                        <span class="block text-xs font-black tracking-wider text-slate-600">商品画像</span>
+                        <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label for="camera_image" class="block text-sm font-black text-slate-700">カメラで撮影</label>
+                                    <input id="camera_image" type="file" name="camera_image" accept="image/jpeg,image/png,image/webp" capture="environment" class="mt-2 block w-full cursor-pointer rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-700 file:px-4 file:py-2 file:text-sm file:font-black file:text-white">
+                                </div>
 
-                        @if($auctionItem->image_path)
-                            <div class="mt-5">
-                                <p class="mb-3 text-xs font-black tracking-wider text-slate-600">現在の画像</p>
-                                <img src="{{ asset('storage/' . $auctionItem->image_path) }}" alt="{{ $auctionItem->title }}" class="h-40 w-40 rounded-2xl border border-slate-200 object-cover shadow">
+                                <div>
+                                    <label for="image" class="block text-sm font-black text-slate-700">画像を選択</label>
+                                    <input id="image" type="file" name="image" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-black file:text-slate-700">
+                                </div>
                             </div>
-                        @endif
+                            <p class="mt-2 text-xs font-semibold text-slate-500">スマホでは「カメラで撮影」から背面カメラを起動できます。JPG / PNG / WEBP 対応。最大2MB。</p>
+
+                            <div id="image-preview-wrap" class="mt-4 hidden">
+                                <p class="mb-2 text-xs font-black tracking-wider text-slate-600">選択中の画像</p>
+                                <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                    <img id="image-preview" src="" alt="選択中の商品画像" class="h-72 w-full object-contain">
+                                </div>
+                            </div>
+
+                            @if($auctionItem->image_path)
+                                <div class="mt-5">
+                                    <p class="mb-3 text-xs font-black tracking-wider text-slate-600">現在の画像</p>
+                                    <img src="{{ asset('storage/' . $auctionItem->image_path) }}" alt="{{ $auctionItem->title }}" class="h-40 w-40 rounded-2xl border border-slate-200 object-cover shadow">
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     <div class="pt-2">
@@ -129,11 +149,49 @@
             const feeRates = @json($salesFeeRates);
             const platform = document.getElementById('platform');
             const salesFeeRate = document.getElementById('sales_fee_rate');
+            const imageInput = document.getElementById('image');
+            const cameraImageInput = document.getElementById('camera_image');
+            const imagePreviewWrap = document.getElementById('image-preview-wrap');
+            const imagePreview = document.getElementById('image-preview');
+            let previewUrl = null;
 
             platform?.addEventListener('change', function () {
                 if (Object.prototype.hasOwnProperty.call(feeRates, platform.value)) {
                     salesFeeRate.value = feeRates[platform.value];
                 }
+            });
+
+            function showImagePreview(file) {
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    previewUrl = null;
+                }
+
+                if (!file) {
+                    imagePreview.removeAttribute('src');
+                    imagePreviewWrap.classList.add('hidden');
+                    return;
+                }
+
+                previewUrl = URL.createObjectURL(file);
+                imagePreview.src = previewUrl;
+                imagePreviewWrap.classList.remove('hidden');
+            }
+
+            imageInput?.addEventListener('change', function () {
+                if (imageInput.files?.length) {
+                    cameraImageInput.value = '';
+                }
+
+                showImagePreview(imageInput.files?.[0]);
+            });
+
+            cameraImageInput?.addEventListener('change', function () {
+                if (cameraImageInput.files?.length) {
+                    imageInput.value = '';
+                }
+
+                showImagePreview(cameraImageInput.files?.[0]);
             });
         });
     </script>

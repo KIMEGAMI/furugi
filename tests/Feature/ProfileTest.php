@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuctionItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -77,6 +79,66 @@ class ProfileTest extends TestCase
 
         $this->assertGuest();
         $this->assertNull($user->fresh());
+    }
+
+    public function test_user_deletion_removes_their_auction_item_images(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        Storage::disk('public')->put('auction-items/item.jpg', 'item-image');
+        Storage::disk('public')->put('auction-items/item-sold.jpg', 'sold-image');
+        Storage::disk('public')->put('auction-items/other-user.jpg', 'other-user-image');
+
+        AuctionItem::create([
+            'user_id' => $user->id,
+            'management_id' => 'FRG-0001',
+            'title' => 'Test item',
+            'comment' => null,
+            'platform' => AuctionItem::PLATFORM_OTHER,
+            'image_path' => 'auction-items/item.jpg',
+            'sold_image_path' => 'auction-items/item-sold.jpg',
+            'status' => AuctionItem::STATUS_SOLD,
+            'purchase_price' => 100,
+            'sold_price' => 200,
+            'sales_fee_rate' => 10,
+            'sales_fee' => 20,
+            'shipping_fee' => 30,
+            'profit' => 50,
+            'sold_at' => now(),
+        ]);
+
+        AuctionItem::create([
+            'user_id' => $otherUser->id,
+            'management_id' => 'FRG-0002',
+            'title' => 'Other item',
+            'comment' => null,
+            'platform' => AuctionItem::PLATFORM_OTHER,
+            'image_path' => 'auction-items/other-user.jpg',
+            'sold_image_path' => null,
+            'status' => AuctionItem::STATUS_SELLING,
+            'purchase_price' => 100,
+            'sold_price' => 200,
+            'sales_fee_rate' => 10,
+            'sales_fee' => 20,
+            'shipping_fee' => 30,
+            'profit' => 0,
+            'sold_at' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->delete('/profile', [
+                'password' => 'password',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        Storage::disk('public')->assertMissing('auction-items/item.jpg');
+        Storage::disk('public')->assertMissing('auction-items/item-sold.jpg');
+        Storage::disk('public')->assertExists('auction-items/other-user.jpg');
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

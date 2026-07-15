@@ -16,6 +16,8 @@ class AuctionItemController extends Controller
 
     private const CSV_MAX_CELL_LENGTH = 1000;
 
+    private const IMAGE_MAX_KILOBYTES = 2048;
+
     public function index(Request $request)
     {
         $status = $request->get('status');
@@ -72,11 +74,20 @@ class AuctionItemController extends Controller
             'parentCategories' => $this->parentCategories(),
             'platforms' => AuctionItem::PLATFORMS,
             'salesFeeRates' => AuctionItem::SALES_FEE_RATES,
+            'itemCount' => $this->currentUserItemCount(),
+            'itemLimit' => $this->freeAuctionItemLimit(),
+            'isPremium' => Auth::user()?->isPremium() ?? false,
         ]);
     }
 
     public function store(Request $request)
     {
+        if ($this->hasReachedFreeItemLimit()) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', '無料プランの商品登録上限に達しました。Premiumにすると登録数の制限なく利用できます。');
+        }
+
         $validated = $this->validateAuctionItem($request);
         $platform = $this->normalizePlatform($validated['platform']);
         $soldPrice = (int) ($validated['sold_price'] ?? 0);
@@ -85,8 +96,9 @@ class AuctionItemController extends Controller
         $salesFeeRate = (float) ($validated['sales_fee_rate'] ?? $this->defaultSalesFeeRate($platform));
         $salesFee = $this->calculateSalesFee($soldPrice, $salesFeeRate);
 
-        $imagePath = $request->hasFile('image')
-            ? $request->file('image')->store('auction-items', 'public')
+        $imageFile = $this->auctionItemImageFile($request);
+        $imagePath = $imageFile
+            ? $imageFile->store('auction-items', 'public')
             : null;
 
         AuctionItem::create([
@@ -115,6 +127,12 @@ class AuctionItemController extends Controller
 
     public function importCsv(Request $request)
     {
+        if (! (Auth::user()?->isPremium() ?? false)) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'CSV取込はPremium限定機能です。');
+        }
+
         $request->validate([
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
         ], [
@@ -286,10 +304,12 @@ class AuctionItemController extends Controller
         $this->authorizeOwner($auctionItem);
         $validated = $this->validateAuctionItem($request, $auctionItem);
 
-        if ($request->hasFile('image')) {
+        $imageFile = $this->auctionItemImageFile($request);
+
+        if ($imageFile) {
             $this->deleteAuctionItemImage($auctionItem->image_path);
             $this->deleteAuctionItemImage($auctionItem->sold_image_path);
-            $auctionItem->image_path = $request->file('image')->store('auction-items', 'public');
+            $auctionItem->image_path = $imageFile->store('auction-items', 'public');
             $auctionItem->sold_image_path = null;
         }
 
@@ -397,11 +417,25 @@ class AuctionItemController extends Controller
                 'nullable',
                 Rule::exists('categories', 'id')->where(fn ($query) => $query->whereNotNull('parent_id')),
             ],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.self::IMAGE_MAX_KILOBYTES],
+            'camera_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.self::IMAGE_MAX_KILOBYTES],
         ], [
             'management_id.unique' => 'この管理IDは既に登録されています。別の管理IDを入力してください。',
             'platform.in' => '出品先を選択してください。',
         ]);
+    }
+
+    private function auctionItemImageFile(Request $request): ?\Illuminate\Http\UploadedFile
+    {
+        if ($request->hasFile('camera_image')) {
+            return $request->file('camera_image');
+        }
+
+        if ($request->hasFile('image')) {
+            return $request->file('image');
+        }
+
+        return null;
     }
 
     private function csvImportError(string $message)
@@ -416,6 +450,29 @@ class AuctionItemController extends Controller
         if ($auctionItem->user_id !== Auth::id()) {
             abort(403);
         }
+    }
+
+    private function hasReachedFreeItemLimit(): bool
+    {
+        $user = Auth::user();
+
+        if (! $user || $user->isPremium()) {
+            return false;
+        }
+
+        return $this->currentUserItemCount() >= $this->freeAuctionItemLimit();
+    }
+
+    private function currentUserItemCount(): int
+    {
+        return AuctionItem::query()
+            ->where('user_id', Auth::id())
+            ->count();
+    }
+
+    private function freeAuctionItemLimit(): int
+    {
+        return Auth::user()?->freeAuctionItemLimit() ?? 30;
     }
 
     private function parentCategories()

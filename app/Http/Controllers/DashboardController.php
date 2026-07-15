@@ -11,7 +11,9 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
+        $user = Auth::user();
         $userId = (int) Auth::id();
+        $isPremium = $user?->isPremium() ?? false;
         $now = now();
         $year = (int) $now->format('Y');
 
@@ -60,7 +62,9 @@ class DashboardController extends Controller
             'maxMonthlyProfit' => max(1, (int) $monthlyStats->max('profit')),
             'platformStats' => $this->platformStats($userId),
             'recentItems' => AuctionItem::where('user_id', $userId)->latest('updated_at')->take(6)->get(),
-            'premiumInsights' => [
+            'isPremium' => $isPremium,
+            'freeItemLimit' => $user?->freeAuctionItemLimit() ?? 30,
+            'premiumInsights' => $isPremium ? [
                 'current_month_sales' => (int) $currentMonthStats['sales'],
                 'current_month_profit' => (int) $currentMonthStats['profit'],
                 'current_month_count' => (int) $currentMonthStats['count'],
@@ -75,7 +79,7 @@ class DashboardController extends Controller
                 'stale_inventory_cost' => $staleInventoryCost,
                 'average_days_to_sell' => $averageDaysToSell,
                 'actions' => $this->insightActions($staleItems->count(), $profitMargin, (int) $currentMonthStats['sales'], $monthlySalesTarget, $monthlyTargetProgress),
-            ],
+            ] : [],
         ]);
     }
 

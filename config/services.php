@@ -19,6 +19,14 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'premium_price_id' => env('STRIPE_PREMIUM_PRICE_ID'),
+        'premium_amount' => (int) env('STRIPE_PREMIUM_AMOUNT', 480),
+        'premium_currency' => env('STRIPE_PREMIUM_CURRENCY', 'jpy'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

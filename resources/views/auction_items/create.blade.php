@@ -27,7 +27,46 @@
             <form action="{{ route('auction-items.store') }}" method="POST" enctype="multipart/form-data" class="rounded-3xl bg-white p-6 shadow-xl">
                 @csrf
 
+                @unless ($isPremium ?? false)
+                    <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm font-black text-amber-800">無料プラン: {{ number_format($itemCount ?? 0) }} / {{ number_format($itemLimit ?? 30) }} 件</p>
+                                <p class="mt-1 text-xs font-bold text-amber-700">Premiumにすると登録数、CSV取込、売上分析、ジャンル分析が解放されます。</p>
+                            </div>
+                            <a href="{{ route('subscriptions.index') }}" class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-white hover:bg-amber-600">
+                                Premiumを見る
+                            </a>
+                        </div>
+                    </div>
+                @endunless
+
                 <div class="grid grid-cols-1 gap-5">
+                    <div>
+                        <span class="block text-xs font-black tracking-wider text-slate-600">商品画像</span>
+                        <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label for="camera_image" class="block text-sm font-black text-slate-700">カメラで撮影</label>
+                                    <input id="camera_image" type="file" name="camera_image" accept="image/jpeg,image/png,image/webp" capture="environment" class="mt-2 block w-full cursor-pointer rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-700 file:px-4 file:py-2 file:text-sm file:font-black file:text-white">
+                                </div>
+
+                                <div>
+                                    <label for="image" class="block text-sm font-black text-slate-700">画像を選択</label>
+                                    <input id="image" type="file" name="image" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-black file:text-slate-700">
+                                </div>
+                            </div>
+                            <p class="mt-2 text-xs font-semibold text-slate-500">スマホでは「カメラで撮影」から背面カメラを起動できます。JPG / PNG / WEBP 対応。最大2MB。</p>
+
+                            <div id="image-preview-wrap" class="mt-4 hidden">
+                                <p class="mb-2 text-xs font-black tracking-wider text-slate-600">選択中の画像</p>
+                                <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                    <img id="image-preview" src="" alt="選択中の商品画像" class="h-72 w-full object-contain">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                         <div>
                             <label class="block text-xs font-black tracking-wider text-slate-600">管理ID</label>
@@ -99,14 +138,6 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-black tracking-wider text-slate-600">商品画像</label>
-                        <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <input type="file" name="image" accept="image/jpeg,image/png,image/webp" class="block w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-black file:text-blue-700">
-                            <p class="mt-2 text-xs font-semibold text-slate-500">JPG / PNG / WEBP 対応。最大10MB。</p>
-                        </div>
-                    </div>
-
                     <div class="pt-2">
                         <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-3 text-sm font-black text-white shadow transition hover:bg-blue-800">
                             登録する
@@ -122,11 +153,49 @@
             const feeRates = @json($salesFeeRates);
             const platform = document.getElementById('platform');
             const salesFeeRate = document.getElementById('sales_fee_rate');
+            const imageInput = document.getElementById('image');
+            const cameraImageInput = document.getElementById('camera_image');
+            const imagePreviewWrap = document.getElementById('image-preview-wrap');
+            const imagePreview = document.getElementById('image-preview');
+            let previewUrl = null;
 
             platform?.addEventListener('change', function () {
                 if (Object.prototype.hasOwnProperty.call(feeRates, platform.value)) {
                     salesFeeRate.value = feeRates[platform.value];
                 }
+            });
+
+            function showImagePreview(file) {
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    previewUrl = null;
+                }
+
+                if (!file) {
+                    imagePreview.removeAttribute('src');
+                    imagePreviewWrap.classList.add('hidden');
+                    return;
+                }
+
+                previewUrl = URL.createObjectURL(file);
+                imagePreview.src = previewUrl;
+                imagePreviewWrap.classList.remove('hidden');
+            }
+
+            imageInput?.addEventListener('change', function () {
+                if (imageInput.files?.length) {
+                    cameraImageInput.value = '';
+                }
+
+                showImagePreview(imageInput.files?.[0]);
+            });
+
+            cameraImageInput?.addEventListener('change', function () {
+                if (cameraImageInput.files?.length) {
+                    imageInput.value = '';
+                }
+
+                showImagePreview(cameraImageInput.files?.[0]);
             });
         });
     </script>

@@ -64,6 +64,7 @@ APP_NAME="古着管理システム"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://furugi.shinji.work
+APP_FORCE_HTTPS=true
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -73,6 +74,7 @@ DB_USERNAME=furugi_user
 DB_PASSWORD=your_secure_password
 
 SESSION_DRIVER=database
+SESSION_SECURE_COOKIE=true
 QUEUE_CONNECTION=database
 MAIL_MAILER=log
 ```
@@ -131,7 +133,7 @@ sudo chown -R www-data:www-data storage bootstrap/cache
 sudo chmod -R ug+rw storage bootstrap/cache
 ```
 
-## 7. Apache Configuration
+## 7. Apache Configuration and HTTPS
 
 Create an Apache site file.
 
@@ -144,6 +146,11 @@ Example:
 ```apache
 <VirtualHost *:80>
     ServerName furugi.shinji.work
+    Redirect permanent / https://furugi.shinji.work/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName furugi.shinji.work
     DocumentRoot /var/www/furugi/public
 
     <Directory /var/www/furugi/public>
@@ -153,19 +160,40 @@ Example:
 
     ErrorLog ${APACHE_LOG_DIR}/furugi_error.log
     CustomLog ${APACHE_LOG_DIR}/furugi_access.log combined
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/furugi.shinji.work/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/furugi.shinji.work/privkey.pem
 </VirtualHost>
 ```
 
-Enable the site and rewrite module.
+Enable the site, rewrite module, SSL module, and headers module.
 
 ```bash
-sudo a2enmod rewrite
+sudo a2enmod rewrite ssl headers
 sudo a2ensite furugi.conf
 sudo apache2ctl configtest
 sudo systemctl reload apache2
 ```
 
-Use Certbot or the hosting provider's SSL feature to enable HTTPS.
+If the server does not have a certificate yet, use Certbot before enabling the final SSL virtual host.
+
+```bash
+sudo apt install -y certbot python3-certbot-apache
+sudo certbot --apache -d furugi.shinji.work
+sudo certbot renew --dry-run
+```
+
+After HTTPS is enabled, verify these production values.
+
+```dotenv
+APP_URL=https://furugi.shinji.work
+APP_FORCE_HTTPS=true
+SESSION_SECURE_COOKIE=true
+GOOGLE_REDIRECT_URI=https://furugi.shinji.work/auth/google/callback
+```
+
+PWA installation requires HTTPS in normal production browsers. The login screen's app install button will only appear when the browser judges the site installable.
 
 ## 8. Optimize Laravel
 
@@ -212,3 +240,14 @@ sudo -u www-data php artisan view:cache
 sudo -u www-data php artisan queue:restart
 sudo systemctl reload apache2
 ```
+
+## 11. GitHub Actions CI/CD
+
+GitHub Actions workflows are defined in `.github/workflows`.
+
+- `CI` runs tests, builds Vite assets, and audits dependencies on pull requests and pushes to `main`.
+- `CD` deploys after `CI` succeeds on `main`, or when manually dispatched.
+
+Configure the required GitHub Secrets and optional Variables described in `docs/ci-cd.md`.
+
+The deployment user must be able to run the standard update commands above in `/var/www/furugi` as `www-data`. If sudo requires a password, configure restricted passwordless sudo rules for only the required deployment commands or reload Apache outside the workflow.

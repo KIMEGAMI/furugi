@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuctionItem;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
@@ -13,8 +14,14 @@ use Illuminate\View\View;
 
 class SalesController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
+        if (! (Auth::user()?->isPremium() ?? false)) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', '売上管理はPremium限定機能です。');
+        }
+
         $userId = (int) Auth::id();
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
         $baseMonth = $this->baseMonth($request->query('month'));
@@ -88,6 +95,10 @@ class SalesController extends Controller
 
     public function downloadCsv(): Response
     {
+        if (! (Auth::user()?->isPremium() ?? false)) {
+            abort(403);
+        }
+
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
         $items = AuctionItem::query()
             ->with(['category.parent'])

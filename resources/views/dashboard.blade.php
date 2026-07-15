@@ -26,6 +26,9 @@
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-3">
+                        @if (Auth::user()?->isAdmin())
+                            <a href="{{ route('admin.maintenance.index') }}" class="rounded-xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-amber-300">Admin</a>
+                        @endif
                         <a href="{{ route('auction-items.create') }}" class="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-emerald-300">商品を登録</a>
                         <a href="{{ route('auction-items.index') }}" class="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20">商品一覧</a>
                         <a href="{{ route('sales.index') }}" class="rounded-xl border border-red-300/30 bg-red-500/20 px-5 py-3 text-sm font-black text-red-100 hover:bg-red-500/30">売上管理</a>
@@ -33,6 +36,7 @@
                 </div>
             </section>
 
+            @if ($isPremium ?? false)
             <section class="mb-8 rounded-2xl border border-emerald-300/25 bg-slate-950/60 p-6 shadow-2xl backdrop-blur-md">
                 <div class="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -86,6 +90,22 @@
                     @endforeach
                 </div>
             </section>
+            @else
+            <section class="mb-8 rounded-2xl border border-amber-300/25 bg-slate-950/60 p-6 shadow-2xl backdrop-blur-md">
+                <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-amber-300">FREE PLAN</p>
+                        <h2 class="mt-1 text-2xl font-black">Premiumで売上分析を解放</h2>
+                        <p class="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-300">
+                            無料プランは商品登録{{ number_format($freeItemLimit ?? 30) }}件まで。Premiumなら登録無制限、CSV取込、売上管理、ジャンル別分析、Premium Insightsが使えます。
+                        </p>
+                    </div>
+                    <a href="{{ route('subscriptions.index') }}" class="inline-flex items-center justify-center rounded-xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-amber-300">
+                        月480円のPremiumを見る
+                    </a>
+                </div>
+            </section>
+            @endif
 
             <section class="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/55 p-5 shadow-xl backdrop-blur-md"><div class="text-sm font-bold text-slate-300">総商品数</div><div class="mt-3 text-3xl font-black">{{ number_format($displayTotalItems) }}</div></div>
@@ -142,6 +162,47 @@
                     <div class="rounded-2xl bg-white/10 p-8 text-sm font-bold text-cyan-300">最近更新した商品はありません。</div>
                 @endif
             </section>
+
+            <footer class="mt-8 rounded-2xl border border-cyan-300/20 bg-slate-950/70 p-6 text-slate-300 shadow-2xl backdrop-blur-md">
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
+                    <div>
+                        <h2 class="text-lg font-black text-white">FURUGI</h2>
+                        <p class="mt-3 text-sm font-semibold leading-6">
+                            古着販売の在庫、画像、売上、利益をまとめて管理するための運用ツールです。
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-black text-cyan-200">サービス</h3>
+                        <div class="mt-3 space-y-2 text-sm font-bold">
+                            <a href="{{ route('dashboard') }}" class="block hover:text-white">ダッシュボード</a>
+                            <a href="{{ route('auction-items.index') }}" class="block hover:text-white">商品管理</a>
+                            <a href="{{ route('subscriptions.index') }}" class="block hover:text-white">料金プラン</a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-black text-cyan-200">サポート</h3>
+                        <div class="mt-3 space-y-2 text-sm font-bold">
+                            <a href="{{ route('legal.faq') }}" class="block hover:text-white">よくある質問</a>
+                            <a href="{{ route('legal.contact') }}" class="block hover:text-white">お問い合わせ</a>
+                            <a href="{{ route('legal.commercial') }}" class="block hover:text-white">特定商取引法に基づく表記</a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-black text-cyan-200">ポリシー</h3>
+                        <div class="mt-3 space-y-2 text-sm font-bold">
+                            <a href="{{ route('legal.terms') }}" class="block hover:text-white">利用規約</a>
+                            <a href="{{ route('legal.privacy') }}" class="block hover:text-white">プライバシーポリシー</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 border-t border-white/10 pt-4 text-xs font-bold text-slate-400">
+                    &copy; 2026 FURUGI. All rights reserved.
+                </div>
+            </footer>
         </div>
     </div>
 
