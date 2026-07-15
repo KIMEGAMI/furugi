@@ -20,8 +20,8 @@
             </p>
 
             <div class="mt-7 flex justify-center">
-                <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:bg-cyan-200 focus:outline-none focus:ring-4 focus:ring-cyan-200/40">
-                    管理者ログイン
+                <a href="{{ route('maintenance.login') }}" class="inline-flex items-center justify-center rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:bg-cyan-200 focus:outline-none focus:ring-4 focus:ring-cyan-200/40">
+                    管理者ログインへ
                 </a>
             </div>
 

@@ -10,6 +10,7 @@ return [
         'up',
         'manifest.webmanifest',
         'service-worker.js',
+        'maintenance-login',
         'login',
         'login/*',
         'login/demo',
