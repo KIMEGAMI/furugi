@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\MaintenanceController;
 use App\Http\Controllers\AuctionItemController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Auth\MaintenanceLoginController;
 use App\Http\Controllers\CategorySalesController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
@@ -15,8 +16,6 @@ use App\Http\Controllers\SalesController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\SubscriptionController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('google.redirect');
@@ -42,14 +41,7 @@ Route::get('/features', [MarketingPageController::class, 'features'])->name('mar
 Route::get('/pricing', [MarketingPageController::class, 'pricing'])->name('marketing.pricing');
 Route::get('/use-cases', [MarketingPageController::class, 'useCases'])->name('marketing.use-cases');
 
-Route::get('/maintenance-login', function (Request $request) {
-    Auth::guard('web')->logout();
-
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-
-    return redirect()->route('login');
-})->name('maintenance.login');
+Route::get('/maintenance-login', MaintenanceLoginController::class)->name('maintenance.login');
 
 Route::get('/', HomeController::class)->name('home');
 
