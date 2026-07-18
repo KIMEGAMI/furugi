@@ -66,7 +66,7 @@
                                 <span class="rounded-full bg-blue-700 px-3 py-1 text-xs font-black text-white">月480円</span>
                             </div>
                             <p class="mt-2 text-xs font-bold leading-5 text-slate-700">
-                                商品登録数の上限拡張、CSV取込・出力、売上分析、ジャンル別分析が使えます。
+                                商品登録数の上限拡張、CSV取込・出力、売上分析、ジャンル別分析、運用診断レポートが使えます。
                             </p>
                         </div>
                     </section>

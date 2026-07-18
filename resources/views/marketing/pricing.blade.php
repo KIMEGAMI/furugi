@@ -1,6 +1,6 @@
 <x-marketing-layout
     title="料金プラン | FURUGI Free・Premium 月480円"
-    description="FURUGIの料金プラン。FreeプランとPremiumプランの違い、商品登録数、CSV、売上分析、ジャンル別分析の利用可否を確認できます。"
+    description="FURUGIの料金プラン。FreeプランとPremiumプランの違い、商品登録数、CSV、売上分析、ジャンル別分析、運用診断レポートの利用可否を確認できます。"
 >
     @php($premiumAmount = (int) config('services.stripe.premium_amount', 480))
 
@@ -33,6 +33,8 @@
                     <li>CSV取込・CSV出力</li>
                     <li>売上分析</li>
                     <li>ジャンル別分析</li>
+                    <li>運用診断レポート</li>
+                    <li>値下げ候補・低利益商品の自動抽出</li>
                 </ul>
             </article>
         </div>

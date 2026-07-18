@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\MarketingPageController;
+use App\Http\Controllers\PremiumReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaController;
 use App\Http\Controllers\SalesController;
@@ -96,6 +97,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/premium/success', [SubscriptionController::class, 'success'])
         ->name('subscriptions.success');
+
+    Route::get('/premium/report', [PremiumReportController::class, 'index'])
+        ->name('premium.report');
 
 });
 

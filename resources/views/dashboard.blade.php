@@ -29,6 +29,9 @@
                         @if (Auth::user()?->isAdmin())
                             <a href="{{ route('admin.maintenance.index') }}" class="rounded-xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-amber-300">Admin</a>
                         @endif
+                        @if ($isPremium ?? false)
+                            <a href="{{ route('premium.report') }}" class="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-200">運用診断</a>
+                        @endif
                         <a href="{{ route('auction-items.create') }}" class="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-emerald-300">商品を登録</a>
                         <a href="{{ route('auction-items.index') }}" class="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20">商品一覧</a>
                         <a href="{{ route('sales.index') }}" class="rounded-xl border border-red-300/30 bg-red-500/20 px-5 py-3 text-sm font-black text-red-100 hover:bg-red-500/30">売上管理</a>
@@ -97,7 +100,7 @@
                         <p class="text-sm font-bold text-amber-300">FREE PLAN</p>
                         <h2 class="mt-1 text-2xl font-black">Premiumで売上分析を解放</h2>
                         <p class="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-300">
-                            無料プランは商品登録{{ number_format($freeItemLimit ?? 30) }}件まで。Premiumなら登録無制限、CSV取込、売上管理、ジャンル別分析、Premium Insightsが使えます。
+                            無料プランは商品登録{{ number_format($freeItemLimit ?? 30) }}件まで。Premiumなら登録無制限、CSV取込、売上管理、ジャンル別分析、Premium Insights、運用診断レポートが使えます。
                         </p>
                     </div>
                     <a href="{{ route('subscriptions.index') }}" class="inline-flex items-center justify-center rounded-xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-amber-300">

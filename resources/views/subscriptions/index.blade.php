@@ -13,7 +13,7 @@
                         <p class="text-sm font-black text-blue-700">FURUGI PREMIUM</p>
                         <h1 class="mt-2 text-3xl font-black text-slate-900 md:text-4xl">月{{ number_format($price) }}円で本格運用へ</h1>
                         <p class="mt-4 max-w-2xl text-sm font-bold leading-7 text-slate-600">
-                            無料プランは小さく試すためのプランです。Premiumでは、商品登録数、CSV取込、売上分析、ジャンル分析、改善提案を解放します。
+                            無料プランは小さく試すためのプランです。Premiumでは、商品登録数、CSV取込、売上分析、ジャンル分析、改善提案、運用診断レポートを解放します。
                         </p>
                     </div>
 
@@ -51,6 +51,8 @@
                             <li>売上管理とCSV出力</li>
                             <li>ジャンル別売上分析</li>
                             <li>Premium Insights</li>
+                            <li>運用診断レポート</li>
+                            <li>値下げ候補・低利益商品の自動抽出</li>
                         </ul>
 
                         @if ($isPremium)
@@ -75,10 +77,10 @@
                 </div>
 
                 <div class="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-                    <h2 class="text-lg font-black text-amber-900">480円で劣らないために必要な見せ方</h2>
+                    <h2 class="text-lg font-black text-amber-900">980円級の運用品質を目指すための機能</h2>
                     <p class="mt-3 text-sm font-bold leading-7 text-amber-800">
-                        競合の在庫・売上管理ツールと比べると、価格だけでなく「登録制限」「分析」「CSV」「改善提案」が明確に見えることが重要です。
-                        この画面ではFreeとPremiumの差を一目で比較できるようにしています。
+                        単なる商品台帳ではなく、在庫の滞留、値下げ候補、低利益商品の見直し、出品先別の成果まで確認できます。
+                        毎週の改善作業に使えるレポートをPremiumに追加し、月額以上の判断材料を出せる構成にしています。
                     </p>
                 </div>
             </section>
