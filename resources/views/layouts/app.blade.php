@@ -65,12 +65,12 @@
         .furugi-app-shell main .text-cyan-100,
         .furugi-app-shell main .text-slate-600,
         .furugi-app-shell main .text-cyan-200 {
-            color: #cbd5e1 !important;
+            color: #d8fffb !important;
         }
 
         .furugi-app-shell main .text-cyan-200,
         .furugi-app-shell main .text-cyan-200 {
-            color: #94a3b8 !important;
+            color: #7ffaf4 !important;
         }
 
         .furugi-app-shell input,

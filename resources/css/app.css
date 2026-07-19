@@ -1,3 +1,110 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    --furugi-tiffany: #0abab5;
+    --furugi-tiffany-dark: #063b3a;
+    --furugi-tiffany-deep: #075f5c;
+    --furugi-tiffany-soft: #d8fffb;
+    --furugi-ink: #082f2e;
+}
+
+body {
+    color: var(--furugi-ink);
+}
+
+.bg-blue-600,
+.bg-blue-700,
+.bg-blue-800,
+.bg-cyan-300,
+.bg-cyan-400,
+.bg-emerald-400 {
+    background-color: var(--furugi-tiffany) !important;
+}
+
+.hover\:bg-blue-800:hover,
+.hover\:bg-blue-700:hover,
+.hover\:bg-cyan-200:hover,
+.hover\:bg-cyan-300:hover,
+.hover\:bg-emerald-300:hover {
+    background-color: var(--furugi-tiffany-deep) !important;
+}
+
+.border-blue-200,
+.border-blue-300,
+.border-blue-500,
+.border-cyan-200,
+.border-cyan-300,
+.border-cyan-500,
+.border-emerald-300 {
+    border-color: #86e7e4 !important;
+}
+
+.text-blue-400,
+.text-blue-500,
+.text-blue-600,
+.text-blue-700,
+.text-blue-800,
+.text-blue-900,
+.text-cyan-200,
+.text-cyan-300,
+.text-cyan-700,
+.text-emerald-100,
+.text-emerald-200,
+.text-emerald-300 {
+    color: var(--furugi-tiffany-deep) !important;
+}
+
+.bg-slate-950 .text-blue-400,
+.bg-slate-950 .text-cyan-200,
+.bg-slate-950 .text-cyan-300,
+.bg-slate-950 .text-emerald-100,
+.bg-slate-950 .text-emerald-200,
+.bg-slate-950 .text-emerald-300,
+.furugi-app-shell .text-blue-400,
+.furugi-app-shell .text-cyan-200,
+.furugi-app-shell .text-cyan-300,
+.furugi-app-shell .text-emerald-100,
+.furugi-app-shell .text-emerald-200,
+.furugi-app-shell .text-emerald-300 {
+    color: var(--furugi-tiffany-soft) !important;
+}
+
+.bg-blue-50,
+.bg-cyan-50,
+.bg-emerald-50 {
+    background-color: #e9fffc !important;
+}
+
+.text-white {
+    color: #ffffff !important;
+}
+
+.text-slate-500,
+.text-slate-600,
+.text-slate-700,
+.text-gray-500,
+.text-gray-600,
+.text-gray-700 {
+    color: #315c5a !important;
+}
+
+.furugi-app-shell .text-slate-300,
+.furugi-app-shell .text-slate-400,
+.furugi-app-shell .text-slate-500,
+.furugi-app-shell .text-slate-600,
+.furugi-app-shell .text-slate-700,
+.furugi-app-shell .text-gray-500,
+.furugi-app-shell .text-gray-600,
+.furugi-app-shell .text-gray-700 {
+    color: #d8fffb !important;
+}
+
+.focus\:border-blue-500:focus,
+.focus\:border-cyan-500:focus,
+.focus\:ring-blue-500:focus,
+.focus\:ring-cyan-500:focus {
+    border-color: var(--furugi-tiffany) !important;
+    --tw-ring-color: #86e7e4 !important;
+}

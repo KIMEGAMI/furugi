@@ -236,6 +236,7 @@ For normal deployments after code is pushed to GitHub:
 cd /var/www/furugi
 sudo -u www-data git pull origin main
 sudo -u www-data composer install --no-dev --optimize-autoloader
+sudo -u www-data rm -f public/hot
 sudo -u www-data npm ci
 sudo -u www-data npm run build
 sudo -u www-data php artisan migrate --force
@@ -245,6 +246,19 @@ sudo -u www-data php artisan route:cache
 sudo -u www-data php artisan view:cache
 sudo -u www-data php artisan queue:restart
 sudo systemctl reload apache2
+```
+
+If the login page or layout looks broken after pulling code, rebuild frontend assets and clear Laravel caches. The `public/build` directory is not committed to Git, so `git pull` alone does not update CSS or JavaScript assets.
+Also make sure `public/hot` does not exist on the production server. That file is only for local Vite development; if it remains in production, Laravel will try to load assets from the local Vite dev server instead of `/public/build`.
+
+```bash
+sudo -u www-data rm -f public/hot
+sudo -u www-data npm ci
+sudo -u www-data npm run build
+sudo -u www-data php artisan optimize:clear
+sudo -u www-data php artisan view:cache
+sudo -u www-data php artisan route:cache
+sudo -u www-data php artisan config:cache
 ```
 
 ## 11. GitHub Actions CI/CD
