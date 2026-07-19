@@ -34,10 +34,15 @@
                 <form action="{{ route('auction-items.import') }}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
                     @csrf
                     <div class="lg:col-span-8">
-                        <label for="csv_file" class="block text-sm font-black text-slate-700">CSVインポート</label>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <label for="csv_file" class="block text-sm font-black text-slate-700">CSVインポート</label>
+                            <button type="button" onclick="document.getElementById('csvImportHelp').showModal()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100">
+                                入力CSVの項目説明
+                            </button>
+                        </div>
                         <input id="csv_file" type="file" name="csv_file" accept=".csv,.txt" class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
                         <p class="mt-2 text-xs font-semibold text-slate-500">
-                            ヘッダー例: management_id,title,comment,platform,大ジャンル,小ジャンル,purchase_price,sold_price,shipping_fee,sales_fee_rate,status
+                            1行目はヘッダ行です。最低限、management_id と title の列が必要です。
                         </p>
                     </div>
                     <div class="lg:col-span-4">
@@ -47,6 +52,50 @@
                     </div>
                 </form>
             </div>
+
+            <dialog id="csvImportHelp" class="w-11/12 max-w-4xl rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/70">
+                <div class="max-h-[85vh] overflow-y-auto bg-white p-6 text-slate-800">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-black text-slate-950">入力CSVの項目説明</h3>
+                            <p class="mt-2 text-sm font-bold leading-6 text-slate-600">
+                                CSVの1行目はヘッダ行として扱います。列の順番は自由ですが、ヘッダ名は下記の名前にしてください。必須は management_id と title です。
+                            </p>
+                        </div>
+                        <button type="button" onclick="document.getElementById('csvImportHelp').close()" class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-black text-slate-700 hover:bg-slate-200">閉じる</button>
+                    </div>
+
+                    <div class="mt-5 overflow-x-auto">
+                        <table class="min-w-full border-collapse text-left text-sm">
+                            <thead class="bg-slate-100 text-xs font-black text-slate-700">
+                                <tr>
+                                    <th class="border border-slate-200 px-3 py-2">CSVヘッダ名</th>
+                                    <th class="border border-slate-200 px-3 py-2">対応する画面項目</th>
+                                    <th class="border border-slate-200 px-3 py-2">説明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">management_id</td><td class="border border-slate-200 px-3 py-2">管理ID</td><td class="border border-slate-200 px-3 py-2">必須。同じユーザー内で重複できません。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">title</td><td class="border border-slate-200 px-3 py-2">商品タイトル</td><td class="border border-slate-200 px-3 py-2">必須。商品一覧や詳細画面に表示されます。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">comment</td><td class="border border-slate-200 px-3 py-2">コメント</td><td class="border border-slate-200 px-3 py-2">任意。商品の説明やメモとして保存します。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">platform</td><td class="border border-slate-200 px-3 py-2">出品先</td><td class="border border-slate-200 px-3 py-2">ヤフオク、メルカリ、ラクマ、PayPayフリマ、その他など。未対応の値はその他になります。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">大ジャンル</td><td class="border border-slate-200 px-3 py-2">大ジャンル</td><td class="border border-slate-200 px-3 py-2">登録済みジャンル名と一致した場合、小ジャンルと組み合わせて反映します。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">小ジャンル</td><td class="border border-slate-200 px-3 py-2">小ジャンル</td><td class="border border-slate-200 px-3 py-2">大ジャンル配下の小ジャンル名です。一致しない場合は未設定になります。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">purchase_price</td><td class="border border-slate-200 px-3 py-2">仕入れ値</td><td class="border border-slate-200 px-3 py-2">半角数字で入力します。空欄は0円扱いです。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">sold_price</td><td class="border border-slate-200 px-3 py-2">売値</td><td class="border border-slate-200 px-3 py-2">販売予定額または販売額です。半角数字で入力します。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">shipping_fee</td><td class="border border-slate-200 px-3 py-2">送料</td><td class="border border-slate-200 px-3 py-2">半角数字で入力します。利益計算に使います。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">sales_fee_rate</td><td class="border border-slate-200 px-3 py-2">販売手数料率</td><td class="border border-slate-200 px-3 py-2">10、5.5 など%を除いた数値で入力します。空欄なら出品先ごとの標準率を使います。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">status</td><td class="border border-slate-200 px-3 py-2">ステータス</td><td class="border border-slate-200 px-3 py-2">selling、sold、draft のいずれかです。空欄や不明な値は selling になります。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">sold_at</td><td class="border border-slate-200 px-3 py-2">SOLD日</td><td class="border border-slate-200 px-3 py-2">status が sold の場合に使います。例: 2026-07-19。</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-5 rounded-xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-700">
+                        ヘッダ例: management_id,title,comment,platform,大ジャンル,小ジャンル,purchase_price,sold_price,shipping_fee,sales_fee_rate,status,sold_at
+                    </div>
+                </div>
+            </dialog>
 
             <div class="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow">
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">

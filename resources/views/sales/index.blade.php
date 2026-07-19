@@ -20,11 +20,57 @@
                         <h3 class="mt-3 text-xl font-black text-white">売上データをCSVで出力</h3>
                         <p class="mt-2 text-sm font-medium text-slate-300">SOLD商品の管理ID・タイトル・出品先・仕入れ値・売上・手数料・送料・実利益・SOLD日をExcelで確認できます。</p>
                     </div>
-                    <a href="{{ route('sales.csv') }}" class="inline-flex items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-500/25 px-6 py-4 text-base font-black text-white shadow-lg hover:bg-cyan-400/30">
-                        CSVダウンロード
-                    </a>
+                    <div class="flex flex-col gap-3 sm:flex-row">
+                        <button type="button" onclick="document.getElementById('csvExportHelp').showModal()" class="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-4 text-base font-black text-white shadow-lg hover:bg-white/20">
+                            出力CSVの項目説明
+                        </button>
+                        <a href="{{ route('sales.csv') }}" class="inline-flex items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-500/25 px-6 py-4 text-base font-black text-white shadow-lg hover:bg-cyan-400/30">
+                            CSVダウンロード
+                        </a>
+                    </div>
                 </div>
             </div>
+
+            <dialog id="csvExportHelp" class="w-11/12 max-w-4xl rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/70">
+                <div class="max-h-[85vh] overflow-y-auto bg-white p-6 text-slate-800">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-black text-slate-950">出力CSVの項目説明</h3>
+                            <p class="mt-2 text-sm font-bold leading-6 text-slate-600">
+                                ダウンロードされるCSVの1行目はヘッダ行です。2行目以降に、SOLDになっている商品の売上データが出力されます。
+                            </p>
+                        </div>
+                        <button type="button" onclick="document.getElementById('csvExportHelp').close()" class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-black text-slate-700 hover:bg-slate-200">閉じる</button>
+                    </div>
+
+                    <div class="mt-5 overflow-x-auto">
+                        <table class="min-w-full border-collapse text-left text-sm">
+                            <thead class="bg-slate-100 text-xs font-black text-slate-700">
+                                <tr>
+                                    <th class="border border-slate-200 px-3 py-2">CSVヘッダ名</th>
+                                    <th class="border border-slate-200 px-3 py-2">対応する画面項目</th>
+                                    <th class="border border-slate-200 px-3 py-2">説明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">管理ID</td><td class="border border-slate-200 px-3 py-2">管理ID</td><td class="border border-slate-200 px-3 py-2">商品ごとの管理番号です。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">タイトル</td><td class="border border-slate-200 px-3 py-2">商品タイトル</td><td class="border border-slate-200 px-3 py-2">商品名として登録した内容です。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">大ジャンル</td><td class="border border-slate-200 px-3 py-2">大ジャンル</td><td class="border border-slate-200 px-3 py-2">商品に設定されている親ジャンルです。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">小ジャンル</td><td class="border border-slate-200 px-3 py-2">小ジャンル</td><td class="border border-slate-200 px-3 py-2">商品に設定されている子ジャンルです。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">出品先</td><td class="border border-slate-200 px-3 py-2">出品先</td><td class="border border-slate-200 px-3 py-2">ヤフオク、メルカリ、ラクマなどの販売先です。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">仕入れ値</td><td class="border border-slate-200 px-3 py-2">仕入れ値</td><td class="border border-slate-200 px-3 py-2">商品登録・編集画面で入力した原価です。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">売値</td><td class="border border-slate-200 px-3 py-2">売値</td><td class="border border-slate-200 px-3 py-2">SOLD時点の販売額です。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">販売手数料率</td><td class="border border-slate-200 px-3 py-2">販売手数料率</td><td class="border border-slate-200 px-3 py-2">売値に対する販売手数料率です。CSVでは%付きで出力します。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">販売手数料</td><td class="border border-slate-200 px-3 py-2">販売手数料</td><td class="border border-slate-200 px-3 py-2">売値と手数料率から計算された金額、または保存済みの手数料です。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">送料</td><td class="border border-slate-200 px-3 py-2">送料</td><td class="border border-slate-200 px-3 py-2">商品に登録した送料です。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">実利益</td><td class="border border-slate-200 px-3 py-2">実利益</td><td class="border border-slate-200 px-3 py-2">売値 - 仕入れ値 - 販売手数料 - 送料 で計算します。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">ステータス</td><td class="border border-slate-200 px-3 py-2">ステータス</td><td class="border border-slate-200 px-3 py-2">売上CSVでは SOLD の商品のみ出力されます。</td></tr>
+                                <tr><td class="border border-slate-200 px-3 py-2 font-bold">SOLD日</td><td class="border border-slate-200 px-3 py-2">SOLD日</td><td class="border border-slate-200 px-3 py-2">SOLDにした日付です。形式は YYYY-MM-DD です。</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </dialog>
 
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/45 p-5"><p class="text-sm text-slate-300">累計売上</p><p class="mt-2 text-2xl font-bold text-white">¥{{ number_format($totalSales) }}</p></div>
