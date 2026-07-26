@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuctionItem;
+use App\Models\Notice;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -64,6 +65,11 @@ class DashboardController extends Controller
             'recentItems' => AuctionItem::where('user_id', $userId)->latest('updated_at')->take(6)->get(),
             'isPremium' => $isPremium,
             'freeItemLimit' => $user?->freeAuctionItemLimit() ?? 30,
+            'dashboardNotices' => Notice::query()
+                ->published()
+                ->latest('published_at')
+                ->paginate(Notice::DASHBOARD_LIMIT, ['*'], 'notice_page')
+                ->withQueryString(),
             'premiumInsights' => $isPremium ? [
                 'current_month_sales' => (int) $currentMonthStats['sales'],
                 'current_month_profit' => (int) $currentMonthStats['profit'],

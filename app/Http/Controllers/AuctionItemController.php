@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuctionItem;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -12,24 +13,55 @@ use Illuminate\Validation\Rule;
 
 class AuctionItemController extends Controller
 {
+    private const UNSOLD_FILTER_MIN_DAYS = 10;
+
     private const CSV_MAX_ROWS = 5000;
 
     private const CSV_MAX_CELL_LENGTH = 1000;
 
     private const IMAGE_MAX_KILOBYTES = 2048;
 
+    private const YAHOO_AUCTION_REQUIRED_HEADERS = [
+        '取扱内容',
+        '商品ID',
+        '取扱日',
+        '状態',
+        '決済金額',
+        '送料',
+    ];
+
+    private const YAHOO_AUCTION_SALE_STATUS = '売上金';
+
+    private const MERCARI_SHOPS_REQUIRED_HEADERS = [
+        '明細番号',
+        '明細種別',
+        '購入日',
+        '商品名',
+        '販売利益',
+        '売上（税込）',
+        'メルカリ便送料（税込）',
+        '販売手数料（税込）',
+    ];
+
+    private const MERCARI_SHOPS_PURCHASE_DETAIL_TYPE = '購入';
+
     public function index(Request $request)
     {
         $status = $request->get('status');
         $platform = $request->get('platform');
         $keyword = $request->get('keyword');
+        $unsoldOnly = $request->boolean('unsold');
         $parentCategoryId = $request->integer('parent_category_id') ?: null;
         $categoryId = $request->integer('category_id') ?: null;
 
         $query = AuctionItem::with(['category.parent'])
             ->where('user_id', Auth::id());
 
-        if (in_array($status, AuctionItem::STATUSES, true)) {
+        if ($unsoldOnly) {
+            $query
+                ->where('status', AuctionItem::STATUS_SELLING)
+                ->where('created_at', '<=', Carbon::now()->subDays(self::UNSOLD_FILTER_MIN_DAYS));
+        } elseif (in_array($status, AuctionItem::STATUSES, true)) {
             $query->where('status', $status);
         }
 
@@ -57,10 +89,15 @@ class AuctionItemController extends Controller
         }
 
         return view('auction_items.index', [
-            'auctionItems' => $query->latest()->paginate(12)->withQueryString(),
+            'auctionItems' => ($unsoldOnly
+                ? $query->orderBy('created_at')->orderBy('id')
+                : $query->latest()
+            )->paginate(12)->withQueryString(),
             'status' => $status,
             'platform' => $platform,
             'keyword' => $keyword,
+            'unsoldOnly' => $unsoldOnly,
+            'unsoldFilterMinDays' => self::UNSOLD_FILTER_MIN_DAYS,
             'parentCategoryId' => $parentCategoryId,
             'categoryId' => $categoryId,
             'parentCategories' => $this->parentCategories(),
@@ -77,6 +114,18 @@ class AuctionItemController extends Controller
             'itemCount' => $this->currentUserItemCount(),
             'itemLimit' => $this->freeAuctionItemLimit(),
             'isPremium' => Auth::user()?->isPremium() ?? false,
+        ]);
+    }
+
+    public function csvImport()
+    {
+        return view('auction_items.csv-import');
+    }
+
+    public function duplicates()
+    {
+        return view('auction_items.duplicates', [
+            'duplicateGroups' => $this->duplicateAuctionItemGroups(),
         ]);
     }
 
@@ -276,6 +325,230 @@ class AuctionItemController extends Controller
             ->with('success', "CSVインポートが完了しました。登録 {$importedCount} 件 / スキップ {$skippedCount} 件");
     }
 
+    public function importYahooAuctionCsv(Request $request)
+    {
+        if (! (Auth::user()?->isPremium() ?? false)) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'CSV取込はPremium限定機能です。');
+        }
+
+        $request->validate([
+            'yahoo_csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+        ], [
+            'yahoo_csv_file.required' => 'ヤフオク売上CSVファイルを選択してください。',
+            'yahoo_csv_file.mimes' => 'ヤフオク売上CSVファイルを選択してください。',
+        ]);
+
+        $handle = $this->openUploadedCsv($request, 'yahoo_csv_file');
+
+        if (! is_resource($handle)) {
+            return $handle;
+        }
+
+        $headers = fgetcsv($handle);
+
+        if (! $headers) {
+            fclose($handle);
+
+            return $this->csvImportError('ヤフオクCSVのヘッダー行を読み込めませんでした。');
+        }
+
+        $headers = array_map(fn ($header) => trim((string) $header), $headers);
+        $missingHeaders = array_diff(self::YAHOO_AUCTION_REQUIRED_HEADERS, $headers);
+
+        if ($missingHeaders !== []) {
+            fclose($handle);
+
+            return $this->csvImportError('ヤフオクCSVに必要な列がありません。不足: '.implode(', ', $missingHeaders));
+        }
+
+        $importedCount = 0;
+        $skippedCount = 0;
+        $lineNumber = 1;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $lineNumber++;
+
+            if ($lineNumber > self::CSV_MAX_ROWS + 1) {
+                fclose($handle);
+
+                return $this->csvImportError('CSVは最大'.number_format(self::CSV_MAX_ROWS).'行まで取り込めます。行数を分けて再実行してください。');
+            }
+
+            if (count(array_filter($row, fn ($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+
+            $row = array_pad($row, count($headers), null);
+            $data = array_combine($headers, array_map(
+                fn ($value) => $this->sanitizeCsvCell($value),
+                array_slice($row, 0, count($headers))
+            ));
+
+            if (! $data || ! $this->isImportableYahooAuctionSale($data)) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $managementId = trim((string) $data['商品ID']);
+            $title = trim((string) $data['取扱内容']);
+
+            if (AuctionItem::where('user_id', Auth::id())->where('management_id', $managementId)->exists()) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $soldPrice = $this->parseCsvMoney($data['決済金額'] ?? null);
+            $salesFee = $this->parseYahooAuctionSalesFee($data);
+            $shippingFee = $this->parseCsvMoney($data['送料'] ?? null);
+            $salesFeeRate = $soldPrice > 0
+                ? round(($salesFee / $soldPrice) * 100, 2)
+                : $this->defaultSalesFeeRate(AuctionItem::PLATFORM_YAHOO);
+
+            AuctionItem::create([
+                'user_id' => Auth::id(),
+                'management_id' => $managementId,
+                'title' => $title,
+                'comment' => $this->buildYahooAuctionComment($data),
+                'platform' => AuctionItem::PLATFORM_YAHOO,
+                'category_id' => null,
+                'image_path' => null,
+                'sold_image_path' => null,
+                'purchase_price' => 0,
+                'sold_price' => $soldPrice,
+                'sales_fee_rate' => $salesFeeRate,
+                'sales_fee' => $salesFee,
+                'shipping_fee' => $shippingFee,
+                'profit' => $this->calculateProfit($soldPrice, 0, $salesFee, $shippingFee),
+                'sold_at' => $this->parseCsvSoldAt($data['取扱日'] ?? null) ?? now(),
+                'status' => AuctionItem::STATUS_SOLD,
+            ]);
+
+            $importedCount++;
+        }
+
+        fclose($handle);
+
+        return redirect()
+            ->route('auction-items.index', ['status' => AuctionItem::STATUS_SOLD])
+            ->with('success', "ヤフオクCSVを変換して一括登録しました。登録 {$importedCount} 件 / スキップ {$skippedCount} 件");
+    }
+
+    public function importMercariShopsCsv(Request $request)
+    {
+        if (! (Auth::user()?->isPremium() ?? false)) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'CSV取込はPremium限定機能です。');
+        }
+
+        $request->validate([
+            'mercari_shops_csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+        ], [
+            'mercari_shops_csv_file.required' => 'メルカリShops売上明細CSVファイルを選択してください。',
+            'mercari_shops_csv_file.mimes' => 'メルカリShops売上明細CSVファイルを選択してください。',
+        ]);
+
+        $handle = $this->openUploadedCsv($request, 'mercari_shops_csv_file');
+
+        if (! is_resource($handle)) {
+            return $handle;
+        }
+
+        $headers = fgetcsv($handle);
+
+        if (! $headers) {
+            fclose($handle);
+
+            return $this->csvImportError('メルカリShops CSVのヘッダー行を読み込めませんでした。');
+        }
+
+        $headers = array_map(fn ($header) => trim((string) $header), $headers);
+        $missingHeaders = array_diff(self::MERCARI_SHOPS_REQUIRED_HEADERS, $headers);
+
+        if ($missingHeaders !== []) {
+            fclose($handle);
+
+            return $this->csvImportError('メルカリShops CSVに必要な列がありません。不足: '.implode(', ', $missingHeaders));
+        }
+
+        $importedCount = 0;
+        $skippedCount = 0;
+        $lineNumber = 1;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $lineNumber++;
+
+            if ($lineNumber > self::CSV_MAX_ROWS + 1) {
+                fclose($handle);
+
+                return $this->csvImportError('CSVは最大'.number_format(self::CSV_MAX_ROWS).'行まで取り込めます。行数を分けて再実行してください。');
+            }
+
+            if (count(array_filter($row, fn ($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+
+            $row = array_pad($row, count($headers), null);
+            $data = array_combine($headers, array_map(
+                fn ($value) => $this->sanitizeCsvCell($value),
+                array_slice($row, 0, count($headers))
+            ));
+
+            if (! $data || ! $this->isImportableMercariShopsSale($data)) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $managementId = trim((string) $data['明細番号']);
+
+            if (AuctionItem::where('user_id', Auth::id())->where('management_id', $managementId)->exists()) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $soldPrice = $this->parseCsvMoney($data['売上（税込）'] ?? null);
+            $salesFee = $this->parseCsvMoney($data['販売手数料（税込）'] ?? null);
+            $shippingFee = $this->parseCsvMoney($data['メルカリ便送料（税込）'] ?? null);
+            $profit = $this->parseCsvMoney($data['販売利益'] ?? null);
+            $salesFeeRate = isset($data['販売手数料率（%）']) && trim((string) $data['販売手数料率（%）']) !== ''
+                ? max(0, min(100, (float) $data['販売手数料率（%）']))
+                : ($soldPrice > 0 ? round(($salesFee / $soldPrice) * 100, 2) : $this->defaultSalesFeeRate(AuctionItem::PLATFORM_MERCARI));
+
+            AuctionItem::create([
+                'user_id' => Auth::id(),
+                'management_id' => $managementId,
+                'title' => trim((string) $data['商品名']),
+                'comment' => $this->buildMercariShopsComment($data),
+                'platform' => AuctionItem::PLATFORM_MERCARI,
+                'category_id' => null,
+                'image_path' => null,
+                'sold_image_path' => null,
+                'purchase_price' => 0,
+                'sold_price' => $soldPrice,
+                'sales_fee_rate' => $salesFeeRate,
+                'sales_fee' => $salesFee,
+                'shipping_fee' => $shippingFee,
+                'profit' => $profit,
+                'sold_at' => $this->parseCsvSoldAt($data['購入日'] ?? null) ?? now(),
+                'status' => AuctionItem::STATUS_SOLD,
+            ]);
+
+            $importedCount++;
+        }
+
+        fclose($handle);
+
+        return redirect()
+            ->route('auction-items.index', ['status' => AuctionItem::STATUS_SOLD])
+            ->with('success', "メルカリShops CSVを変換して一括登録しました。登録 {$importedCount} 件 / スキップ {$skippedCount} 件");
+    }
+
     public function show(AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
@@ -395,6 +668,70 @@ class AuctionItemController extends Controller
             ->with('success', '商品を削除しました。');
     }
 
+    public function deleteDuplicates(Request $request)
+    {
+        if (! $request->filled('delete_mode')) {
+            $request->merge(['delete_mode' => 'selected']);
+        }
+
+        $validated = $request->validate([
+            'delete_mode' => ['nullable', 'string', Rule::in(['selected', 'latest', 'all_latest'])],
+            'keep_item_id' => [
+                'required_if:delete_mode,selected',
+                'nullable',
+                'integer',
+                Rule::exists('auction_items', 'id')->where(fn ($query) => $query->where('user_id', Auth::id())),
+            ],
+            'duplicate_key' => ['required_if:delete_mode,latest', 'nullable', 'string', 'max:600'],
+        ]);
+
+        $deleteMode = $validated['delete_mode'] ?? 'selected';
+        $duplicateGroups = $this->duplicateAuctionItemGroups();
+
+        if ($deleteMode === 'all_latest') {
+            $deleteCount = 0;
+
+            foreach ($duplicateGroups as $group) {
+                $keepItemId = $this->latestDuplicateItem($group['items'])->id;
+                $deleteCount += $this->deleteDuplicateGroupExcept($group['items'], $keepItemId);
+            }
+
+            return redirect()
+                ->route('auction-items.duplicates')
+                ->with('success', 'すべての重複候補を削除しました。削除 '.$deleteCount.' 件');
+        }
+
+        if ($deleteMode === 'latest') {
+            $duplicateKey = (string) $validated['duplicate_key'];
+            $targetGroup = $duplicateGroups->first(fn ($group) => $group['key'] === $duplicateKey);
+
+            if (! $targetGroup) {
+                return redirect()
+                    ->route('auction-items.duplicates')
+                    ->with('error', '選択した重複候補は見つかりませんでした。');
+            }
+
+            $keepItemId = $this->latestDuplicateItem($targetGroup['items'])->id;
+        } else {
+            $keepItemId = (int) $validated['keep_item_id'];
+            $targetGroup = $duplicateGroups->first(
+                fn ($group) => $group['items']->contains(fn (AuctionItem $item) => $item->id === $keepItemId)
+            );
+        }
+
+        if (! $targetGroup) {
+            return redirect()
+                ->route('auction-items.duplicates')
+                ->with('error', '選択した商品は重複候補ではありません。');
+        }
+
+        $deleteCount = $this->deleteDuplicateGroupExcept($targetGroup['items'], $keepItemId);
+
+        return redirect()
+            ->route('auction-items.duplicates')
+            ->with('success', '重複候補を削除しました。削除 '.$deleteCount.' 件');
+    }
+
     private function validateAuctionItem(Request $request, ?AuctionItem $auctionItem = null): array
     {
         $uniqueRule = Rule::unique('auction_items', 'management_id')
@@ -425,7 +762,7 @@ class AuctionItemController extends Controller
         ]);
     }
 
-    private function auctionItemImageFile(Request $request): ?\Illuminate\Http\UploadedFile
+    private function auctionItemImageFile(Request $request): ?UploadedFile
     {
         if ($request->hasFile('camera_image')) {
             return $request->file('camera_image');
@@ -443,6 +780,39 @@ class AuctionItemController extends Controller
         return redirect()
             ->route('auction-items.index')
             ->with('error', $message);
+    }
+
+    private function openUploadedCsv(Request $request, string $field)
+    {
+        $filePath = $request->file($field)?->getRealPath();
+
+        if (! $filePath || ! file_exists($filePath)) {
+            return $this->csvImportError('CSVファイルを読み込めませんでした。');
+        }
+
+        $csvText = file_get_contents($filePath);
+
+        if ($csvText === false || trim($csvText) === '') {
+            return $this->csvImportError('CSVファイルが空です。');
+        }
+
+        $encoding = mb_detect_encoding($csvText, ['UTF-8', 'SJIS-win', 'SJIS', 'CP932', 'EUC-JP'], true);
+
+        if ($encoding && $encoding !== 'UTF-8') {
+            $csvText = mb_convert_encoding($csvText, 'UTF-8', $encoding);
+        }
+
+        $csvText = preg_replace('/^\xEF\xBB\xBF/', '', $csvText);
+        $handle = fopen('php://temp', 'r+');
+
+        if (! $handle) {
+            return $this->csvImportError('CSVファイルを処理できませんでした。');
+        }
+
+        fwrite($handle, $csvText);
+        rewind($handle);
+
+        return $handle;
     }
 
     private function authorizeOwner(AuctionItem $auctionItem): void
@@ -485,6 +855,74 @@ class AuctionItemController extends Controller
             ->get();
     }
 
+    private function duplicateAuctionItemGroups()
+    {
+        return AuctionItem::query()
+            ->where('user_id', Auth::id())
+            ->orderBy('platform')
+            ->orderBy('title')
+            ->orderBy('id')
+            ->get()
+            ->groupBy(fn (AuctionItem $item) => $this->duplicateAuctionItemKey($item))
+            ->filter(fn ($items, string $key) => $key !== '' && $items->count() > 1)
+            ->map(fn ($items, string $key) => [
+                'key' => $key,
+                'title' => $items->first()->title,
+                'platform' => $items->first()->platform,
+                'items' => $items
+                    ->sortByDesc(fn (AuctionItem $item) => $this->latestDuplicateSortValue($item))
+                    ->values(),
+            ])
+            ->values();
+    }
+
+    private function latestDuplicateItem($items): AuctionItem
+    {
+        return $items
+            ->sortByDesc(fn (AuctionItem $item) => $this->latestDuplicateSortValue($item))
+            ->first();
+    }
+
+    private function latestDuplicateSortValue(AuctionItem $item): int
+    {
+        return (($item->created_at?->timestamp ?? 0) * 1000000) + $item->id;
+    }
+
+    private function deleteDuplicateGroupExcept($items, int $keepItemId): int
+    {
+        $deleteItems = $items
+            ->reject(fn (AuctionItem $item) => $item->id === $keepItemId)
+            ->values();
+
+        foreach ($deleteItems as $item) {
+            $this->deleteAuctionItemImage($item->image_path);
+            $this->deleteAuctionItemImage($item->sold_image_path);
+            $item->delete();
+        }
+
+        return $deleteItems->count();
+    }
+
+    private function duplicateAuctionItemKey(AuctionItem $item): string
+    {
+        $title = $this->normalizeDuplicateText($item->title);
+        $platform = $this->normalizeDuplicateText($item->platform);
+
+        if ($title === '') {
+            return '';
+        }
+
+        return $platform.'|'.$title;
+    }
+
+    private function normalizeDuplicateText(?string $value): string
+    {
+        $value = mb_convert_kana(trim((string) $value), 'asKV');
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return mb_strtolower($value);
+    }
+
     private function resolveCsvCategoryId(mixed $parentName, mixed $childName): ?int
     {
         $parentName = trim((string) $parentName);
@@ -507,6 +945,103 @@ class AuctionItemController extends Controller
         $value = preg_replace('/[ \t]+/', ' ', $value) ?? $value;
 
         return mb_substr($value, 0, self::CSV_MAX_CELL_LENGTH);
+    }
+
+    private function isImportableYahooAuctionSale(array $data): bool
+    {
+        $managementId = trim((string) ($data['商品ID'] ?? ''));
+        $title = trim((string) ($data['取扱内容'] ?? ''));
+        $status = trim((string) ($data['状態'] ?? ''));
+
+        return $managementId !== ''
+            && $managementId !== '-'
+            && $title !== ''
+            && $status === self::YAHOO_AUCTION_SALE_STATUS;
+    }
+
+    private function parseYahooAuctionSalesFee(array $data): int
+    {
+        $successfulBidFee = $this->parseCsvMoney($data['落札システム利用料'] ?? null);
+        $salesFee = $this->parseCsvMoney($data['販売手数料'] ?? null);
+
+        return $successfulBidFee + $salesFee;
+    }
+
+    private function isImportableMercariShopsSale(array $data): bool
+    {
+        $managementId = trim((string) ($data['明細番号'] ?? ''));
+        $title = trim((string) ($data['商品名'] ?? ''));
+        $detailType = trim((string) ($data['明細種別'] ?? ''));
+        $profit = $this->parseSignedCsvMoney($data['販売利益'] ?? null);
+
+        return $managementId !== ''
+            && $title !== ''
+            && $detailType === self::MERCARI_SHOPS_PURCHASE_DETAIL_TYPE
+            && $profit >= 0;
+    }
+
+    private function buildYahooAuctionComment(array $data): ?string
+    {
+        $parts = [
+            'ヤフオク売上CSVから変換',
+            '状態: '.trim((string) ($data['状態'] ?? '')),
+            '売上: '.trim((string) ($data['売上'] ?? '')),
+            '決済金額: '.trim((string) ($data['決済金額'] ?? '')),
+            '受取金額: '.trim((string) ($data['受取金額'] ?? '')),
+        ];
+
+        $comment = implode(' / ', array_filter($parts, fn ($part) => ! str_ends_with($part, ': ')));
+
+        return $comment !== '' ? mb_substr($comment, 0, self::CSV_MAX_CELL_LENGTH) : null;
+    }
+
+    private function buildMercariShopsComment(array $data): ?string
+    {
+        $parts = [
+            'メルカリShops売上明細CSVから変換',
+            '注文番号: '.trim((string) ($data['注文番号'] ?? '')),
+            '明細種別: '.trim((string) ($data['明細種別'] ?? '')),
+            '販売利益: '.trim((string) ($data['販売利益'] ?? '')),
+            'ショップ名: '.trim((string) ($data['ショップ名'] ?? '')),
+        ];
+
+        $comment = implode(' / ', array_filter($parts, fn ($part) => ! str_ends_with($part, ': ')));
+
+        return $comment !== '' ? mb_substr($comment, 0, self::CSV_MAX_CELL_LENGTH) : null;
+    }
+
+    private function parseCsvMoney(mixed $value): int
+    {
+        $value = mb_convert_kana(trim((string) $value), 'n');
+
+        if ($value === '' || $value === '-') {
+            return 0;
+        }
+
+        $normalized = preg_replace('/[^\d.-]/', '', $value) ?? '';
+
+        if ($normalized === '' || $normalized === '-') {
+            return 0;
+        }
+
+        return max(0, (int) round((float) $normalized));
+    }
+
+    private function parseSignedCsvMoney(mixed $value): int
+    {
+        $value = mb_convert_kana(trim((string) $value), 'n');
+
+        if ($value === '' || $value === '-') {
+            return 0;
+        }
+
+        $normalized = preg_replace('/[^\d.-]/', '', $value) ?? '';
+
+        if ($normalized === '' || $normalized === '-') {
+            return 0;
+        }
+
+        return (int) round((float) $normalized);
     }
 
     private function normalizePlatform(mixed $platform): string
@@ -579,7 +1114,14 @@ class AuctionItemController extends Controller
         try {
             return Carbon::parse($value);
         } catch (\Throwable) {
-            return null;
+            $normalized = str_replace(['年', '月', '日', '時', '分'], ['-', '-', '', ':', ''], $value);
+            $normalized = preg_replace('/\s+/', ' ', trim($normalized)) ?? $normalized;
+
+            try {
+                return Carbon::parse($normalized);
+            } catch (\Throwable) {
+                return null;
+            }
         }
     }
 

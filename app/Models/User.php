@@ -29,6 +29,8 @@ class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    public const DEMO_EMAIL = 'user@shinji.work';
+
     public const PLAN_FREE = 'free';
 
     public const PLAN_PREMIUM = 'premium';

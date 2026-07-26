@@ -81,6 +81,78 @@ class ProfileTest extends TestCase
         $this->assertNull($user->fresh());
     }
 
+    public function test_demo_user_cannot_see_delete_account_section(): void
+    {
+        $user = User::factory()->create([
+            'email' => User::DEMO_EMAIL,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get('/profile');
+
+        $response->assertOk();
+        $response->assertDontSee('profile.destroy');
+        $response->assertDontSee('confirm-user-deletion');
+    }
+
+    public function test_admin_user_cannot_see_delete_account_section(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get('/profile');
+
+        $response->assertOk();
+        $response->assertDontSee('profile.destroy');
+        $response->assertDontSee('confirm-user-deletion');
+    }
+
+    public function test_demo_user_cannot_delete_their_account(): void
+    {
+        $user = User::factory()->create([
+            'email' => User::DEMO_EMAIL,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', [
+                'password' => 'password',
+            ]);
+
+        $response
+            ->assertSessionHas('status', 'protected-account')
+            ->assertRedirect('/profile');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
+    }
+
+    public function test_admin_user_cannot_delete_their_account(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', [
+                'password' => 'password',
+            ]);
+
+        $response
+            ->assertSessionHas('status', 'protected-account')
+            ->assertRedirect('/profile');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
+    }
+
     public function test_user_deletion_removes_their_auction_item_images(): void
     {
         Storage::fake('public');

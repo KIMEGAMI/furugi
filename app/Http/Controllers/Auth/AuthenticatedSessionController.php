@@ -11,11 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class AuthenticatedSessionController extends Controller
 {
-    private const DEMO_EMAIL = 'user@shinji.work';
-
     private const DEMO_PASSWORD = '12345678';
 
     public function create(): View
@@ -34,7 +33,7 @@ class AuthenticatedSessionController extends Controller
 
     public function demo(Request $request): RedirectResponse
     {
-        if (! Auth::attempt(['email' => self::DEMO_EMAIL, 'password' => self::DEMO_PASSWORD])) {
+        if (! Auth::attempt(['email' => User::DEMO_EMAIL, 'password' => self::DEMO_PASSWORD])) {
             throw ValidationException::withMessages([
                 'email' => 'デモユーザーにログインできませんでした。管理者にお問い合わせください。',
             ]);
@@ -63,7 +62,15 @@ class AuthenticatedSessionController extends Controller
         $user = $request->user();
 
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
-            $user->sendEmailVerificationNotification();
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (TransportExceptionInterface) {
+                return redirect()
+                    ->route('verification.notice')
+                    ->withErrors([
+                        'email' => '認証メールの送信に失敗しました。管理者はメール設定を確認してください。',
+                    ]);
+            }
 
             return redirect()
                 ->route('verification.notice')

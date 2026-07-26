@@ -10,8 +10,8 @@
             <section class="rounded-3xl bg-white p-6 shadow-xl md:p-8">
                 <p class="text-sm font-black text-blue-700">ADMIN</p>
                 <h1 class="mt-2 text-3xl font-black text-slate-900">メンテナンスモード</h1>
-                <p class="mt-4 text-sm font-bold leading-7 text-slate-600">
-                    有効にすると、一般ユーザーはログイン後もメンテナンス画面になります。管理者はログイン画面とこの管理画面を開けます。
+                <p class="mt-4 text-sm font-bold leading-7 text-slate-700">
+                    有効にすると、一般ユーザーはメンテナンス画面に切り替わります。管理者はログイン画面と管理画面を開けます。
                 </p>
 
                 <div class="mt-6 rounded-2xl border {{ $enabled ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50' }} p-5">
@@ -39,6 +39,38 @@
                         </button>
                     </form>
                 </div>
+            </section>
+
+            <section class="mt-6 rounded-3xl bg-white p-6 shadow-xl md:p-8">
+                <p class="text-sm font-black text-blue-700">NOTICE</p>
+                <h2 class="mt-2 text-2xl font-black text-slate-900">お知らせを投稿</h2>
+                <p class="mt-3 text-sm font-bold leading-7 text-slate-700">
+                    投稿したお知らせは、ダッシュボードに最新5件まで表示されます。題名をクリックすると詳細ページで本文を確認できます。
+                </p>
+
+                <form method="POST" action="{{ route('admin.notices.store') }}" class="mt-6 space-y-5">
+                    @csrf
+
+                    <div>
+                        <label for="title" class="block text-sm font-black text-slate-900">題名</label>
+                        <input id="title" name="title" type="text" value="{{ old('title') }}" maxlength="80" class="mt-2 w-full rounded-xl border-slate-300 bg-white text-slate-950 shadow-sm focus:border-blue-600 focus:ring-blue-600">
+                        @error('title')
+                            <p class="mt-2 text-sm font-bold text-red-700">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="body" class="block text-sm font-black text-slate-900">本文</label>
+                        <textarea id="body" name="body" rows="6" maxlength="1000" class="mt-2 w-full rounded-xl border-slate-300 bg-white text-slate-950 shadow-sm focus:border-blue-600 focus:ring-blue-600">{{ old('body') }}</textarea>
+                        @error('body')
+                            <p class="mt-2 text-sm font-bold text-red-700">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <button type="submit" class="rounded-xl bg-blue-700 px-5 py-3 text-sm font-black text-white shadow hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        お知らせを投稿
+                    </button>
+                </form>
             </section>
         </div>
     </div>

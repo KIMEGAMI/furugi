@@ -31,16 +31,14 @@ class SubscriptionController extends Controller
         $secret = config('services.stripe.secret');
 
         if (! is_string($secret) || $secret === '') {
-            return redirect()
-                ->route('subscriptions.index')
+            return back()
                 ->with('error', 'Stripeの設定が未完了です。STRIPE_SECRETを設定してください。');
         }
 
         try {
             $customerId = $this->ensureStripeCustomer($user, $secret);
         } catch (Throwable) {
-            return redirect()
-                ->route('subscriptions.index')
+            return back()
                 ->with('error', '決済用の顧客情報を作成できませんでした。時間をおいて再度お試しください。');
         }
 
@@ -53,22 +51,20 @@ class SubscriptionController extends Controller
                 'customer' => $customerId,
                 'line_items' => [$lineItem],
                 'success_url' => route('subscriptions.success', [], true).'?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('subscriptions.index', [], true),
+                'cancel_url' => route('profile.edit', [], true),
                 'client_reference_id' => (string) $user->id,
                 'metadata[user_id]' => (string) $user->id,
             ]);
 
         if ($response->failed()) {
-            return redirect()
-                ->route('subscriptions.index')
+            return back()
                 ->with('error', '決済画面を作成できませんでした。時間をおいて再度お試しください。');
         }
 
         $checkoutUrl = $response->json('url');
 
         if (! is_string($checkoutUrl) || $checkoutUrl === '') {
-            return redirect()
-                ->route('subscriptions.index')
+            return back()
                 ->with('error', '決済画面のURLを取得できませんでした。');
         }
 
@@ -86,8 +82,7 @@ class SubscriptionController extends Controller
         $secret = config('services.stripe.secret');
 
         if (! is_string($secret) || $secret === '' || ! is_string($user->stripe_customer_id) || $user->stripe_customer_id === '') {
-            return redirect()
-                ->route('subscriptions.index')
+            return back()
                 ->with('error', '請求管理画面を開けませんでした。');
         }
 
@@ -95,20 +90,18 @@ class SubscriptionController extends Controller
             ->withToken($secret)
             ->post(self::STRIPE_API_BASE.'/billing_portal/sessions', [
                 'customer' => $user->stripe_customer_id,
-                'return_url' => route('subscriptions.index', [], true),
+                'return_url' => route('profile.edit', [], true),
             ]);
 
         if ($response->failed()) {
-            return redirect()
-                ->route('subscriptions.index')
+            return back()
                 ->with('error', '請求管理画面を作成できませんでした。');
         }
 
         $portalUrl = $response->json('url');
 
         if (! is_string($portalUrl) || $portalUrl === '') {
-            return redirect()
-                ->route('subscriptions.index')
+            return back()
                 ->with('error', '請求管理画面のURLを取得できませんでした。');
         }
 

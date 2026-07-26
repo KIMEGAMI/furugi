@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\MaintenanceController;
+use App\Http\Controllers\Admin\NoticeController as AdminNoticeController;
 use App\Http\Controllers\AuctionItemController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\MaintenanceLoginController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\MarketingPageController;
+use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\PremiumReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaController;
@@ -57,8 +59,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/admin/maintenance', [MaintenanceController::class, 'update'])
         ->name('admin.maintenance.update');
 
+    Route::post('/admin/notices', [AdminNoticeController::class, 'store'])
+        ->name('admin.notices.store');
+
+    Route::get('/notices', [NoticeController::class, 'index'])
+        ->name('notices.index');
+
+    Route::get('/notices/{notice}', [NoticeController::class, 'show'])
+        ->name('notices.show');
+
+    Route::get('/auction-items/csv-import', [AuctionItemController::class, 'csvImport'])
+        ->name('auction-items.csv-import');
+
     Route::post('/auction-items/import', [AuctionItemController::class, 'importCsv'])
         ->name('auction-items.import');
+
+    Route::post('/auction-items/import/yahoo-auctions', [AuctionItemController::class, 'importYahooAuctionCsv'])
+        ->name('auction-items.import.yahoo-auctions');
+
+    Route::post('/auction-items/import/mercari-shops', [AuctionItemController::class, 'importMercariShopsCsv'])
+        ->name('auction-items.import.mercari-shops');
+
+    Route::get('/auction-items/duplicates', [AuctionItemController::class, 'duplicates'])
+        ->name('auction-items.duplicates');
+
+    Route::delete('/auction-items/duplicates', [AuctionItemController::class, 'deleteDuplicates'])
+        ->name('auction-items.duplicates.destroy');
 
     Route::resource('auction-items', AuctionItemController::class);
 
@@ -73,6 +99,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/sales/csv', [SalesController::class, 'downloadCsv'])
         ->name('sales.csv');
+
+    Route::get('/sales/backup-csv', [SalesController::class, 'downloadBackupCsv'])
+        ->name('sales.backup-csv');
+
+    Route::get('/sales/restore-csv', [SalesController::class, 'downloadRestoreCsv'])
+        ->name('sales.restore-csv');
 
     Route::get('/category-sales', [CategorySalesController::class, 'index'])
         ->name('category-sales.index');

@@ -13,12 +13,16 @@
                         HOME
                     </x-nav-link>
 
-                    <x-nav-link :href="route('auction-items.index')" :active="request()->routeIs('auction-items.*')">
+                    <x-nav-link :href="route('auction-items.index')" :active="request()->routeIs('auction-items.index', 'auction-items.show', 'auction-items.edit', 'auction-items.duplicates')">
                         商品一覧
                     </x-nav-link>
 
                     <x-nav-link :href="route('auction-items.create')" :active="request()->routeIs('auction-items.create')">
                         商品登録
+                    </x-nav-link>
+
+                    <x-nav-link :href="route('auction-items.csv-import')" :active="request()->routeIs('auction-items.csv-import')">
+                        CSV登録
                     </x-nav-link>
 
                     <x-nav-link :href="route('sales.index')" :active="request()->routeIs('sales.*')">
@@ -55,7 +59,7 @@
             <div class="-me-2 flex items-center sm:hidden">
                 <button
                     @click="open = ! open"
-                    class="inline-flex items-center justify-center rounded-md p-2 text-slate-300 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-slate-300 focus:bg-gray-100 focus:text-slate-300 focus:outline-none"
+                    class="inline-flex items-center justify-center rounded-md p-2 text-slate-100 transition duration-150 ease-in-out hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none"
                 >
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path
@@ -87,12 +91,16 @@
                 HOME
             </x-responsive-nav-link>
 
-            <x-responsive-nav-link :href="route('auction-items.index')" :active="request()->routeIs('auction-items.*')">
+            <x-responsive-nav-link :href="route('auction-items.index')" :active="request()->routeIs('auction-items.index', 'auction-items.show', 'auction-items.edit', 'auction-items.duplicates')">
                 商品一覧
             </x-responsive-nav-link>
 
             <x-responsive-nav-link :href="route('auction-items.create')" :active="request()->routeIs('auction-items.create')">
                 商品登録
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('auction-items.csv-import')" :active="request()->routeIs('auction-items.csv-import')">
+                CSV登録
             </x-responsive-nav-link>
 
             <x-responsive-nav-link :href="route('sales.index')" :active="request()->routeIs('sales.*')">

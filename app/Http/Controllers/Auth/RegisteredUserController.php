@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class RegisteredUserController extends Controller
 {
@@ -43,7 +44,15 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        $user->sendEmailVerificationNotification();
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (TransportExceptionInterface) {
+            return redirect()
+                ->route('verification.notice')
+                ->withErrors([
+                    'email' => '登録は完了しましたが、認証メールの送信に失敗しました。管理者はメール設定を確認してください。',
+                ]);
+        }
 
         return redirect()
             ->route('verification.notice')

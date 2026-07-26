@@ -39,11 +39,53 @@
             backdrop-filter: blur(12px);
         }
 
-.furugi-app-shell main .bg-white {
-    background-color: rgba(0, 0, 0, 0.25) !important;
-    border-color: rgba(255, 255, 255, 0.10) !important;
-    backdrop-filter: blur(12px);
-}
+        .furugi-app-shell main .bg-white {
+            background-color: rgba(0, 0, 0, 0.32) !important;
+            border-color: rgba(127, 250, 244, 0.24) !important;
+            backdrop-filter: blur(12px);
+        }
+
+        .furugi-app-shell main a.bg-white,
+        .furugi-app-shell main button.bg-white {
+            background-color: #ffffff !important;
+            color: #111827 !important;
+            border-color: rgba(10, 186, 181, 0.35) !important;
+            backdrop-filter: none;
+        }
+
+        .furugi-app-shell main a.bg-white:hover,
+        .furugi-app-shell main button.bg-white:hover {
+            background-color: #ecfeff !important;
+            color: #111827 !important;
+        }
+
+        .furugi-app-shell main a.bg-white *,
+        .furugi-app-shell main button.bg-white * {
+            color: #111827 !important;
+        }
+
+        .furugi-app-shell main .bg-white.text-white,
+        .furugi-app-shell main .bg-white .text-white {
+            color: #7ffaf4 !important;
+        }
+
+        .furugi-app-shell main dialog.bg-white,
+        .furugi-app-shell main dialog .bg-white {
+            background-color: #ffffff !important;
+            color: #082f2e !important;
+            border-color: rgba(10, 186, 181, 0.28) !important;
+            backdrop-filter: none;
+        }
+
+        .furugi-app-shell main dialog,
+        .furugi-app-shell main dialog * {
+            text-shadow: none !important;
+        }
+
+        .furugi-app-shell main dialog {
+            background-color: #ffffff !important;
+            color: #082f2e !important;
+        }
 
         .furugi-app-shell main .bg-blue-50,
         .furugi-app-shell main .bg-red-50,
@@ -56,16 +98,36 @@
 
         .furugi-app-shell main .text-blue-900,
         .furugi-app-shell main .text-slate-900,
+        .furugi-app-shell main .text-slate-950,
         .furugi-app-shell main .text-cyan-50,
         .furugi-app-shell main .text-cyan-100 {
-            color: #f8fafc !important;
+            color: #bafffb !important;
+        }
+
+        .furugi-app-shell main dialog .text-blue-900,
+        .furugi-app-shell main dialog .text-slate-900,
+        .furugi-app-shell main dialog .text-slate-950,
+        .furugi-app-shell main dialog .text-slate-800 {
+            color: #082f2e !important;
         }
 
         .furugi-app-shell main .text-slate-700,
+        .furugi-app-shell main .text-slate-800,
         .furugi-app-shell main .text-cyan-100,
         .furugi-app-shell main .text-slate-600,
         .furugi-app-shell main .text-cyan-200 {
-            color: #d8fffb !important;
+            color: #7ffaf4 !important;
+        }
+
+        .furugi-app-shell main dialog .text-slate-500,
+        .furugi-app-shell main dialog .text-slate-600,
+        .furugi-app-shell main dialog .text-slate-700 {
+            color: #315c5a !important;
+        }
+
+        .furugi-app-shell main dialog .text-blue-700,
+        .furugi-app-shell main dialog .text-cyan-700 {
+            color: #075f5c !important;
         }
 
         .furugi-app-shell main .text-cyan-200,
@@ -85,8 +147,52 @@
             background-color: rgba(255, 255, 255, 0.10) !important;
         }
 
+        .furugi-app-shell main dialog table {
+            background-color: #ffffff !important;
+            color: #082f2e !important;
+        }
+
+        .furugi-app-shell main dialog table thead,
+        .furugi-app-shell main dialog table .bg-slate-100,
+        .furugi-app-shell main dialog table .bg-gray-50 {
+            background-color: #d8fffb !important;
+            color: #063b3a !important;
+        }
+
+        .furugi-app-shell main dialog th,
+        .furugi-app-shell main dialog td {
+            border-color: #86e7e4 !important;
+            color: #082f2e !important;
+        }
+
+        .furugi-app-shell main dialog tbody tr:nth-child(even) {
+            background-color: #f7fffe !important;
+        }
+
         .furugi-app-shell table tbody {
             background-color: transparent !important;
+        }
+
+        .furugi-app-shell main .bg-slate-50,
+        .furugi-app-shell main .bg-slate-100,
+        .furugi-app-shell main .bg-gray-50,
+        .furugi-app-shell main .bg-gray-100 {
+            background-color: rgba(255, 255, 255, 0.10) !important;
+            color: #7ffaf4 !important;
+        }
+
+        .furugi-app-shell main dialog .bg-slate-50,
+        .furugi-app-shell main dialog .bg-slate-100,
+        .furugi-app-shell main dialog .bg-gray-50,
+        .furugi-app-shell main dialog .bg-gray-100 {
+            background-color: #f0fffd !important;
+            color: #082f2e !important;
+        }
+
+        .furugi-app-shell main dialog button.bg-slate-100 {
+            background-color: #e0fffb !important;
+            color: #063b3a !important;
+            border: 1px solid #86e7e4;
         }
     </style>
 </head>
