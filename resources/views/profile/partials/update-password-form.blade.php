@@ -13,7 +13,7 @@
                 name="current_password"
                 type="password"
                 autocomplete="current-password"
-                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black placeholder:text-slate-500 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             >
 
             @if ($errors->updatePassword->get('current_password'))
@@ -33,7 +33,7 @@
                 name="password"
                 type="password"
                 autocomplete="new-password"
-                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black placeholder:text-slate-500 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             >
 
             @if ($errors->updatePassword->get('password'))
@@ -53,7 +53,7 @@
                 name="password_confirmation"
                 type="password"
                 autocomplete="new-password"
-                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black placeholder:text-slate-500 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             >
         </div>
 

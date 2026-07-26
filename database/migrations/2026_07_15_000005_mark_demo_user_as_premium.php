@@ -6,12 +6,10 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    private const DEMO_EMAIL = 'user@shinji.work';
-
     public function up(): void
     {
         DB::table('users')
-            ->where('email', self::DEMO_EMAIL)
+            ->where('email', User::DEMO_EMAIL)
             ->update([
                 'subscription_plan' => User::PLAN_PREMIUM,
                 'subscription_status' => 'active',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\AuctionItem;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,10 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'canDeleteAccount' => ! $this->isProtectedAccount($request->user()),
+            'isPremium' => $request->user()->isPremium(),
+            'premiumPrice' => config('services.stripe.premium_amount', 480),
+            'canOpenBillingPortal' => is_string($request->user()->stripe_customer_id) && $request->user()->stripe_customer_id !== '',
         ]);
     }
 
@@ -44,11 +49,16 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+
+        if ($this->isProtectedAccount($user)) {
+            return Redirect::route('profile.edit')
+                ->with('status', 'protected-account');
+        }
+
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
         ]);
-
-        $user = $request->user();
 
         Auth::logout();
 
@@ -59,6 +69,15 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    private function isProtectedAccount(?User $user): bool
+    {
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        return $user->isAdmin() || $user->email === User::DEMO_EMAIL;
     }
 
     private function deleteUserAuctionItemImages(int $userId): void

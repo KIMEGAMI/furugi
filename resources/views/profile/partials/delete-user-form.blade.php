@@ -36,7 +36,7 @@
                     name="password"
                     type="password"
                     placeholder="パスワード"
-                    class="block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-red-500 focus:ring-red-500"
+                    class="block w-full rounded-xl border-slate-300 px-4 py-4 text-black placeholder:text-slate-500 shadow-sm focus:border-red-500 focus:ring-red-500"
                 >
 
                 @if ($errors->userDeletion->get('password'))

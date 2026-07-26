@@ -25,12 +25,6 @@
                 </a>
             </div>
 
-            @if (($retryAfter ?? 0) > 0)
-                <div class="mx-auto mt-6 inline-flex rounded-full bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-200">
-                    目安: 約{{ max(1, (int) ceil($retryAfter / 60)) }}分後に再度お試しください
-                </div>
-            @endif
-
             <div class="mt-8 rounded-2xl border border-white/10 bg-white/10 p-4 text-left">
                 <p class="text-sm font-black text-white">ご利用中のお客様へ</p>
                 <p class="mt-2 text-xs font-semibold leading-6 text-slate-300">

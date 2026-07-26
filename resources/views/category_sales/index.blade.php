@@ -15,9 +15,10 @@
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/45 p-6 shadow-sm backdrop-blur-md">
                 <form method="GET" action="{{ route('category-sales.index') }}" class="flex flex-col gap-4 sm:flex-row sm:items-end">
-                    <div class="w-full sm:max-w-xs">
-                        <label for="month" class="block text-sm font-semibold text-slate-200">集計月</label>
-                        <input id="month" type="month" name="month" value="{{ $month }}" class="mt-2 h-11 w-full rounded-xl border-cyan-300/20 bg-slate-900/80 text-white shadow-sm focus:border-cyan-300 focus:ring-cyan-300">
+                    <div class="w-full rounded-2xl bg-white p-3 sm:max-w-xs">
+                        <label for="month" class="block text-sm font-black text-black">集計月</label>
+                        <input id="month" type="month" name="month" value="{{ $month }}" class="mt-2 h-11 w-full rounded-xl border-slate-300 bg-white text-black shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
+                        <p class="mt-2 text-xs font-bold text-black">入力例: 2026年7月なら「2026-07」を選択または入力してください。</p>
                     </div>
                     <button type="submit" class="h-11 rounded-xl bg-cyan-500 px-5 text-sm font-black text-slate-950 hover:bg-cyan-400">この月を表示</button>
                     <a href="{{ route('category-sales.index') }}" class="inline-flex h-11 items-center justify-center rounded-xl border border-cyan-300/30 px-5 text-sm font-black text-white hover:bg-cyan-400/10">全期間</a>

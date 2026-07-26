@@ -30,7 +30,7 @@
     @endphp
 
     <div class="min-h-screen bg-slate-100 py-10">
-        <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-6xl px-4 pb-24 sm:px-6 sm:pb-0 lg:px-8">
             @if(session('success'))
                 <div class="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5">
                     <p class="font-bold text-blue-700">{{ session('success') }}</p>
@@ -103,5 +103,29 @@
                 </div>
             </div>
         </div>
+
+        <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-cyan-200 bg-white/95 px-3 py-3 shadow-2xl backdrop-blur md:hidden" aria-label="スマホ操作">
+            <div class="grid grid-cols-3 gap-2">
+                <a href="{{ route('auction-items.index') }}" class="rounded-xl bg-slate-100 px-3 py-3 text-center text-xs font-black text-black shadow">
+                    一覧
+                </a>
+                <a href="{{ route('auction-items.edit', $auctionItem) }}" class="rounded-xl bg-blue-700 px-3 py-3 text-center text-xs font-black text-white shadow">
+                    編集
+                </a>
+                @if($auctionItem->status !== 'sold')
+                    <form action="{{ route('auction-items.sold', $auctionItem) }}" method="POST" onsubmit="return confirm('この商品をSOLDにしますか？')">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit" class="w-full rounded-xl bg-amber-500 px-3 py-3 text-center text-xs font-black text-white shadow">SOLD</button>
+                    </form>
+                @else
+                    <form action="{{ route('auction-items.selling', $auctionItem) }}" method="POST" onsubmit="return confirm('この商品を出品中に戻しますか？')">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit" class="w-full rounded-xl bg-cyan-300 px-3 py-3 text-center text-xs font-black text-slate-950 shadow">出品中</button>
+                    </form>
+                @endif
+            </div>
+        </nav>
     </div>
 </x-app-layout>

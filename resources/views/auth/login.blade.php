@@ -11,11 +11,11 @@
 </head>
 
 <body class="min-h-screen bg-slate-100">
-    <main class="flex min-h-screen items-center justify-center p-4">
+    <main class="flex min-h-screen items-center justify-center bg-cover bg-center p-4 lg:bg-none" style="background-image: linear-gradient(rgba(240, 255, 253, 0.78), rgba(240, 255, 253, 0.9)), url('{{ asset('images/furugi-auth-visual.png') }}');">
         <div class="grid min-h-[720px] w-full max-w-7xl grid-cols-1 overflow-hidden rounded-lg bg-white shadow-2xl lg:grid-cols-2">
             <section class="relative hidden bg-blue-900 lg:block">
                 <img
-                    src="{{ asset('images/auth/login-hero.png') }}"
+                    src="{{ asset('images/furugi-auth-visual.png') }}"
                     alt="FURUGI 古着販売向け在庫管理システム"
                     class="absolute inset-0 h-full w-full object-cover"
                 >
@@ -48,28 +48,6 @@
                     >
                         FURUGIをアプリとして追加
                     </button>
-
-                    <section class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                            <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-black text-slate-900">Free</h2>
-                                <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-black text-slate-700">0円</span>
-                            </div>
-                            <p class="mt-2 text-xs font-bold leading-5 text-slate-600">
-                                まず試したい方向け。商品登録30件まで、基本の商品管理とSOLD管理が使えます。
-                            </p>
-                        </div>
-
-                        <div class="rounded-lg border-2 border-blue-500 bg-blue-50 p-4 shadow-sm">
-                            <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-black text-slate-900">Premium</h2>
-                                <span class="rounded-full bg-blue-700 px-3 py-1 text-xs font-black text-white">月480円</span>
-                            </div>
-                            <p class="mt-2 text-xs font-bold leading-5 text-slate-700">
-                                商品登録数の上限拡張、CSV取込・出力、売上分析、ジャンル別分析、運用診断レポートが使えます。
-                            </p>
-                        </div>
-                    </section>
 
                     @if (session('status'))
                         <div class="mb-6 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -127,12 +105,12 @@
                             @endif
                         </div>
 
-                        <button type="submit" class="mt-8 w-full rounded-md bg-blue-700 px-6 py-4 text-center font-bold text-white shadow-lg transition hover:bg-blue-800">
+                        <button type="submit" class="mt-8 w-full rounded-md border border-cyan-300 bg-white px-6 py-4 text-center font-bold text-black shadow-lg transition hover:bg-cyan-50">
                             ログイン
                         </button>
 
                         <div class="mt-6 text-center">
-                            <a href="{{ route('register') }}" class="text-sm font-bold text-slate-900 hover:text-blue-700">
+                            <a href="{{ route('register') }}" class="text-sm font-bold text-cyan-700 hover:text-cyan-900">
                                 アカウントを新規作成する
                             </a>
                         </div>
@@ -140,7 +118,7 @@
 
                     <form method="POST" action="{{ route('login.demo') }}" class="mt-6">
                         @csrf
-                        <button type="submit" class="w-full rounded-md border border-blue-200 bg-blue-50 px-6 py-4 text-center font-bold text-blue-800 shadow-sm transition hover:border-blue-300 hover:bg-blue-100">
+                        <button type="submit" class="w-full rounded-md border border-cyan-300 bg-cyan-50 px-6 py-4 text-center font-bold text-cyan-700 shadow-sm transition hover:border-cyan-400 hover:bg-cyan-100">
                             デモを見る
                         </button>
                     </form>
@@ -151,12 +129,20 @@
                                 <div class="w-full border-t border-gray-300"></div>
                             </div>
                             <div class="relative flex justify-center text-sm">
-                                <span class="bg-white px-2 text-slate-600">または</span>
+                                <span class="bg-white px-2 text-black">または</span>
                             </div>
                         </div>
 
-                        <a href="{{ route('google.redirect') }}" class="mt-4 flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-gray-50">
-                            Googleでログイン
+                        <a href="{{ route('google.redirect') }}" class="mt-4 flex w-full items-center justify-center gap-3 rounded-md border border-cyan-300 bg-white px-4 py-3 text-sm font-black text-black shadow-sm hover:bg-cyan-50">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                                <img
+                                    src="{{ asset('images/google-login-icon.png') }}"
+                                    alt=""
+                                    class="h-full w-full scale-[3.4] object-cover"
+                                    loading="lazy"
+                                >
+                            </span>
+                            <span>Googleでログイン</span>
                         </a>
                     </div>
 

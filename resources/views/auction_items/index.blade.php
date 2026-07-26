@@ -2,120 +2,56 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-2xl font-black text-blue-400">出品一覧</h2>
-                <p class="mt-1 text-sm text-cyan-200">
-                    登録したフリマ・オークション出品データを一覧で管理します。
-                </p>
+                <h2 class="text-2xl font-black text-cyan-200">商品一覧</h2>
+                <p class="mt-1 text-sm font-bold text-cyan-100">画像、販売状況、価格、利益、売れ残り期間をまとめて確認できます。</p>
             </div>
 
-            <a href="{{ route('auction-items.create') }}" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-800">
-                出品を登録する
-            </a>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <a href="{{ route('auction-items.duplicates') }}" class="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-white px-5 py-3 text-sm font-bold text-black shadow transition hover:bg-amber-50">
+                    重複チェック
+                </a>
+                <a href="{{ route('auction-items.csv-import') }}" class="inline-flex items-center justify-center rounded-xl border border-cyan-200 bg-white px-5 py-3 text-sm font-bold text-black shadow transition hover:bg-cyan-50">
+                    CSV登録
+                </a>
+                <a href="{{ route('auction-items.create') }}" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-800">
+                    商品を登録
+                </a>
+            </div>
         </div>
     </x-slot>
 
-    <div class="min-h-screen bg-slate-100 py-10">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-slate-100 py-6 sm:py-10">
+        <div class="mx-auto max-w-7xl px-4 pb-24 sm:px-6 sm:pb-0 lg:px-8">
             @foreach (['success' => 'blue', 'error' => 'red'] as $flashKey => $color)
                 @if(session($flashKey))
                     <div class="mb-6 rounded-2xl border border-{{ $color }}-200 bg-{{ $color }}-50 px-6 py-5">
-                        <p class="font-bold text-{{ $color }}-700">{{ session($flashKey) }}</p>
+                        <p class="font-bold text-black">{{ session($flashKey) }}</p>
                     </div>
                 @endif
             @endforeach
 
-            @if($errors->has('csv_file'))
-                <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-6 py-5">
-                    <p class="font-bold text-red-700">{{ $errors->first('csv_file') }}</p>
-                </div>
-            @endif
-
-            <div class="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow">
-                <form action="{{ route('auction-items.import') }}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
-                    @csrf
-                    <div class="lg:col-span-8">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <label for="csv_file" class="block text-sm font-black text-slate-700">CSVインポート</label>
-                            <button type="button" onclick="document.getElementById('csvImportHelp').showModal()" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100">
-                                入力CSVの項目説明
-                            </button>
-                        </div>
-                        <input id="csv_file" type="file" name="csv_file" accept=".csv,.txt" class="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                        <p class="mt-2 text-xs font-semibold text-slate-500">
-                            1行目はヘッダ行です。最低限、management_id と title の列が必要です。
-                        </p>
-                    </div>
-                    <div class="lg:col-span-4">
-                        <button type="submit" class="w-full rounded-xl bg-slate-800 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-slate-900">
-                            CSVを取り込む
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <dialog id="csvImportHelp" class="w-11/12 max-w-4xl rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/70">
-                <div class="max-h-[85vh] overflow-y-auto bg-white p-6 text-slate-800">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-xl font-black text-slate-950">入力CSVの項目説明</h3>
-                            <p class="mt-2 text-sm font-bold leading-6 text-slate-600">
-                                CSVの1行目はヘッダ行として扱います。列の順番は自由ですが、ヘッダ名は下記の名前にしてください。必須は management_id と title です。
-                            </p>
-                        </div>
-                        <button type="button" onclick="document.getElementById('csvImportHelp').close()" class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-black text-slate-700 hover:bg-slate-200">閉じる</button>
-                    </div>
-
-                    <div class="mt-5 overflow-x-auto">
-                        <table class="min-w-full border-collapse text-left text-sm">
-                            <thead class="bg-slate-100 text-xs font-black text-slate-700">
-                                <tr>
-                                    <th class="border border-slate-200 px-3 py-2">CSVヘッダ名</th>
-                                    <th class="border border-slate-200 px-3 py-2">対応する画面項目</th>
-                                    <th class="border border-slate-200 px-3 py-2">説明</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">management_id</td><td class="border border-slate-200 px-3 py-2">管理ID</td><td class="border border-slate-200 px-3 py-2">必須。同じユーザー内で重複できません。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">title</td><td class="border border-slate-200 px-3 py-2">商品タイトル</td><td class="border border-slate-200 px-3 py-2">必須。商品一覧や詳細画面に表示されます。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">comment</td><td class="border border-slate-200 px-3 py-2">コメント</td><td class="border border-slate-200 px-3 py-2">任意。商品の説明やメモとして保存します。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">platform</td><td class="border border-slate-200 px-3 py-2">出品先</td><td class="border border-slate-200 px-3 py-2">ヤフオク、メルカリ、ラクマ、PayPayフリマ、その他など。未対応の値はその他になります。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">大ジャンル</td><td class="border border-slate-200 px-3 py-2">大ジャンル</td><td class="border border-slate-200 px-3 py-2">登録済みジャンル名と一致した場合、小ジャンルと組み合わせて反映します。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">小ジャンル</td><td class="border border-slate-200 px-3 py-2">小ジャンル</td><td class="border border-slate-200 px-3 py-2">大ジャンル配下の小ジャンル名です。一致しない場合は未設定になります。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">purchase_price</td><td class="border border-slate-200 px-3 py-2">仕入れ値</td><td class="border border-slate-200 px-3 py-2">半角数字で入力します。空欄は0円扱いです。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">sold_price</td><td class="border border-slate-200 px-3 py-2">売値</td><td class="border border-slate-200 px-3 py-2">販売予定額または販売額です。半角数字で入力します。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">shipping_fee</td><td class="border border-slate-200 px-3 py-2">送料</td><td class="border border-slate-200 px-3 py-2">半角数字で入力します。利益計算に使います。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">sales_fee_rate</td><td class="border border-slate-200 px-3 py-2">販売手数料率</td><td class="border border-slate-200 px-3 py-2">10、5.5 など%を除いた数値で入力します。空欄なら出品先ごとの標準率を使います。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">status</td><td class="border border-slate-200 px-3 py-2">ステータス</td><td class="border border-slate-200 px-3 py-2">selling、sold、draft のいずれかです。空欄や不明な値は selling になります。</td></tr>
-                                <tr><td class="border border-slate-200 px-3 py-2 font-mono font-bold">sold_at</td><td class="border border-slate-200 px-3 py-2">SOLD日</td><td class="border border-slate-200 px-3 py-2">status が sold の場合に使います。例: 2026-07-19。</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="mt-5 rounded-xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-700">
-                        ヘッダ例: management_id,title,comment,platform,大ジャンル,小ジャンル,purchase_price,sold_price,shipping_fee,sales_fee_rate,status,sold_at
-                    </div>
-                </div>
-            </dialog>
-
-            <div class="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow">
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <a href="{{ route('auction-items.index', array_filter(['platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ empty($status) ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+            <section class="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <a href="{{ route('auction-items.index', array_filter(['platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ empty($status) && ! ($unsoldOnly ?? false) ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">
                         すべて
                     </a>
-                    <a href="{{ route('auction-items.index', array_filter(['status' => 'selling', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'selling' ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+                    <a href="{{ route('auction-items.index', array_filter(['status' => 'selling', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'selling' ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">
                         出品中
                     </a>
-                    <a href="{{ route('auction-items.index', array_filter(['status' => 'sold', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'sold' ? 'bg-red-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+                    <a href="{{ route('auction-items.index', array_filter(['status' => 'sold', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'sold' ? 'bg-red-600 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">
                         SOLD
                     </a>
+                    <a href="{{ route('auction-items.index', array_filter(['unsold' => '1', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ ($unsoldOnly ?? false) ? 'bg-amber-500 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">
+                        {{ $unsoldFilterMinDays ?? 10 }}日以上未売却
+                    </a>
                 </div>
-            </div>
+            </section>
 
-            <div class="mb-8 rounded-3xl border border-slate-200 bg-white p-6 shadow">
+            <section class="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow sm:p-6">
                 <form method="GET" action="{{ route('auction-items.index') }}" class="grid grid-cols-1 gap-4 lg:grid-cols-12">
                     <div class="lg:col-span-3">
                         <label for="platform" class="block text-sm font-black text-slate-700">出品先</label>
-                        <select id="platform" name="platform" class="mt-2 w-full rounded-xl border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <select id="platform" name="platform" class="mt-2 w-full rounded-xl border-slate-300 text-black shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             <option value="">すべて</option>
                             @foreach ($platforms as $platformName)
                                 <option value="{{ $platformName }}" @selected($platform === $platformName)>{{ $platformName }}</option>
@@ -137,24 +73,27 @@
 
                     <div class="lg:col-span-6">
                         <label for="keyword" class="block text-sm font-black text-slate-700">キーワード</label>
-                        <input id="keyword" type="text" name="keyword" value="{{ $keyword }}" placeholder="管理ID・タイトル・コメントで検索" class="mt-2 w-full rounded-xl border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <input id="keyword" type="text" name="keyword" value="{{ $keyword }}" placeholder="管理ID・タイトル・コメントで検索" class="mt-2 w-full rounded-xl border-slate-300 text-black shadow-sm focus:border-blue-500 focus:ring-blue-500">
                     </div>
 
                     <input type="hidden" name="status" value="{{ $status }}">
+                    @if ($unsoldOnly ?? false)
+                        <input type="hidden" name="unsold" value="1">
+                    @endif
 
                     <div class="flex items-end gap-3 lg:col-span-3">
                         <button type="submit" class="w-full rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-800">
-                            検索する
+                            検索
                         </button>
-                        <a href="{{ route('auction-items.index') }}" class="w-full rounded-xl bg-slate-200 px-5 py-3 text-center text-sm font-bold text-slate-700 transition hover:bg-slate-300">
+                        <a href="{{ route('auction-items.index') }}" class="w-full rounded-xl bg-slate-200 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-slate-300">
                             解除
                         </a>
                     </div>
                 </form>
-            </div>
+            </section>
 
             @if($auctionItems->count() > 0)
-                <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                     @foreach($auctionItems as $item)
                         @php
                             $displayImagePath = $item->status === 'sold' && $item->sold_image_path ? $item->sold_image_path : $item->image_path;
@@ -164,69 +103,77 @@
                             $salesFeeRate = (float) ($item->sales_fee_rate ?? 0);
                             $salesFee = (int) ($item->sales_fee ?? round($soldPrice * ($salesFeeRate / 100)));
                             $shippingFee = (int) ($item->shipping_fee ?? 0);
-                            $profit = (int) ($item->profit ?? ($soldPrice - $purchasePrice - $salesFee - $shippingFee));
+                            $profit = $item->status === 'sold'
+                                ? (int) ($item->profit ?? ($soldPrice - $purchasePrice - $salesFee - $shippingFee))
+                                : ($soldPrice - $purchasePrice - $salesFee - $shippingFee);
                             $categoryLabel = $item->category ? (($item->category->parent?->name ? $item->category->parent->name.' / ' : '').$item->category->name) : '未設定';
+                            $daysListed = $item->created_at ? max(0, (int) $item->created_at->diffInDays(now())) : 0;
+                            $statusLabel = $item->status === 'sold' ? 'SOLD' : '出品中';
                         @endphp
 
-                        <article class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow">
-                            <div class="relative bg-slate-200">
-                                @if($displayImagePath)
-                                    <img src="{{ asset('storage/' . $displayImagePath) }}" alt="{{ $item->title }}" class="h-64 w-full object-cover">
-                                @else
-                                    <div class="flex h-64 w-full items-center justify-center bg-slate-200 font-bold text-slate-700">NO IMAGE</div>
-                                @endif
+                        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow">
+                            <a href="{{ route('auction-items.show', $item) }}" class="block">
+                                <div class="relative aspect-[4/3] bg-slate-200">
+                                    @if($displayImagePath)
+                                        <img src="{{ asset('storage/' . $displayImagePath) }}" alt="{{ $item->title }}" class="h-full w-full object-cover">
+                                    @else
+                                        <div class="flex h-full w-full items-center justify-center bg-slate-200 font-black text-black">NO IMAGE</div>
+                                    @endif
 
-                                <div class="absolute left-4 right-4 top-4 flex flex-wrap gap-2">
-                                    <span class="rounded-full {{ $item->status === 'sold' ? 'bg-red-600' : 'bg-blue-700' }} px-4 py-2 text-xs font-black text-white shadow">
-                                        {{ $item->status === 'sold' ? 'SOLD' : '出品中' }}
-                                    </span>
-                                    <span class="rounded-full bg-slate-800 px-4 py-2 text-xs font-black text-white shadow">{{ $platformName }}</span>
-                                </div>
-                            </div>
-
-                            <div class="p-6">
-                                <div class="flex items-center justify-between gap-3">
-                                    <p class="text-xs font-black tracking-widest text-slate-700">{{ $item->management_id }}</p>
-                                    <p class="text-sm font-bold text-slate-700">仕入れ ¥{{ number_format($purchasePrice) }}</p>
-                                </div>
-
-                                <h3 class="mt-3 text-xl font-black text-slate-950">{{ $item->title }}</h3>
-                                <p class="mt-2 text-xs font-black text-slate-600">ジャンル: {{ $categoryLabel }}</p>
-                                <p class="mt-3 line-clamp-3 text-sm leading-6 text-slate-700">{{ $item->comment ?: 'コメントはありません。' }}</p>
-
-                                <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                                    <div class="grid grid-cols-2 gap-3 text-sm">
-                                        <div><p class="text-xs font-black text-slate-500">売値</p><p class="mt-1 font-black text-slate-950">¥{{ number_format($soldPrice) }}</p></div>
-                                        <div><p class="text-xs font-black text-slate-500">販売手数料</p><p class="mt-1 font-black text-slate-950">¥{{ number_format($salesFee) }} <span class="text-xs text-slate-600">/ {{ rtrim(rtrim(number_format($salesFeeRate, 2), '0'), '.') }}%</span></p></div>
-                                        <div><p class="text-xs font-black text-slate-500">送料</p><p class="mt-1 font-black text-slate-950">¥{{ number_format($shippingFee) }}</p></div>
-                                        <div><p class="text-xs font-black text-slate-500">実利益</p><p class="mt-1 font-black {{ $profit < 0 ? 'text-red-700' : 'text-green-700' }}">¥{{ number_format($profit) }}</p></div>
+                                    <div class="absolute left-3 right-3 top-3 flex flex-wrap gap-2">
+                                        <span class="rounded-full {{ $item->status === 'sold' ? 'bg-red-600' : 'bg-blue-700' }} px-3 py-1.5 text-xs font-black text-white shadow">
+                                            {{ $statusLabel }}
+                                        </span>
+                                        <span class="rounded-full bg-white px-3 py-1.5 text-xs font-black text-black shadow">{{ $platformName }}</span>
+                                        @if($item->status !== 'sold' && $daysListed >= ($unsoldFilterMinDays ?? 10))
+                                            <span class="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-black shadow">未売却 {{ $daysListed }}日</span>
+                                        @endif
                                     </div>
                                 </div>
+                            </a>
 
-                                <div class="mt-6 grid grid-cols-2 gap-3">
-                                    <a href="{{ route('auction-items.show', $item) }}" class="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-700 transition hover:bg-slate-200">詳細</a>
+                            <div class="p-5">
+                                <div class="flex items-center justify-between gap-3">
+                                    <p class="text-xs font-black tracking-widest text-slate-700">{{ $item->management_id }}</p>
+                                    <p class="text-xs font-black text-slate-700">{{ $categoryLabel }}</p>
+                                </div>
+
+                                <h3 class="mt-3 line-clamp-2 min-h-[3.5rem] text-lg font-black leading-7 text-slate-950">{{ $item->title }}</h3>
+                                <p class="mt-2 line-clamp-2 min-h-[3rem] text-sm font-semibold leading-6 text-slate-700">{{ $item->comment ?: 'コメントはありません。' }}</p>
+
+                                <div class="mt-5 grid grid-cols-2 gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm">
+                                    <div><p class="text-xs font-black text-slate-600">仕入れ</p><p class="mt-1 font-black text-black">¥{{ number_format($purchasePrice) }}</p></div>
+                                    <div><p class="text-xs font-black text-slate-600">販売価格</p><p class="mt-1 font-black text-black">¥{{ number_format($soldPrice) }}</p></div>
+                                    <div><p class="text-xs font-black text-slate-600">送料・手数料</p><p class="mt-1 font-black text-black">¥{{ number_format($shippingFee + $salesFee) }}</p></div>
+                                    <div><p class="text-xs font-black text-slate-600">見込み/実利益</p><p class="mt-1 font-black {{ $profit < 0 ? 'text-red-700' : 'text-green-700' }}">¥{{ number_format($profit) }}</p></div>
+                                </div>
+
+                                <div class="mt-5 grid grid-cols-2 gap-2">
+                                    <a href="{{ route('auction-items.show', $item) }}" class="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-black transition hover:bg-slate-200">詳細</a>
                                     <a href="{{ route('auction-items.edit', $item) }}" class="rounded-xl bg-blue-700 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-800">編集</a>
                                 </div>
 
-                                @if($item->status !== 'sold')
-                                    <form action="{{ route('auction-items.sold', $item) }}" method="POST" class="mt-3" onsubmit="return confirm('この商品をSOLDにしますか？')">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="w-full rounded-xl bg-amber-500 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-amber-600">SOLDにする</button>
-                                    </form>
-                                @else
-                                    <form action="{{ route('auction-items.selling', $item) }}" method="POST" class="mt-3" onsubmit="return confirm('この商品を出品中に戻しますか？')">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="w-full rounded-xl bg-blue-700 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-800">出品中に戻す</button>
-                                    </form>
-                                @endif
+                                <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    @if($item->status !== 'sold')
+                                        <form action="{{ route('auction-items.sold', $item) }}" method="POST" onsubmit="return confirm('この商品をSOLDにしますか？')">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="w-full rounded-xl bg-amber-500 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-amber-600">SOLDにする</button>
+                                        </form>
+                                    @else
+                                        <form action="{{ route('auction-items.selling', $item) }}" method="POST" onsubmit="return confirm('この商品を出品中に戻しますか？')">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="w-full rounded-xl bg-blue-700 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-800">出品中に戻す</button>
+                                        </form>
+                                    @endif
 
-                                <form action="{{ route('auction-items.destroy', $item) }}" method="POST" class="mt-3" onsubmit="return confirm('この商品を削除しますか？画像も削除されます。')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="w-full rounded-xl bg-red-600 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-red-700">削除</button>
-                                </form>
+                                    <form action="{{ route('auction-items.destroy', $item) }}" method="POST" onsubmit="return confirm('この商品を削除しますか？画像も削除されます。')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="w-full rounded-xl bg-red-600 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-red-700">削除</button>
+                                    </form>
+                                </div>
                             </div>
                         </article>
                     @endforeach
@@ -235,11 +182,25 @@
                 <div class="mt-8">{{ $auctionItems->links() }}</div>
             @else
                 <div class="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow">
-                    <h3 class="text-2xl font-black text-slate-900">表示できる出品データがありません</h3>
-                    <p class="mt-3 font-semibold text-slate-700">条件を変更するか、新しい出品を登録してください。</p>
-                    <a href="{{ route('auction-items.create') }}" class="mt-8 inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-sm font-bold text-white shadow transition hover:bg-blue-800">出品を登録する</a>
+                    <h3 class="text-2xl font-black text-slate-900">表示できる商品がありません</h3>
+                    <p class="mt-3 font-semibold text-slate-700">条件を変更するか、新しい商品を登録してください。</p>
+                    <a href="{{ route('auction-items.create') }}" class="mt-8 inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-4 text-sm font-bold text-white shadow transition hover:bg-blue-800">商品を登録</a>
                 </div>
             @endif
         </div>
+
+        <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-cyan-200 bg-white/95 px-3 py-3 shadow-2xl backdrop-blur md:hidden" aria-label="スマホ操作">
+            <div class="grid grid-cols-3 gap-2">
+                <a href="{{ route('auction-items.create') }}" class="rounded-xl bg-blue-700 px-3 py-3 text-center text-xs font-black text-white shadow">
+                    商品登録
+                </a>
+                <a href="{{ route('auction-items.index', ['status' => 'selling']) }}" class="rounded-xl bg-slate-100 px-3 py-3 text-center text-xs font-black text-black shadow">
+                    出品中
+                </a>
+                <a href="{{ route('premium.report') }}" class="rounded-xl bg-cyan-300 px-3 py-3 text-center text-xs font-black text-slate-950 shadow">
+                    レポート
+                </a>
+            </div>
+        </nav>
     </div>
 </x-app-layout>

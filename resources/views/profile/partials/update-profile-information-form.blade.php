@@ -20,7 +20,7 @@
                 required
                 autofocus
                 autocomplete="name"
-                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black placeholder:text-slate-500 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             >
 
             @error('name')
@@ -40,7 +40,7 @@
                 value="{{ old('email', $user->email) }}"
                 required
                 autocomplete="username"
-                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black placeholder:text-slate-500 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             >
 
             @error('email')

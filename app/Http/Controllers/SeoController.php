@@ -7,19 +7,6 @@ use Illuminate\Support\Facades\Route;
 
 class SeoController extends Controller
 {
-    private const INDEXABLE_ROUTES = [
-        'home' => ['weekly', '1.0'],
-        'marketing.features' => ['monthly', '0.9'],
-        'marketing.use-cases' => ['monthly', '0.9'],
-        'marketing.pricing' => ['monthly', '0.8'],
-        'register' => ['monthly', '0.7'],
-        'legal.faq' => ['monthly', '0.8'],
-        'legal.terms' => ['yearly', '0.5'],
-        'legal.privacy' => ['yearly', '0.5'],
-        'legal.commercial' => ['yearly', '0.5'],
-        'legal.contact' => ['yearly', '0.5'],
-    ];
-
     private const PRIVATE_PATHS = [
         '/admin',
         '/auction-items',
@@ -32,10 +19,10 @@ class SeoController extends Controller
 
     public function sitemap(): Response
     {
-        $lastModified = now()->toDateString();
+        $lastModified = config('seo.updated_at', now()->toDateString());
         $urls = [];
 
-        foreach (self::INDEXABLE_ROUTES as $routeName => [$changeFrequency, $priority]) {
+        foreach (config('seo.pages', []) as $routeName => $page) {
             if (! Route::has($routeName)) {
                 continue;
             }
@@ -43,8 +30,14 @@ class SeoController extends Controller
             $urls[] = [
                 'loc' => route($routeName),
                 'lastmod' => $lastModified,
-                'changefreq' => $changeFrequency,
-                'priority' => $priority,
+                'changefreq' => $page['changefreq'] ?? 'monthly',
+                'priority' => $page['priority'] ?? '0.5',
+                'image' => $routeName === 'home'
+                    ? asset(ltrim(config('seo.image', '/images/furugi-manager-hero.png'), '/'))
+                    : null,
+                'image_title' => $routeName === 'home'
+                    ? config('seo.site_name', 'FURUGI MANAGER')
+                    : null,
             ];
         }
 
