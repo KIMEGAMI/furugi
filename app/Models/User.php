@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable([
@@ -69,5 +70,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin;
+    }
+
+    /** @return HasMany<AuctionItem, User> */
+    public function auctionItems(): HasMany
+    {
+        return $this->hasMany(AuctionItem::class);
     }
 }

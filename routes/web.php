@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\MaintenanceController;
 use App\Http\Controllers\Admin\NoticeController as AdminNoticeController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AuctionItemController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\MaintenanceLoginController;
@@ -61,6 +62,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/admin/notices', [AdminNoticeController::class, 'store'])
         ->name('admin.notices.store');
+
+    Route::get('/admin/users', [AdminUserController::class, 'index'])
+        ->name('admin.users.index');
+
+    Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy'])
+        ->name('admin.users.destroy');
 
     Route::get('/notices', [NoticeController::class, 'index'])
         ->name('notices.index');
