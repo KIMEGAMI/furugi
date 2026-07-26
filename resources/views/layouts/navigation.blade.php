@@ -1,14 +1,14 @@
 <nav x-data="{ open: false }" class="border-b border-cyan-300/20 bg-slate-950/45 text-white shadow-2xl backdrop-blur-md">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 justify-between">
-            <div class="flex">
+            <div class="flex min-w-0">
                 <div class="flex shrink-0 items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <span class="text-xl font-black text-white">FURUGI</span>
+                    <a href="{{ route('dashboard') }}" class="text-xl font-black text-white">
+                        FURUGI
                     </a>
                 </div>
 
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                <div class="hidden space-x-6 sm:-my-px sm:ms-8 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         HOME
                     </x-nav-link>
@@ -36,6 +36,20 @@
                     <x-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')">
                         プロフィール
                     </x-nav-link>
+
+                    @if (Auth::user()?->isAdmin())
+                        <x-nav-link :href="route('admin.maintenance.index')" :active="request()->routeIs('admin.maintenance.*', 'admin.notices.*')">
+                            管理者画面
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                            ユーザー一覧
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('notices.index')" :active="request()->routeIs('notices.*')">
+                            お知らせ一覧
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -60,6 +74,7 @@
                 <button
                     @click="open = ! open"
                     class="inline-flex items-center justify-center rounded-md p-2 text-slate-100 transition duration-150 ease-in-out hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none"
+                    aria-label="メニューを開閉"
                 >
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path
@@ -114,6 +129,26 @@
             <x-responsive-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')">
                 プロフィール
             </x-responsive-nav-link>
+
+            @if (Auth::user()?->isAdmin())
+                <div class="mt-2 border-t border-cyan-300/20 pt-2">
+                    <div class="px-4 py-2 text-xs font-black tracking-[0.18em] text-cyan-200">
+                        管理者メニュー
+                    </div>
+
+                    <x-responsive-nav-link :href="route('admin.maintenance.index')" :active="request()->routeIs('admin.maintenance.*', 'admin.notices.*')">
+                        管理者画面
+                    </x-responsive-nav-link>
+
+                    <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                        ユーザー一覧
+                    </x-responsive-nav-link>
+
+                    <x-responsive-nav-link :href="route('notices.index')" :active="request()->routeIs('notices.*')">
+                        お知らせ一覧
+                    </x-responsive-nav-link>
+                </div>
+            @endif
         </div>
 
         <div class="border-t border-cyan-300/20 pb-1 pt-4">

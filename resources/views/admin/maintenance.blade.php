@@ -7,6 +7,15 @@
                 </div>
             @endif
 
+            <div class="mb-5 flex flex-wrap gap-3">
+                <a href="{{ route('admin.users.index') }}" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white hover:bg-slate-800">
+                    ユーザー一覧
+                </a>
+                <a href="{{ route('notices.index') }}" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-5 py-3 text-sm font-black text-white hover:bg-blue-800">
+                    お知らせ一覧
+                </a>
+            </div>
+
             <section class="rounded-3xl bg-white p-6 shadow-xl md:p-8">
                 <p class="text-sm font-black text-blue-700">ADMIN</p>
                 <h1 class="mt-2 text-3xl font-black text-slate-900">メンテナンスモード</h1>
