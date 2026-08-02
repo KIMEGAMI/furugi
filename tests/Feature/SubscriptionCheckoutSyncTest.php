@@ -60,6 +60,64 @@ class SubscriptionCheckoutSyncTest extends TestCase
         ]);
     }
 
+    public function test_existing_active_subscription_on_another_customer_blocks_new_checkout(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_old*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_canceled',
+                        'customer' => 'cus_old',
+                        'status' => 'canceled',
+                    ],
+                ],
+            ]),
+            'https://api.stripe.com/v1/customers*' => Http::response([
+                'data' => [
+                    ['id' => 'cus_old'],
+                    ['id' => 'cus_active'],
+                ],
+            ]),
+            'https://api.stripe.com/v1/subscriptions?customer=cus_active*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_active',
+                        'customer' => 'cus_active',
+                        'status' => 'active',
+                        'current_period_end' => now()->addMonth()->timestamp,
+                    ],
+                ],
+            ]),
+            'https://api.stripe.com/v1/checkout/sessions' => Http::response([
+                'url' => 'https://checkout.stripe.test/session',
+            ]),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'subscription_status' => 'canceled',
+            'stripe_customer_id' => 'cus_old',
+            'stripe_subscription_id' => 'sub_canceled',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'))
+            ->assertRedirect(route('subscriptions.index'));
+
+        Http::assertNotSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_active',
+            'stripe_subscription_id' => 'sub_active',
+        ]);
+    }
+
     public function test_new_checkout_session_includes_subscription_metadata(): void
     {
         config([

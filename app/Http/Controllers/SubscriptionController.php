@@ -296,7 +296,12 @@ class SubscriptionController extends Controller
     private function syncKnownStripeSubscriptionForUser(User $user): bool
     {
         if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
-            return $this->syncLatestSubscriptionForUser($user);
+            $synced = $this->syncLatestSubscriptionForUser($user);
+            $user->refresh();
+
+            if ($synced && $user->hasActiveSubscription()) {
+                return true;
+            }
         }
 
         return $this->syncLatestSubscriptionByEmail($user);
