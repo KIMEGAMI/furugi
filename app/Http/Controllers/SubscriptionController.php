@@ -7,8 +7,8 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
@@ -21,18 +21,13 @@ class SubscriptionController extends Controller
     {
         $user = $request->user();
 
-        if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
-            $this->syncLatestSubscriptionForUser($user);
-            $user->refresh();
-        }
+        $this->syncKnownStripeSubscriptionForUser($user);
+        $user->refresh();
 
         return view('subscriptions.index', [
             'user' => $user,
             'hasActiveSubscription' => $user->hasActiveSubscription(),
-            'hasStripeSubscription' => is_string($user->stripe_customer_id)
-                && $user->stripe_customer_id !== ''
-                && is_string($user->stripe_subscription_id)
-                && $user->stripe_subscription_id !== '',
+            'hasStripeSubscription' => $this->hasStripeSubscriptionIdentifiers($user),
             'price' => config('services.stripe.subscription_amount', 480),
         ]);
     }
@@ -42,15 +37,15 @@ class SubscriptionController extends Controller
         $user = $request->user();
         $secret = config('services.stripe.secret');
 
-        if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
-            $this->syncLatestSubscriptionForUser($user);
-            $user->refresh();
+        if ($user->hasActiveSubscription()) {
+            return $this->redirectAlreadySubscribed();
+        }
 
-            if ($user->hasActiveSubscription()) {
-                return redirect()
-                    ->route('subscriptions.index')
-                    ->with('status', 'すでにPremium契約が有効です。契約・解約画面から契約状態を確認できます。');
-            }
+        $this->syncKnownStripeSubscriptionForUser($user);
+        $user->refresh();
+
+        if ($user->hasActiveSubscription()) {
+            return $this->redirectAlreadySubscribed();
         }
 
         if (! is_string($secret) || $secret === '') {
@@ -80,6 +75,7 @@ class SubscriptionController extends Controller
                     'locale' => config('services.stripe.checkout_locale', 'ja'),
                     'client_reference_id' => (string) $user->id,
                     'metadata[user_id]' => (string) $user->id,
+                    'subscription_data[metadata][user_id]' => (string) $user->id,
                 ]);
         } catch (Throwable) {
             return redirect()
@@ -108,6 +104,11 @@ class SubscriptionController extends Controller
     {
         $user = $request->user();
         $secret = config('services.stripe.secret');
+
+        if (! is_string($user->stripe_customer_id) || $user->stripe_customer_id === '') {
+            $this->syncKnownStripeSubscriptionForUser($user);
+            $user->refresh();
+        }
 
         if (! is_string($secret) || $secret === '' || ! is_string($user->stripe_customer_id) || $user->stripe_customer_id === '') {
             return redirect()
@@ -191,6 +192,21 @@ class SubscriptionController extends Controller
         return redirect()
             ->route('subscriptions.index')
             ->with('status', 'Premium契約を確認しました。契約・解約画面から契約状態を確認できます。');
+    }
+
+    private function redirectAlreadySubscribed(): RedirectResponse
+    {
+        return redirect()
+            ->route('subscriptions.index')
+            ->with('status', 'すでにPremium契約が有効です。契約・解約画面から契約状態を確認できます。');
+    }
+
+    private function hasStripeSubscriptionIdentifiers(User $user): bool
+    {
+        return is_string($user->stripe_customer_id)
+            && $user->stripe_customer_id !== ''
+            && is_string($user->stripe_subscription_id)
+            && $user->stripe_subscription_id !== '';
     }
 
     private function ensureStripeCustomer(User $user, string $secret): string
@@ -277,6 +293,15 @@ class SubscriptionController extends Controller
         return false;
     }
 
+    private function syncKnownStripeSubscriptionForUser(User $user): bool
+    {
+        if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
+            return $this->syncLatestSubscriptionForUser($user);
+        }
+
+        return $this->syncLatestSubscriptionByEmail($user);
+    }
+
     private function syncLatestSubscriptionForUser(User $user): bool
     {
         $secret = config('services.stripe.secret');
@@ -320,6 +345,61 @@ class SubscriptionController extends Controller
         }
 
         return $this->syncSubscriptionPayload($user, $subscription);
+    }
+
+    private function syncLatestSubscriptionByEmail(User $user): bool
+    {
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '' || ! is_string($user->email) || $user->email === '') {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get(self::STRIPE_API_BASE.'/customers', [
+                    'email' => $user->email,
+                    'limit' => 10,
+                ]);
+        } catch (Throwable) {
+            return false;
+        }
+
+        if ($response->failed()) {
+            return false;
+        }
+
+        $customers = $response->json('data');
+
+        if (! is_array($customers) || $customers === []) {
+            return false;
+        }
+
+        foreach ($customers as $customer) {
+            if (! is_array($customer)) {
+                continue;
+            }
+
+            $customerId = data_get($customer, 'id');
+
+            if (! is_string($customerId) || $customerId === '') {
+                continue;
+            }
+
+            $user->forceFill(['stripe_customer_id' => $customerId])->save();
+
+            if ($this->syncLatestSubscriptionForUser($user)) {
+                $user->refresh();
+
+                if ($user->hasActiveSubscription()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
