@@ -28,7 +28,7 @@
             <div class="mt-8 rounded-2xl border border-white/10 bg-white/10 p-4 text-left">
                 <p class="text-sm font-black text-white">ご利用中のお客様へ</p>
                 <p class="mt-2 text-xs font-semibold leading-6 text-slate-300">
-                    登録済みの商品データや画像は保持されます。作業完了後、通常どおりログインしてご利用いただけます。
+                    登録済みの商品データと画像は保持されます。作業完了後、通常どおりログインしてご利用いただけます。
                 </p>
             </div>
         </section>
