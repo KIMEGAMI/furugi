@@ -17,7 +17,7 @@
             >
 
             @if ($errors->updatePassword->get('current_password'))
-                <p class="mt-2 text-sm font-bold text-red-600">
+                <p class="mt-2 text-sm font-bold text-black">
                     {{ $errors->updatePassword->first('current_password') }}
                 </p>
             @endif
@@ -37,7 +37,7 @@
             >
 
             @if ($errors->updatePassword->get('password'))
-                <p class="mt-2 text-sm font-bold text-red-600">
+                <p class="mt-2 text-sm font-bold text-black">
                     {{ $errors->updatePassword->first('password') }}
                 </p>
             @endif

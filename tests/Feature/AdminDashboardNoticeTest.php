@@ -23,6 +23,34 @@ class AdminDashboardNoticeTest extends TestCase
         $response->assertDontSee('分後に再度お試しください', false);
     }
 
+    public function test_admin_can_view_dashboard_during_maintenance_mode(): void
+    {
+        SystemSetting::putValue(SystemSetting::KEY_MAINTENANCE_ENABLED, '1');
+
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $this
+            ->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk();
+    }
+
+    public function test_regular_user_cannot_view_dashboard_during_maintenance_mode(): void
+    {
+        SystemSetting::putValue(SystemSetting::KEY_MAINTENANCE_ENABLED, '1');
+
+        $user = User::factory()->create([
+            'is_admin' => false,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertStatus(503);
+    }
+
     public function test_admin_can_publish_dashboard_notice_and_user_can_open_detail_page(): void
     {
         $admin = User::factory()->create([
@@ -108,7 +136,7 @@ class AdminDashboardNoticeTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('ページ送りお知らせ'.(Notice::PAGE_SIZE + 1), false);
-        $response->assertDontSee('ページ送りお知らせ1', false);
+        $response->assertDontSee('>ページ送りお知らせ1<', false);
         $response->assertSee('page=2', false);
     }
 }

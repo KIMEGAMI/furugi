@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\BulkMailController;
+use App\Http\Controllers\Admin\GrowthController;
 use App\Http\Controllers\Admin\MaintenanceController;
 use App\Http\Controllers\Admin\NoticeController as AdminNoticeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -13,7 +15,6 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\MarketingPageController;
 use App\Http\Controllers\NoticeController;
-use App\Http\Controllers\PremiumReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaController;
 use App\Http\Controllers\SalesController;
@@ -50,10 +51,10 @@ Route::get('/maintenance-login', MaintenanceLoginController::class)->name('maint
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth'])
     ->name('dashboard');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/admin/maintenance', [MaintenanceController::class, 'index'])
         ->name('admin.maintenance.index');
 
@@ -69,6 +70,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy'])
         ->name('admin.users.destroy');
 
+    Route::get('/admin/bulk-mail', [BulkMailController::class, 'index'])
+        ->name('admin.bulk-mail.index');
+
+    Route::post('/admin/bulk-mail', [BulkMailController::class, 'store'])
+        ->name('admin.bulk-mail.store');
+
+    Route::get('/admin/growth', [GrowthController::class, 'index'])
+        ->name('admin.growth.index');
+
+    Route::patch('/admin/growth/inquiries/{contactInquiry}', [GrowthController::class, 'handleInquiry'])
+        ->name('admin.growth.inquiries.handle');
+
     Route::get('/notices', [NoticeController::class, 'index'])
         ->name('notices.index');
 
@@ -76,21 +89,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('notices.show');
 
     Route::get('/auction-items/csv-import', [AuctionItemController::class, 'csvImport'])
+        ->middleware('premium')
         ->name('auction-items.csv-import');
 
     Route::post('/auction-items/import', [AuctionItemController::class, 'importCsv'])
+        ->middleware('premium')
         ->name('auction-items.import');
 
     Route::post('/auction-items/import/yahoo-auctions', [AuctionItemController::class, 'importYahooAuctionCsv'])
+        ->middleware('premium')
         ->name('auction-items.import.yahoo-auctions');
 
-    Route::post('/auction-items/import/mercari-shops', [AuctionItemController::class, 'importMercariShopsCsv'])
-        ->name('auction-items.import.mercari-shops');
-
     Route::get('/auction-items/duplicates', [AuctionItemController::class, 'duplicates'])
+        ->middleware('premium')
         ->name('auction-items.duplicates');
 
     Route::delete('/auction-items/duplicates', [AuctionItemController::class, 'deleteDuplicates'])
+        ->middleware('premium')
         ->name('auction-items.duplicates.destroy');
 
     Route::resource('auction-items', AuctionItemController::class);
@@ -102,18 +117,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('auction-items.selling');
 
     Route::get('/sales', [SalesController::class, 'index'])
+        ->middleware('premium')
         ->name('sales.index');
 
     Route::get('/sales/csv', [SalesController::class, 'downloadCsv'])
+        ->middleware('premium')
         ->name('sales.csv');
 
     Route::get('/sales/backup-csv', [SalesController::class, 'downloadBackupCsv'])
+        ->middleware('premium')
         ->name('sales.backup-csv');
 
     Route::get('/sales/restore-csv', [SalesController::class, 'downloadRestoreCsv'])
+        ->middleware('premium')
         ->name('sales.restore-csv');
 
     Route::get('/category-sales', [CategorySalesController::class, 'index'])
+        ->middleware('premium')
         ->name('category-sales.index');
 
     Route::get('/profile', [ProfileController::class, 'edit'])
@@ -125,20 +145,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 
-    Route::get('/premium', [SubscriptionController::class, 'index'])
+    Route::get('/billing', [SubscriptionController::class, 'index'])
         ->name('subscriptions.index');
 
-    Route::post('/premium/checkout', [SubscriptionController::class, 'checkout'])
+    Route::get('/premium', fn () => redirect()->route('subscriptions.index'))
+        ->name('subscriptions.legacy');
+
+    Route::post('/billing/checkout', [SubscriptionController::class, 'checkout'])
         ->name('subscriptions.checkout');
 
-    Route::post('/premium/portal', [SubscriptionController::class, 'portal'])
+    Route::post('/billing/portal', [SubscriptionController::class, 'portal'])
         ->name('subscriptions.portal');
 
-    Route::get('/premium/success', [SubscriptionController::class, 'success'])
-        ->name('subscriptions.success');
+    Route::post('/billing/cancel-feedback', [SubscriptionController::class, 'cancelFeedback'])
+        ->name('subscriptions.cancel-feedback');
 
-    Route::get('/premium/report', [PremiumReportController::class, 'index'])
-        ->name('premium.report');
+    Route::get('/billing/success', [SubscriptionController::class, 'success'])
+        ->name('subscriptions.success');
 
 });
 

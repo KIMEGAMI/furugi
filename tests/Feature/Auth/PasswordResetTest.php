@@ -19,6 +19,17 @@ class PasswordResetTest extends TestCase
         $response = $this->get('/forgot-password');
 
         $response->assertStatus(200);
+        $response->assertSee('パスワード再設定', false);
+        $response->assertSee('再設定URLを送信', false);
+    }
+
+    public function test_login_screen_has_password_reset_link(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertStatus(200);
+        $response->assertSee('パスワードを忘れた方', false);
+        $response->assertSee(route('password.request'), false);
     }
 
     public function test_reset_password_link_can_be_requested(): void
@@ -59,6 +70,7 @@ class PasswordResetTest extends TestCase
             $response = $this->get('/reset-password/'.$notification->token);
 
             $response->assertStatus(200);
+            $response->assertSee('新しいパスワードを設定', false);
 
             return true;
         });

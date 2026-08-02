@@ -16,7 +16,7 @@
         <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             @if ($errors->any())
                 <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4">
-                    <ul class="space-y-1 text-sm font-bold text-red-600">
+                    <ul class="space-y-1 text-sm font-bold text-black">
                         @foreach ($errors->all() as $error)
                             <li>・{{ $error }}</li>
                         @endforeach

@@ -1,24 +1,39 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-cyan-200">
-        {{ __('登録済みのメールアドレスを入力してください。パスワード再設定用のリンクをメールで送信します。') }}
+    <div class="mb-6">
+        <h1 class="text-2xl font-black text-white">パスワード再設定</h1>
+        <p class="mt-3 text-sm font-semibold leading-7 text-cyan-100">
+            登録済みのメールアドレスを入力してください。パスワードを再設定するためのURLをメールで送信します。
+        </p>
     </div>
 
-    <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <form method="POST" action="{{ route('password.email') }}">
+    <form method="POST" action="{{ route('password.email') }}" class="space-y-5">
         @csrf
 
-        <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('メールアドレス')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
+            <x-input-label for="email" value="メールアドレス" />
+            <x-text-input
+                id="email"
+                class="mt-2 block w-full"
+                type="email"
+                name="email"
+                :value="old('email')"
+                required
+                autofocus
+                autocomplete="username"
+                placeholder="登録済みのメールアドレス"
+            />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
-        <div class="flex items-center justify-end mt-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{{ route('login') }}" class="text-sm font-bold text-cyan-200 hover:text-white">
+                ログイン画面へ戻る
+            </a>
+
             <x-primary-button>
-                {{ __('パスワード再設定メールを送信') }}
+                再設定URLを送信
             </x-primary-button>
         </div>
     </form>

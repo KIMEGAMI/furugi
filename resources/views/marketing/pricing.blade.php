@@ -1,69 +1,100 @@
 @php
     $pageSeo = config('seo.pages')['marketing.pricing'] ?? [];
-    $premiumAmount = (int) config('services.stripe.premium_amount', config('seo.software.default_price', 480));
-    $schema = [[
-        '@context' => 'https://schema.org',
-        '@type' => 'Product',
-        'name' => config('seo.site_name').' Premium',
-        'description' => $pageSeo['description'],
-        'brand' => [
-            '@type' => 'Brand',
-            'name' => config('seo.site_name'),
-        ],
-        'offers' => [
-            '@type' => 'Offer',
-            'price' => (string) $premiumAmount,
-            'priceCurrency' => 'JPY',
-            'availability' => 'https://schema.org/InStock',
-            'url' => route('marketing.pricing'),
-        ],
-    ]];
 @endphp
 
 <x-marketing-layout
     :title="$pageSeo['title']"
     :description="$pageSeo['description']"
     :canonical="route('marketing.pricing')"
-    :schema="$schema"
 >
     <section class="bg-slate-950 py-16 text-white">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <p class="text-sm font-black tracking-[0.24em] text-cyan-200">PRICING</p>
-            <h1 class="mt-4 max-w-4xl text-4xl font-black leading-tight md:text-5xl">無料で試して、必要な機能だけPremiumで広げる。</h1>
+            <h1 class="mt-4 max-w-4xl text-4xl font-black leading-tight md:text-5xl">料金体系</h1>
             <p class="mt-5 max-w-3xl text-base font-semibold leading-8 text-cyan-100">
-                小規模な古着販売はFreeで始められます。CSV登録、売上分析、ジャンル別分析など継続運用に必要な機能はPremiumで利用できます。
+                Freeは小さく試すための無料枠です。Premiumは月額480円で登録制限をなくし、CSV、売上分析、ジャンル分析など古着販売の運用に必要な機能をまとめて利用できます。
             </p>
         </div>
     </section>
 
-    <section class="py-14">
-        <div class="mx-auto grid max-w-5xl gap-5 px-4 sm:px-6 md:grid-cols-2 lg:px-8">
-            <article class="rounded-lg border border-slate-200 bg-white p-6">
-                <h2 class="text-2xl font-black text-slate-950">Free</h2>
-                <p class="mt-3 text-4xl font-black text-slate-950">0円</p>
-                <p class="mt-2 text-sm font-bold text-slate-600">まず操作感を試したい方向け</p>
-                <ul class="mt-6 space-y-3 font-semibold text-slate-700">
-                    <li>商品登録の基本機能</li>
-                    <li>画像付き商品管理</li>
-                    <li>SOLD管理</li>
-                    <li>基本ダッシュボード</li>
-                </ul>
-            </article>
+    <section class="bg-white py-14">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="grid gap-5 lg:grid-cols-2">
+                <article class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-sm font-black tracking-[0.18em] text-slate-500">FREE</p>
+                            <h2 class="mt-2 text-3xl font-black text-slate-950">無料</h2>
+                            <p class="mt-3 text-sm font-bold leading-7 text-slate-600">
+                                まず操作感を確認したい方向けの無料枠です。
+                            </p>
+                        </div>
+                        <div class="rounded-lg bg-slate-100 px-5 py-4 text-center">
+                            <p class="text-3xl font-black text-slate-950">¥0</p>
+                            <p class="mt-1 text-xs font-bold text-slate-500">月額</p>
+                        </div>
+                    </div>
 
-            <article class="rounded-lg border-2 border-cyan-500 bg-white p-6 shadow-lg">
-                <h2 class="text-2xl font-black text-slate-950">Premium</h2>
-                <p class="mt-3 text-4xl font-black text-cyan-800">{{ number_format($premiumAmount) }}円/月</p>
-                <p class="mt-2 text-sm font-bold text-slate-600">本格的に古着販売を管理したい方向け</p>
-                <ul class="mt-6 space-y-3 font-semibold text-slate-700">
-                    <li>商品登録数の上限拡張</li>
-                    <li>CSV登録・CSV出力</li>
-                    <li>ヤフオクCSV変換</li>
-                    <li>売上・利益分析</li>
-                    <li>ジャンル別分析</li>
-                    <li>運用診断レポート</li>
-                    <li>今後のバックアップ・エクスポート強化対象</li>
-                </ul>
-            </article>
+                    <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-5">
+                        <h3 class="text-lg font-black text-slate-950">Freeの制限</h3>
+                        <ul class="mt-4 space-y-3 text-sm font-bold leading-7 text-slate-700">
+                            <li>商品登録は50件まで</li>
+                            <li>大ジャンル・小ジャンルなどカテゴリ管理は5件まで</li>
+                            <li>CSV一括登録は利用不可</li>
+                            <li>売上CSV出力は利用不可</li>
+                            <li>ジャンル別売上分析は利用不可</li>
+                            <li>重複チェックや高度な分析は利用不可</li>
+                        </ul>
+                    </div>
+
+                    <a href="{{ route('register') }}" class="mt-6 inline-flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-6 py-3 text-sm font-black text-slate-900 shadow-sm hover:bg-slate-50">
+                        Freeで始める
+                    </a>
+                </article>
+
+                <article class="rounded-lg border-2 border-cyan-500 bg-cyan-50 p-6 shadow-lg">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-sm font-black tracking-[0.18em] text-cyan-700">PREMIUM</p>
+                            <h2 class="mt-2 text-3xl font-black text-slate-950">月額480円</h2>
+                            <p class="mt-3 text-sm font-bold leading-7 text-slate-700">
+                                制限を外して、日々の登録・分析・CSV作業を本格運用できます。
+                            </p>
+                        </div>
+                        <div class="rounded-lg bg-white px-5 py-4 text-center shadow-sm">
+                            <p class="text-3xl font-black text-slate-950">¥480</p>
+                            <p class="mt-1 text-xs font-bold text-slate-500">月額</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 rounded-lg border border-cyan-200 bg-white p-5">
+                        <h3 class="text-lg font-black text-slate-950">Premiumで使える機能</h3>
+                        <ul class="mt-4 space-y-3 text-sm font-bold leading-7 text-slate-700">
+                            <li>商品登録数の制限なし</li>
+                            <li>カテゴリ登録数の制限なし</li>
+                            <li>画像付き商品登録</li>
+                            <li>出品中・SOLD管理</li>
+                            <li>古着システムCSVの一括登録</li>
+                            <li>ヤフオク売上CSVの変換登録</li>
+                            <li>売上CSV、全商品バックアップCSV、復元用CSVの出力</li>
+                            <li>売上・利益・利益率の分析</li>
+                            <li>大ジャンル・小ジャンル別の売上分析</li>
+                            <li>重複チェック、滞留在庫確認、運用改善に使う分析</li>
+                        </ul>
+                    </div>
+
+                    <a href="{{ route('subscriptions.index') }}" class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-cyan-700 px-6 py-3 text-sm font-black text-white shadow hover:bg-cyan-800">
+                        Premiumに登録する
+                    </a>
+                </article>
+            </div>
+
+            <div class="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-5">
+                <h2 class="text-lg font-black text-amber-900">解約について</h2>
+                <p class="mt-3 text-sm font-bold leading-7 text-amber-800">
+                    Premium登録後は、ログイン後の「契約・解約」画面からStripeの契約管理画面へ移動し、支払い方法の変更や解約を行えます。
+                </p>
+            </div>
         </div>
     </section>
 </x-marketing-layout>

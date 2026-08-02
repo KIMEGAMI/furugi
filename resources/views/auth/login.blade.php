@@ -72,7 +72,7 @@
                                 class="mt-3 block w-full rounded-md border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
                             @error('email')
-                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -88,11 +88,11 @@
                                 class="mt-3 block w-full rounded-md border-slate-300 px-4 py-4 text-slate-800 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
                             @error('password')
-                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <div class="mt-6 flex items-center justify-between">
+                        <div class="mt-6 flex items-center justify-between gap-4">
                             <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
                                 <input type="checkbox" name="remember" class="rounded border-slate-300 text-blue-600 shadow-sm focus:ring-blue-500">
                                 ログイン状態を保存する
@@ -100,7 +100,7 @@
 
                             @if (Route::has('password.request'))
                                 <a href="{{ route('password.request') }}" class="text-sm font-bold text-blue-700 hover:text-blue-900">
-                                    パスワードをお忘れですか？
+                                    パスワードを忘れた方
                                 </a>
                             @endif
                         </div>

@@ -26,7 +26,7 @@
 
             @if($errors->any())
                 <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-6 py-5">
-                    <p class="font-bold text-red-700">{{ $errors->first() }}</p>
+                    <p class="font-bold text-black">{{ $errors->first() }}</p>
                 </div>
             @endif
 

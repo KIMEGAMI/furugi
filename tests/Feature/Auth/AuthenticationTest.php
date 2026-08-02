@@ -3,9 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -45,26 +43,8 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
-    public function test_demo_login_marks_the_demo_user_as_premium(): void
+    public function test_unverified_users_can_authenticate_using_the_login_screen(): void
     {
-        $user = User::factory()->create([
-            'email' => 'user@shinji.work',
-            'password' => '12345678',
-            'subscription_plan' => User::PLAN_FREE,
-            'subscription_status' => null,
-            'premium_started_at' => null,
-            'premium_ends_at' => null,
-        ]);
-
-        $this->post(route('login.demo'));
-
-        $this->assertTrue($user->fresh()->isPremium());
-    }
-
-    public function test_unverified_users_receive_a_verification_email_after_login(): void
-    {
-        Notification::fake();
-
         $user = User::factory()->unverified()->create();
 
         $response = $this->post('/login', [
@@ -73,10 +53,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticatedAs($user);
-        $response->assertRedirect(route('verification.notice', absolute: false));
-        $response->assertSessionHas('status', 'verification-link-sent');
-
-        Notification::assertSentTo($user, VerifyEmail::class);
+        $response->assertRedirect(route('dashboard', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

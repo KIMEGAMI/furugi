@@ -22,9 +22,6 @@ class ProfileController extends Controller
         return view('profile.edit', [
             'user' => $request->user(),
             'canDeleteAccount' => ! $this->isProtectedAccount($request->user()),
-            'isPremium' => $request->user()->isPremium(),
-            'premiumPrice' => config('services.stripe.premium_amount', 480),
-            'canOpenBillingPortal' => is_string($request->user()->stripe_customer_id) && $request->user()->stripe_customer_id !== '',
         ]);
     }
 

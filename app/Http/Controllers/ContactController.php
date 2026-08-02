@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ContactInquiry;
 use App\Services\NgWordFilter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,14 @@ class ContactController extends Controller
                 'message' => '不適切な表現が含まれています。内容を見直してから送信してください。',
             ]);
         }
+
+        ContactInquiry::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'subject' => $validated['subject'],
+            'message' => $validated['message'],
+            'status' => ContactInquiry::STATUS_OPEN,
+        ]);
 
         if ($this->canSendMail()) {
             Mail::send('emails.contact', ['contact' => $validated], function ($message) use ($validated): void {

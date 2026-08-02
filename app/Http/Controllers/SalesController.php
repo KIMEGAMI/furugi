@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\AuctionItem;
 use Carbon\Carbon;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
@@ -14,13 +13,8 @@ use Illuminate\View\View;
 
 class SalesController extends Controller
 {
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request): View
     {
-        if (! (Auth::user()?->isPremium() ?? false)) {
-            return redirect()
-                ->route('subscriptions.index')
-                ->with('error', '売上管理はPremium限定機能です。');
-        }
 
         $userId = (int) Auth::id();
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
@@ -106,9 +100,6 @@ class SalesController extends Controller
 
     public function downloadCsv(): Response
     {
-        if (! (Auth::user()?->isPremium() ?? false)) {
-            abort(403);
-        }
 
         $hasSoldAt = Schema::hasColumn('auction_items', 'sold_at');
         $items = AuctionItem::query()
@@ -152,9 +143,6 @@ class SalesController extends Controller
 
     public function downloadBackupCsv(): Response
     {
-        if (! (Auth::user()?->isPremium() ?? false)) {
-            abort(403);
-        }
 
         $items = AuctionItem::query()
             ->with(['category.parent'])
@@ -199,9 +187,6 @@ class SalesController extends Controller
 
     public function downloadRestoreCsv(): Response
     {
-        if (! (Auth::user()?->isPremium() ?? false)) {
-            abort(403);
-        }
 
         $items = AuctionItem::query()
             ->with(['category.parent'])
@@ -339,11 +324,11 @@ class SalesController extends Controller
     private function monthlyInsightMessage(int $profitDiff, float $profitRate): string
     {
         if ($profitDiff > 0 && $profitRate >= 25) {
-            return '前月より利益が伸びています。利益率も良いため、同じジャンルや出品先の仕入れを強める候補です。';
+            return '前月より利益が伸びています。利益率も高いため、同じジャンルや出品先の商品を強化する価値があります。';
         }
 
         if ($profitDiff > 0) {
-            return '前月より利益は伸びています。手数料と送料を見直すと、さらに利益率を上げられます。';
+            return '前月より利益が伸びています。手数料と送料を見直すと、さらに利益率を上げられます。';
         }
 
         if ($profitRate < 15) {
@@ -359,6 +344,7 @@ class SalesController extends Controller
 
         return $platform !== '' ? $platform : '未設定';
     }
+
     private function statusLabel(string $status): string
     {
         return match ($status) {

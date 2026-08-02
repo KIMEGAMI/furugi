@@ -1,7 +1,7 @@
 <section class="space-y-6">
     <p class="text-sm leading-7 text-slate-600">
         アカウントを削除すると、登録済みデータも含めて復元できません。
-        ポートフォリオ用途では通常この操作は使用しません。
+        通常利用ではこの操作は使用しないでください。
     </p>
 
     <button
@@ -40,7 +40,7 @@
                 >
 
                 @if ($errors->userDeletion->get('password'))
-                    <p class="mt-2 text-sm font-bold text-red-600">
+                    <p class="mt-2 text-sm font-bold text-black">
                         {{ $errors->userDeletion->first('password') }}
                     </p>
                 @endif

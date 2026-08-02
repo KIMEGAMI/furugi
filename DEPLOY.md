@@ -216,6 +216,15 @@ sudo -u www-data php artisan view:cache
 
 This app uses the database queue connection by default. If queued jobs are used in production, run a worker with Supervisor or systemd.
 
+Recommended systemd setup:
+
+```bash
+cd /var/www/furugi
+sudo bash deploy/scripts/install-startup-services.sh
+```
+
+This enables Apache2 at boot and installs `furugi-queue.service` for Laravel queue workers.
+
 Simple manual start:
 
 ```bash
@@ -226,6 +235,20 @@ After each deployment:
 
 ```bash
 sudo -u www-data php artisan queue:restart
+```
+
+Restart production services without rebooting the server:
+
+```bash
+cd /var/www/furugi
+sudo bash deploy/scripts/restart-production-services.sh
+```
+
+Restart services and then reboot the server:
+
+```bash
+cd /var/www/furugi
+sudo bash deploy/scripts/restart-production-services.sh --reboot
 ```
 
 ## 10. Standard Update Command

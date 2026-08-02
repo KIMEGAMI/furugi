@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (! Schema::hasColumn('users', 'subscription_plan')) {
-                $table->string('subscription_plan')->default('free')->after('google_id');
+                $table->string('subscription_plan')->default('inactive')->after('google_id');
             }
 
             if (! Schema::hasColumn('users', 'subscription_status')) {
@@ -37,17 +37,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex(['stripe_customer_id']);
-            $table->dropIndex(['stripe_subscription_id']);
-            $table->dropColumn([
-                'subscription_plan',
-                'subscription_status',
-                'stripe_customer_id',
-                'stripe_subscription_id',
-                'premium_started_at',
-                'premium_ends_at',
-            ]);
-        });
+        // Keep Stripe linkage columns to avoid losing billing state during rollback.
     }
 };

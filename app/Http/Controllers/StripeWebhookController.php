@@ -104,14 +104,14 @@ class StripeWebhookController extends Controller
 
         $status = (string) data_get($subscription, 'status', '');
         $periodEnd = data_get($subscription, 'current_period_end');
-        $isPremium = in_array($status, ['active', 'trialing'], true);
+        $isActive = in_array($status, ['active', 'trialing'], true);
 
         $user->forceFill([
-            'subscription_plan' => $isPremium ? User::PLAN_PREMIUM : User::PLAN_FREE,
+            'subscription_plan' => $isActive ? User::SUBSCRIPTION_ACTIVE : User::SUBSCRIPTION_INACTIVE,
             'subscription_status' => $status ?: null,
             'stripe_customer_id' => is_string($customerId) ? $customerId : $user->stripe_customer_id,
             'stripe_subscription_id' => is_string($subscriptionId) ? $subscriptionId : $user->stripe_subscription_id,
-            'premium_started_at' => $isPremium && $user->premium_started_at === null ? now() : $user->premium_started_at,
+            'premium_started_at' => $isActive && $user->premium_started_at === null ? now() : $user->premium_started_at,
             'premium_ends_at' => is_numeric($periodEnd) ? Carbon::createFromTimestamp((int) $periodEnd) : $user->premium_ends_at,
         ])->save();
     }

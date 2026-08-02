@@ -13,7 +13,7 @@ class AuctionItemDuplicateTest extends TestCase
 
     public function test_user_can_see_duplicate_item_groups(): void
     {
-        $user = User::factory()->create();
+        $user = $this->premiumUser();
         $otherUser = User::factory()->create();
 
         $this->createAuctionItem($user, 'A-1', 'XLARGE Tシャツ', AuctionItem::PLATFORM_YAHOO);
@@ -34,7 +34,7 @@ class AuctionItemDuplicateTest extends TestCase
 
     public function test_user_can_delete_duplicate_items_except_selected_keep_item(): void
     {
-        $user = User::factory()->create();
+        $user = $this->premiumUser();
         $otherUser = User::factory()->create();
 
         $keepItem = $this->createAuctionItem($user, 'A-1', 'XLARGE Tシャツ', AuctionItem::PLATFORM_YAHOO);
@@ -58,7 +58,7 @@ class AuctionItemDuplicateTest extends TestCase
 
     public function test_user_can_delete_duplicate_items_except_latest_item(): void
     {
-        $user = User::factory()->create();
+        $user = $this->premiumUser();
 
         $oldItem = $this->createAuctionItem($user, 'A-1', 'XLARGE Tシャツ', AuctionItem::PLATFORM_YAHOO);
         $latestItem = $this->createAuctionItem($user, 'A-2', '  xlarge　tシャツ  ', AuctionItem::PLATFORM_YAHOO);
@@ -83,7 +83,7 @@ class AuctionItemDuplicateTest extends TestCase
 
     public function test_user_can_delete_all_duplicate_groups_except_each_latest_item(): void
     {
-        $user = User::factory()->create();
+        $user = $this->premiumUser();
         $otherUser = User::factory()->create();
 
         $oldShirt = $this->createAuctionItem($user, 'A-1', 'XLARGE Tシャツ', AuctionItem::PLATFORM_YAHOO);
@@ -118,7 +118,7 @@ class AuctionItemDuplicateTest extends TestCase
 
     public function test_user_cannot_delete_non_duplicate_item_from_duplicate_delete_endpoint(): void
     {
-        $user = User::factory()->create();
+        $user = $this->premiumUser();
         $item = $this->createAuctionItem($user, 'A-1', 'XLARGE Tシャツ', AuctionItem::PLATFORM_YAHOO);
 
         $response = $this
@@ -152,6 +152,14 @@ class AuctionItemDuplicateTest extends TestCase
             'shipping_fee' => 30,
             'profit' => 0,
             'sold_at' => null,
+        ]);
+    }
+
+    private function premiumUser(): User
+    {
+        return User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
         ]);
     }
 }

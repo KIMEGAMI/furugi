@@ -64,7 +64,7 @@
                         <label for="title" class="block text-sm font-black text-slate-900">題名</label>
                         <input id="title" name="title" type="text" value="{{ old('title') }}" maxlength="80" class="mt-2 w-full rounded-xl border-slate-300 bg-white text-slate-950 shadow-sm focus:border-blue-600 focus:ring-blue-600">
                         @error('title')
-                            <p class="mt-2 text-sm font-bold text-red-700">{{ $message }}</p>
+                            <p class="mt-2 text-sm font-bold text-black">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -72,7 +72,7 @@
                         <label for="body" class="block text-sm font-black text-slate-900">本文</label>
                         <textarea id="body" name="body" rows="6" maxlength="1000" class="mt-2 w-full rounded-xl border-slate-300 bg-white text-slate-950 shadow-sm focus:border-blue-600 focus:ring-blue-600">{{ old('body') }}</textarea>
                         @error('body')
-                            <p class="mt-2 text-sm font-bold text-red-700">{{ $message }}</p>
+                            <p class="mt-2 text-sm font-bold text-black">{{ $message }}</p>
                         @enderror
                     </div>
 

@@ -24,7 +24,7 @@
             >
 
             @error('name')
-                <p class="mt-2 text-sm font-bold text-red-600">{{ $message }}</p>
+                <p class="mt-2 text-sm font-bold text-black">{{ $message }}</p>
             @enderror
         </div>
 
@@ -44,7 +44,7 @@
             >
 
             @error('email')
-                <p class="mt-2 text-sm font-bold text-red-600">{{ $message }}</p>
+                <p class="mt-2 text-sm font-bold text-black">{{ $message }}</p>
             @enderror
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())

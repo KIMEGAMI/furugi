@@ -13,7 +13,10 @@ class SalesCsvSecurityTest extends TestCase
 
     public function test_downloaded_sales_csv_escapes_formula_like_cells(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+        ]);
 
         AuctionItem::create([
             'user_id' => $user->id,

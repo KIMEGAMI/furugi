@@ -5,13 +5,11 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -28,7 +26,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return $this->redirectAfterAuthentication($request);
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     public function demo(Request $request): RedirectResponse
@@ -39,11 +37,9 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        $this->activateDemoPremium();
-
         $request->session()->regenerate();
 
-        return $this->redirectAfterAuthentication($request);
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -54,45 +50,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
-    }
-
-    private function redirectAfterAuthentication(Request $request): RedirectResponse
-    {
-        $user = $request->user();
-
-        if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
-            try {
-                $user->sendEmailVerificationNotification();
-            } catch (TransportExceptionInterface) {
-                return redirect()
-                    ->route('verification.notice')
-                    ->withErrors([
-                        'email' => '認証メールの送信に失敗しました。管理者はメール設定を確認してください。',
-                    ]);
-            }
-
-            return redirect()
-                ->route('verification.notice')
-                ->with('status', 'verification-link-sent');
-        }
-
-        return redirect()->intended(route('dashboard', absolute: false));
-    }
-
-    private function activateDemoPremium(): void
-    {
-        $user = Auth::user();
-
-        if (! $user instanceof User) {
-            return;
-        }
-
-        $user->forceFill([
-            'subscription_plan' => User::PLAN_PREMIUM,
-            'subscription_status' => 'active',
-            'premium_started_at' => $user->premium_started_at ?? now(),
-            'premium_ends_at' => now()->addYears(10),
-        ])->save();
+        return redirect('/');
     }
 }

@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SubscriptionCancellationFeedback;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
 
@@ -17,11 +21,19 @@ class SubscriptionController extends Controller
     {
         $user = $request->user();
 
+        if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
+            $this->syncLatestSubscriptionForUser($user);
+            $user->refresh();
+        }
+
         return view('subscriptions.index', [
             'user' => $user,
-            'isPremium' => $user->isPremium(),
-            'freeItemLimit' => User::FREE_AUCTION_ITEM_LIMIT,
-            'price' => config('services.stripe.premium_amount', 480),
+            'hasActiveSubscription' => $user->hasActiveSubscription(),
+            'hasStripeSubscription' => is_string($user->stripe_customer_id)
+                && $user->stripe_customer_id !== ''
+                && is_string($user->stripe_subscription_id)
+                && $user->stripe_subscription_id !== '',
+            'price' => config('services.stripe.subscription_amount', 480),
         ]);
     }
 
@@ -30,50 +42,66 @@ class SubscriptionController extends Controller
         $user = $request->user();
         $secret = config('services.stripe.secret');
 
+        if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
+            $this->syncLatestSubscriptionForUser($user);
+            $user->refresh();
+
+            if ($user->hasActiveSubscription()) {
+                return redirect()
+                    ->route('subscriptions.index')
+                    ->with('status', 'すでにPremium契約が有効です。契約・解約画面から契約状態を確認できます。');
+            }
+        }
+
         if (! is_string($secret) || $secret === '') {
-            return back()
+            return redirect()
+                ->route('subscriptions.index')
                 ->with('error', 'Stripeの設定が未完了です。STRIPE_SECRETを設定してください。');
         }
 
         try {
             $customerId = $this->ensureStripeCustomer($user, $secret);
         } catch (Throwable) {
-            return back()
+            return redirect()
+                ->route('subscriptions.index')
                 ->with('error', '決済用の顧客情報を作成できませんでした。時間をおいて再度お試しください。');
         }
 
-        $lineItem = $this->subscriptionLineItem();
-
-        $response = Http::asForm()
-            ->withToken($secret)
-            ->post(self::STRIPE_API_BASE.'/checkout/sessions', [
-                'mode' => 'subscription',
-                'customer' => $customerId,
-                'line_items' => [$lineItem],
-                'success_url' => route('subscriptions.success', [], true).'?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('profile.edit', [], true),
-                'client_reference_id' => (string) $user->id,
-                'metadata[user_id]' => (string) $user->id,
-            ]);
+        try {
+            $response = Http::asForm()
+                ->timeout(10)
+                ->withToken($secret)
+                ->post(self::STRIPE_API_BASE.'/checkout/sessions', [
+                    'mode' => 'subscription',
+                    'customer' => $customerId,
+                    'line_items' => [$this->subscriptionLineItem()],
+                    'success_url' => route('subscriptions.success', [], true).'?session_id={CHECKOUT_SESSION_ID}',
+                    'cancel_url' => route('subscriptions.index', [], true),
+                    'locale' => config('services.stripe.checkout_locale', 'ja'),
+                    'client_reference_id' => (string) $user->id,
+                    'metadata[user_id]' => (string) $user->id,
+                ]);
+        } catch (Throwable) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'Stripeに接続できませんでした。ネットワークまたはStripeの設定を確認し、時間をおいて再度お試しください。');
+        }
 
         if ($response->failed()) {
-            return back()
+            return redirect()
+                ->route('subscriptions.index')
                 ->with('error', '決済画面を作成できませんでした。時間をおいて再度お試しください。');
         }
 
         $checkoutUrl = $response->json('url');
 
         if (! is_string($checkoutUrl) || $checkoutUrl === '') {
-            return back()
+            return redirect()
+                ->route('subscriptions.index')
                 ->with('error', '決済画面のURLを取得できませんでした。');
         }
 
         return redirect()->away($checkoutUrl);
-    }
-
-    public function success(): View
-    {
-        return view('subscriptions.success');
     }
 
     public function portal(Request $request): RedirectResponse
@@ -82,30 +110,87 @@ class SubscriptionController extends Controller
         $secret = config('services.stripe.secret');
 
         if (! is_string($secret) || $secret === '' || ! is_string($user->stripe_customer_id) || $user->stripe_customer_id === '') {
-            return back()
-                ->with('error', '請求管理画面を開けませんでした。');
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', '契約・解約画面を開けませんでした。Stripeの顧客情報を確認してください。');
         }
 
-        $response = Http::asForm()
-            ->withToken($secret)
-            ->post(self::STRIPE_API_BASE.'/billing_portal/sessions', [
-                'customer' => $user->stripe_customer_id,
-                'return_url' => route('profile.edit', [], true),
-            ]);
+        try {
+            $response = Http::asForm()
+                ->timeout(10)
+                ->withToken($secret)
+                ->post(self::STRIPE_API_BASE.'/billing_portal/sessions', [
+                    'customer' => $user->stripe_customer_id,
+                    'return_url' => route('subscriptions.index', [], true),
+                ]);
+        } catch (Throwable) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'Stripeに接続できませんでした。ネットワークまたはStripeの設定を確認し、時間をおいて再度お試しください。');
+        }
 
         if ($response->failed()) {
-            return back()
-                ->with('error', '請求管理画面を作成できませんでした。');
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', '契約・解約画面を作成できませんでした。時間をおいて再度お試しください。');
         }
 
         $portalUrl = $response->json('url');
 
         if (! is_string($portalUrl) || $portalUrl === '') {
-            return back()
-                ->with('error', '請求管理画面のURLを取得できませんでした。');
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', '契約・解約画面のURLを取得できませんでした。');
         }
 
         return redirect()->away($portalUrl);
+    }
+
+    public function cancelFeedback(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', Rule::in(array_keys(SubscriptionCancellationFeedback::REASONS))],
+            'detail' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        try {
+            SubscriptionCancellationFeedback::create([
+                'user_id' => $user->id,
+                'reason' => $validated['reason'],
+                'detail' => $validated['detail'] ?? null,
+                'subscription_status' => $user->subscription_status,
+            ]);
+        } catch (Throwable $exception) {
+            Log::warning('Failed to store subscription cancellation feedback.', [
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return $this->portal($request);
+    }
+
+    public function success(Request $request): RedirectResponse
+    {
+        $sessionId = $request->query('session_id');
+
+        if (! is_string($sessionId) || $sessionId === '') {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'Stripeの決済結果を確認できませんでした。契約状態を再確認してください。');
+        }
+
+        if (! $this->syncCheckoutSession($request->user(), $sessionId)) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'Stripeの契約状態を反映できませんでした。時間をおいて契約状態を再確認してください。');
+        }
+
+        return redirect()
+            ->route('subscriptions.index')
+            ->with('status', 'Premium契約を確認しました。契約・解約画面から契約状態を確認できます。');
     }
 
     private function ensureStripeCustomer(User $user, string $secret): string
@@ -115,6 +200,7 @@ class SubscriptionController extends Controller
         }
 
         $response = Http::asForm()
+            ->timeout(10)
             ->withToken($secret)
             ->post(self::STRIPE_API_BASE.'/customers', [
                 'email' => $user->email,
@@ -130,12 +216,170 @@ class SubscriptionController extends Controller
         return $customerId;
     }
 
+    private function syncCheckoutSession(User $user, string $sessionId): bool
+    {
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '') {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get(self::STRIPE_API_BASE.'/checkout/sessions/'.$sessionId, [
+                    'expand' => ['subscription'],
+                ]);
+        } catch (Throwable) {
+            return false;
+        }
+
+        if ($response->failed()) {
+            return false;
+        }
+
+        $session = $response->json();
+
+        if (! is_array($session)) {
+            return false;
+        }
+
+        $sessionUserId = data_get($session, 'metadata.user_id') ?: data_get($session, 'client_reference_id');
+
+        if ((string) $sessionUserId !== (string) $user->id) {
+            return false;
+        }
+
+        $customerId = data_get($session, 'customer');
+        $subscription = data_get($session, 'subscription');
+
+        if (is_array($subscription)) {
+            if (is_string($customerId)) {
+                $subscription['customer'] = $customerId;
+            }
+
+            return $this->syncSubscriptionPayload($user, $subscription);
+        }
+
+        if (is_string($subscription) && $subscription !== '') {
+            $payload = $this->fetchSubscription($subscription);
+
+            if ($payload !== []) {
+                if (is_string($customerId)) {
+                    $payload['customer'] = $customerId;
+                }
+
+                return $this->syncSubscriptionPayload($user, $payload);
+            }
+        }
+
+        return false;
+    }
+
+    private function syncLatestSubscriptionForUser(User $user): bool
+    {
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '' || ! is_string($user->stripe_customer_id) || $user->stripe_customer_id === '') {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get(self::STRIPE_API_BASE.'/subscriptions', [
+                    'customer' => $user->stripe_customer_id,
+                    'status' => 'all',
+                    'limit' => 10,
+                ]);
+        } catch (Throwable) {
+            return false;
+        }
+
+        if ($response->failed()) {
+            return false;
+        }
+
+        $subscriptions = $response->json('data');
+
+        if (! is_array($subscriptions) || $subscriptions === []) {
+            return false;
+        }
+
+        $subscription = collect($subscriptions)
+            ->first(fn (mixed $item): bool => is_array($item) && in_array(data_get($item, 'status'), ['active', 'trialing'], true));
+
+        if (! is_array($subscription)) {
+            $subscription = collect($subscriptions)->first(fn (mixed $item): bool => is_array($item));
+        }
+
+        if (! is_array($subscription)) {
+            return false;
+        }
+
+        return $this->syncSubscriptionPayload($user, $subscription);
+    }
+
+    /**
+     * @param  array<string, mixed>  $subscription
+     */
+    private function syncSubscriptionPayload(User $user, array $subscription): bool
+    {
+        $subscriptionId = data_get($subscription, 'id');
+        $customerId = data_get($subscription, 'customer');
+        $status = (string) data_get($subscription, 'status', '');
+        $periodEnd = data_get($subscription, 'current_period_end');
+        $isActive = in_array($status, ['active', 'trialing'], true);
+
+        $user->forceFill([
+            'subscription_plan' => $isActive ? User::SUBSCRIPTION_ACTIVE : User::SUBSCRIPTION_INACTIVE,
+            'subscription_status' => $status ?: null,
+            'stripe_customer_id' => is_string($customerId) ? $customerId : $user->stripe_customer_id,
+            'stripe_subscription_id' => is_string($subscriptionId) ? $subscriptionId : $user->stripe_subscription_id,
+            'premium_started_at' => $isActive && $user->premium_started_at === null ? now() : $user->premium_started_at,
+            'premium_ends_at' => is_numeric($periodEnd) ? Carbon::createFromTimestamp((int) $periodEnd) : $user->premium_ends_at,
+        ])->save();
+
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fetchSubscription(string $subscriptionId): array
+    {
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '') {
+            return [];
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get(self::STRIPE_API_BASE.'/subscriptions/'.$subscriptionId);
+        } catch (Throwable) {
+            return [];
+        }
+
+        if ($response->failed()) {
+            return [];
+        }
+
+        $payload = $response->json();
+
+        return is_array($payload) ? $payload : [];
+    }
+
     /**
      * @return array<string, mixed>
      */
     private function subscriptionLineItem(): array
     {
-        $priceId = config('services.stripe.premium_price_id');
+        $priceId = config('services.stripe.subscription_price_id');
 
         if (is_string($priceId) && $priceId !== '') {
             return [
@@ -147,12 +391,12 @@ class SubscriptionController extends Controller
         return [
             'quantity' => 1,
             'price_data' => [
-                'currency' => config('services.stripe.premium_currency', 'jpy'),
-                'unit_amount' => (int) config('services.stripe.premium_amount', 480),
+                'currency' => config('services.stripe.subscription_currency', 'jpy'),
+                'unit_amount' => (int) config('services.stripe.subscription_amount', 480),
                 'recurring' => ['interval' => 'month'],
                 'product_data' => [
-                    'name' => 'FURUGI Premium',
-                    'description' => 'Inventory, sales analysis, CSV import/export, and premium insights.',
+                    'name' => config('services.stripe.subscription_product_name', 'FURUGI Premium'),
+                    'description' => config('services.stripe.subscription_product_description', 'FURUGI paid subscription.'),
                 ],
             ],
         ];

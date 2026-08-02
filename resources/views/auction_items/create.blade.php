@@ -3,9 +3,8 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h2 class="text-2xl font-black text-blue-400">出品登録</h2>
-                <p class="mt-1 text-sm text-cyan-200">フリマ・オークション出品情報を登録します。</p>
+                <p class="mt-1 text-sm text-cyan-200">フリマ・オークションの商品情報を登録します。</p>
             </div>
-
             <a href="{{ route('auction-items.index') }}" class="inline-flex items-center justify-center rounded-xl bg-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-300">
                 一覧へ戻る
             </a>
@@ -27,20 +26,6 @@
             <form action="{{ route('auction-items.store') }}" method="POST" enctype="multipart/form-data" class="rounded-3xl bg-white p-6 shadow-xl">
                 @csrf
 
-                @unless ($isPremium ?? false)
-                    <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <p class="text-sm font-black text-amber-800">無料プラン: {{ number_format($itemCount ?? 0) }} / {{ number_format($itemLimit ?? 30) }} 件</p>
-                                <p class="mt-1 text-xs font-bold text-amber-700">Premiumにすると登録数、CSV取込、売上分析、ジャンル分析が解放されます。</p>
-                            </div>
-                            <a href="{{ route('subscriptions.index') }}" class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-white hover:bg-amber-600">
-                                Premiumを見る
-                            </a>
-                        </div>
-                    </div>
-                @endunless
-
                 <div class="grid grid-cols-1 gap-5">
                     <div>
                         <span class="block text-xs font-black tracking-wider text-slate-600">商品画像</span>
@@ -50,14 +35,12 @@
                                     <label for="camera_image" class="block text-sm font-black text-slate-700">カメラで撮影</label>
                                     <input id="camera_image" type="file" name="camera_image" accept="image/jpeg,image/png,image/webp" capture="environment" class="mt-2 block w-full cursor-pointer rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-700 file:px-4 file:py-2 file:text-sm file:font-black file:text-white">
                                 </div>
-
                                 <div>
                                     <label for="image" class="block text-sm font-black text-slate-700">画像を選択</label>
                                     <input id="image" type="file" name="image" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-black file:text-slate-700">
                                 </div>
                             </div>
-                            <p class="mt-2 text-xs font-semibold text-slate-500">スマホでは「カメラで撮影」から背面カメラを起動できます。JPG / PNG / WEBP 対応。最大2MB。</p>
-
+                            <p class="mt-2 text-xs font-semibold text-slate-500">スマートフォンでは「カメラで撮影」から背面カメラを起動できます。JPG / PNG / WEBP 対応、最大2MBです。</p>
                             <div id="image-preview-wrap" class="mt-4 hidden">
                                 <p class="mb-2 text-xs font-black tracking-wider text-slate-600">選択中の画像</p>
                                 <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -72,7 +55,6 @@
                             <label class="block text-xs font-black tracking-wider text-slate-600">管理ID</label>
                             <input type="text" name="management_id" value="{{ old('management_id') }}" class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" placeholder="FRG-0001">
                         </div>
-
                         <div>
                             <label for="platform" class="block text-xs font-black tracking-wider text-slate-600">出品先</label>
                             <select name="platform" id="platform" class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
@@ -107,7 +89,6 @@
                                 <input type="number" name="purchase_price" value="{{ old('purchase_price') }}" class="h-11 w-full rounded-xl border-slate-300 pl-8 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" placeholder="3000">
                             </div>
                         </div>
-
                         <div>
                             <label class="block text-xs font-black tracking-wider text-slate-600">売値</label>
                             <div class="relative mt-2">
@@ -123,7 +104,6 @@
                             <input type="number" step="0.1" name="sales_fee_rate" id="sales_fee_rate" value="{{ old('sales_fee_rate', 10) }}" class="mt-2 h-11 w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             <p class="mt-1 text-xs font-semibold text-slate-500">出品先を選ぶと自動で反映されます。</p>
                         </div>
-
                         <div>
                             <label class="block text-xs font-black tracking-wider text-slate-600">送料</label>
                             <div class="relative mt-2">
@@ -131,7 +111,6 @@
                                 <input type="number" name="shipping_fee" value="{{ old('shipping_fee', 750) }}" class="h-11 w-full rounded-xl border-slate-300 pl-8 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             </div>
                         </div>
-
                         <div class="rounded-2xl bg-slate-100 p-4">
                             <p class="text-xs font-black tracking-wider text-slate-500">利益計算式</p>
                             <p class="mt-2 text-sm font-black text-slate-700">売値 - 仕入れ値 - 手数料 - 送料</p>
@@ -170,32 +149,28 @@
                     URL.revokeObjectURL(previewUrl);
                     previewUrl = null;
                 }
-
                 if (!file) {
                     imagePreview.removeAttribute('src');
                     imagePreviewWrap.classList.add('hidden');
                     return;
                 }
-
                 previewUrl = URL.createObjectURL(file);
                 imagePreview.src = previewUrl;
                 imagePreviewWrap.classList.remove('hidden');
             }
 
             imageInput?.addEventListener('change', function () {
+                showImagePreview(imageInput.files?.[0] ?? null);
                 if (imageInput.files?.length) {
                     cameraImageInput.value = '';
                 }
-
-                showImagePreview(imageInput.files?.[0]);
             });
 
             cameraImageInput?.addEventListener('change', function () {
+                showImagePreview(cameraImageInput.files?.[0] ?? null);
                 if (cameraImageInput.files?.length) {
                     imageInput.value = '';
                 }
-
-                showImagePreview(cameraImageInput.files?.[0]);
             });
         });
     </script>

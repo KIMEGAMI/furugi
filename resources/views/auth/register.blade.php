@@ -84,7 +84,7 @@
                                 class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
                             @error('name')
-                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                <p class="mt-2 text-sm text-black">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -101,7 +101,7 @@
                                 class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
                             @error('email')
-                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                <p class="mt-2 text-sm text-black">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -123,7 +123,7 @@
                             <p id="password-strength-text" class="mt-2 text-xs font-bold text-slate-600">パスワード強度: 未入力</p>
 
                             @error('password')
-                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                <p class="mt-2 text-sm text-black">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -139,6 +139,44 @@
                                 class="mt-3 block w-full rounded-xl border-slate-300 px-4 py-4 text-black shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             >
                             <p id="password-match-text" class="mt-2 text-xs font-bold text-slate-600">パスワード確認を入力してください</p>
+                        </div>
+
+                        <div class="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <label for="terms_accepted" class="flex items-start gap-3 text-sm font-bold text-slate-900">
+                                <input
+                                    id="terms_accepted"
+                                    name="terms_accepted"
+                                    type="checkbox"
+                                    value="1"
+                                    required
+                                    @checked(old('terms_accepted'))
+                                    class="mt-1 rounded border-slate-400 text-blue-700 shadow-sm focus:ring-blue-600"
+                                >
+                                <span>
+                                    <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener noreferrer" class="text-blue-800 underline hover:text-blue-950">利用規約</a>に同意します
+                                </span>
+                            </label>
+                            @error('terms_accepted')
+                                <p class="text-sm font-bold text-black">利用規約への同意が必要です。</p>
+                            @enderror
+
+                            <label for="privacy_accepted" class="flex items-start gap-3 text-sm font-bold text-slate-900">
+                                <input
+                                    id="privacy_accepted"
+                                    name="privacy_accepted"
+                                    type="checkbox"
+                                    value="1"
+                                    required
+                                    @checked(old('privacy_accepted'))
+                                    class="mt-1 rounded border-slate-400 text-blue-700 shadow-sm focus:ring-blue-600"
+                                >
+                                <span>
+                                    <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener noreferrer" class="text-blue-800 underline hover:text-blue-950">プライバシーポリシー</a>に同意します
+                                </span>
+                            </label>
+                            @error('privacy_accepted')
+                                <p class="text-sm font-bold text-black">プライバシーポリシーへの同意が必要です。</p>
+                            @enderror
                         </div>
 
                         <button

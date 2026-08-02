@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Middleware\MaintenanceMode;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\EnsurePremiumPlan;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\MaintenanceMode;
-use App\Http\Middleware\SecurityHeaders;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,9 +14,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [
+        $middleware->web(prepend: [
             MaintenanceMode::class,
+        ]);
+
+        $middleware->web(append: [
             SecurityHeaders::class,
+        ]);
+
+        $middleware->alias([
+            'premium' => EnsurePremiumPlan::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

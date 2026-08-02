@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ContactFormTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_contact_form_can_be_rendered(): void
     {
         $response = $this->get('/contact');
@@ -44,5 +47,9 @@ class ContactFormTest extends TestCase
         $response->assertSessionHasNoErrors();
         $response->assertSessionHas('success');
         Mail::assertNothingSent();
+        $this->assertDatabaseHas('contact_inquiries', [
+            'email' => 'sender@example.com',
+            'status' => 'open',
+        ]);
     }
 }

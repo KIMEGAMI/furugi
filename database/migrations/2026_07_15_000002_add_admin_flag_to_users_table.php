@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (! Schema::hasColumn('users', 'is_admin')) {
-                $table->boolean('is_admin')->default(false)->after('premium_ends_at');
+                $table->boolean('is_admin')->default(false)->after('email_verified_at');
             }
         });
     }

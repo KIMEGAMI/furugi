@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'to_address' => env('CONTACT_TO_ADDRESS'),
+    'to_address' => env('CONTACT_TO_ADDRESS', 'saas.system.shinji@gmail.com'),
     'to_name' => env('CONTACT_TO_NAME', env('APP_NAME', 'FURUGI')),
     'subject_prefix' => env('CONTACT_SUBJECT_PREFIX', 'FURUGIお問い合わせ'),
     'max_name_length' => (int) env('CONTACT_MAX_NAME_LENGTH', 80),

@@ -13,6 +13,7 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
@@ -22,9 +23,12 @@ return [
     'stripe' => [
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
-        'premium_price_id' => env('STRIPE_PREMIUM_PRICE_ID'),
-        'premium_amount' => (int) env('STRIPE_PREMIUM_AMOUNT', 480),
-        'premium_currency' => env('STRIPE_PREMIUM_CURRENCY', 'jpy'),
+        'subscription_price_id' => env('STRIPE_SUBSCRIPTION_PRICE_ID', env('STRIPE_PREMIUM_PRICE_ID')),
+        'subscription_amount' => (int) env('STRIPE_SUBSCRIPTION_AMOUNT', env('STRIPE_PREMIUM_AMOUNT', 480)),
+        'subscription_currency' => env('STRIPE_SUBSCRIPTION_CURRENCY', env('STRIPE_PREMIUM_CURRENCY', 'jpy')),
+        'checkout_locale' => env('STRIPE_CHECKOUT_LOCALE', 'ja'),
+        'subscription_product_name' => env('STRIPE_PREMIUM_PRODUCT_NAME', 'FURUGI Premium'),
+        'subscription_product_description' => env('STRIPE_PREMIUM_PRODUCT_DESCRIPTION', 'FURUGI paid subscription.'),
     ],
 
     'postmark' => [

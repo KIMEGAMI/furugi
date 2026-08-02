@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuctionItem;
 use App\Models\Category;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -32,21 +33,17 @@ class AuctionItemController extends Controller
 
     private const YAHOO_AUCTION_SALE_STATUS = '売上金';
 
-    private const MERCARI_SHOPS_REQUIRED_HEADERS = [
-        '明細番号',
-        '明細種別',
-        '購入日',
-        '商品名',
-        '販売利益',
-        '売上（税込）',
-        'メルカリ便送料（税込）',
-        '販売手数料（税込）',
-    ];
-
-    private const MERCARI_SHOPS_PURCHASE_DETAIL_TYPE = '購入';
-
     public function index(Request $request)
     {
+        if ($request->boolean('unsold') && ! $request->user()?->hasActiveSubscription()) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', '滞留在庫チェックはPremiumプラン限定です。Premiumに登録すると、売れ残り商品の確認や運用改善に使える分析機能を利用できます。')
+                ->with('upgrade_title', '滞留在庫チェックはPremiumプランで利用できます。')
+                ->with('upgrade_description', '売れ残り商品の確認、売上分析、ジャンル別分析、重複チェックまでまとめて利用できます。')
+                ->with('upgrade_features', $this->premiumUpgradeFeatures());
+        }
+
         $status = $request->get('status');
         $platform = $request->get('platform');
         $keyword = $request->get('keyword');
@@ -111,9 +108,6 @@ class AuctionItemController extends Controller
             'parentCategories' => $this->parentCategories(),
             'platforms' => AuctionItem::PLATFORMS,
             'salesFeeRates' => AuctionItem::SALES_FEE_RATES,
-            'itemCount' => $this->currentUserItemCount(),
-            'itemLimit' => $this->freeAuctionItemLimit(),
-            'isPremium' => Auth::user()?->isPremium() ?? false,
         ]);
     }
 
@@ -131,13 +125,20 @@ class AuctionItemController extends Controller
 
     public function store(Request $request)
     {
-        if ($this->hasReachedFreeItemLimit()) {
-            return redirect()
-                ->route('subscriptions.index')
-                ->with('error', '無料プランの商品登録上限に達しました。Premiumにすると登録数の制限なく利用できます。');
+        $limitResponse = $this->ensureFreeAuctionItemLimit($request);
+
+        if ($limitResponse) {
+            return $limitResponse;
         }
 
         $validated = $this->validateAuctionItem($request);
+
+        $categoryLimitResponse = $this->ensureFreeCategoryLimit($request, $validated['category_id'] ?? null);
+
+        if ($categoryLimitResponse) {
+            return $categoryLimitResponse;
+        }
+
         $platform = $this->normalizePlatform($validated['platform']);
         $soldPrice = (int) ($validated['sold_price'] ?? 0);
         $purchasePrice = (int) ($validated['purchase_price'] ?? 0);
@@ -176,11 +177,6 @@ class AuctionItemController extends Controller
 
     public function importCsv(Request $request)
     {
-        if (! (Auth::user()?->isPremium() ?? false)) {
-            return redirect()
-                ->route('subscriptions.index')
-                ->with('error', 'CSV取込はPremium限定機能です。');
-        }
 
         $request->validate([
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
@@ -327,11 +323,6 @@ class AuctionItemController extends Controller
 
     public function importYahooAuctionCsv(Request $request)
     {
-        if (! (Auth::user()?->isPremium() ?? false)) {
-            return redirect()
-                ->route('subscriptions.index')
-                ->with('error', 'CSV取込はPremium限定機能です。');
-        }
 
         $request->validate([
             'yahoo_csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
@@ -437,118 +428,6 @@ class AuctionItemController extends Controller
             ->with('success', "ヤフオクCSVを変換して一括登録しました。登録 {$importedCount} 件 / スキップ {$skippedCount} 件");
     }
 
-    public function importMercariShopsCsv(Request $request)
-    {
-        if (! (Auth::user()?->isPremium() ?? false)) {
-            return redirect()
-                ->route('subscriptions.index')
-                ->with('error', 'CSV取込はPremium限定機能です。');
-        }
-
-        $request->validate([
-            'mercari_shops_csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
-        ], [
-            'mercari_shops_csv_file.required' => 'メルカリShops売上明細CSVファイルを選択してください。',
-            'mercari_shops_csv_file.mimes' => 'メルカリShops売上明細CSVファイルを選択してください。',
-        ]);
-
-        $handle = $this->openUploadedCsv($request, 'mercari_shops_csv_file');
-
-        if (! is_resource($handle)) {
-            return $handle;
-        }
-
-        $headers = fgetcsv($handle);
-
-        if (! $headers) {
-            fclose($handle);
-
-            return $this->csvImportError('メルカリShops CSVのヘッダー行を読み込めませんでした。');
-        }
-
-        $headers = array_map(fn ($header) => trim((string) $header), $headers);
-        $missingHeaders = array_diff(self::MERCARI_SHOPS_REQUIRED_HEADERS, $headers);
-
-        if ($missingHeaders !== []) {
-            fclose($handle);
-
-            return $this->csvImportError('メルカリShops CSVに必要な列がありません。不足: '.implode(', ', $missingHeaders));
-        }
-
-        $importedCount = 0;
-        $skippedCount = 0;
-        $lineNumber = 1;
-
-        while (($row = fgetcsv($handle)) !== false) {
-            $lineNumber++;
-
-            if ($lineNumber > self::CSV_MAX_ROWS + 1) {
-                fclose($handle);
-
-                return $this->csvImportError('CSVは最大'.number_format(self::CSV_MAX_ROWS).'行まで取り込めます。行数を分けて再実行してください。');
-            }
-
-            if (count(array_filter($row, fn ($value) => trim((string) $value) !== '')) === 0) {
-                continue;
-            }
-
-            $row = array_pad($row, count($headers), null);
-            $data = array_combine($headers, array_map(
-                fn ($value) => $this->sanitizeCsvCell($value),
-                array_slice($row, 0, count($headers))
-            ));
-
-            if (! $data || ! $this->isImportableMercariShopsSale($data)) {
-                $skippedCount++;
-
-                continue;
-            }
-
-            $managementId = trim((string) $data['明細番号']);
-
-            if (AuctionItem::where('user_id', Auth::id())->where('management_id', $managementId)->exists()) {
-                $skippedCount++;
-
-                continue;
-            }
-
-            $soldPrice = $this->parseCsvMoney($data['売上（税込）'] ?? null);
-            $salesFee = $this->parseCsvMoney($data['販売手数料（税込）'] ?? null);
-            $shippingFee = $this->parseCsvMoney($data['メルカリ便送料（税込）'] ?? null);
-            $profit = $this->parseCsvMoney($data['販売利益'] ?? null);
-            $salesFeeRate = isset($data['販売手数料率（%）']) && trim((string) $data['販売手数料率（%）']) !== ''
-                ? max(0, min(100, (float) $data['販売手数料率（%）']))
-                : ($soldPrice > 0 ? round(($salesFee / $soldPrice) * 100, 2) : $this->defaultSalesFeeRate(AuctionItem::PLATFORM_MERCARI));
-
-            AuctionItem::create([
-                'user_id' => Auth::id(),
-                'management_id' => $managementId,
-                'title' => trim((string) $data['商品名']),
-                'comment' => $this->buildMercariShopsComment($data),
-                'platform' => AuctionItem::PLATFORM_MERCARI,
-                'category_id' => null,
-                'image_path' => null,
-                'sold_image_path' => null,
-                'purchase_price' => 0,
-                'sold_price' => $soldPrice,
-                'sales_fee_rate' => $salesFeeRate,
-                'sales_fee' => $salesFee,
-                'shipping_fee' => $shippingFee,
-                'profit' => $profit,
-                'sold_at' => $this->parseCsvSoldAt($data['購入日'] ?? null) ?? now(),
-                'status' => AuctionItem::STATUS_SOLD,
-            ]);
-
-            $importedCount++;
-        }
-
-        fclose($handle);
-
-        return redirect()
-            ->route('auction-items.index', ['status' => AuctionItem::STATUS_SOLD])
-            ->with('success', "メルカリShops CSVを変換して一括登録しました。登録 {$importedCount} 件 / スキップ {$skippedCount} 件");
-    }
-
     public function show(AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
@@ -576,6 +455,11 @@ class AuctionItemController extends Controller
     {
         $this->authorizeOwner($auctionItem);
         $validated = $this->validateAuctionItem($request, $auctionItem);
+        $categoryLimitResponse = $this->ensureFreeCategoryLimit($request, $validated['category_id'] ?? null, $auctionItem);
+
+        if ($categoryLimitResponse) {
+            return $categoryLimitResponse;
+        }
 
         $imageFile = $this->auctionItemImageFile($request);
 
@@ -762,6 +646,83 @@ class AuctionItemController extends Controller
         ]);
     }
 
+    private function ensureFreeAuctionItemLimit(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user || $user->hasActiveSubscription()) {
+            return null;
+        }
+
+        $itemCount = AuctionItem::query()
+            ->where('user_id', $user->id)
+            ->count();
+
+        if ($itemCount < User::FREE_AUCTION_ITEM_LIMIT) {
+            return null;
+        }
+
+        return redirect()
+            ->route('subscriptions.index')
+            ->with('error', 'Freeプランの商品登録は'.User::FREE_AUCTION_ITEM_LIMIT.'件までです。Premiumに登録すると商品登録数の制限がなくなります。')
+            ->with('upgrade_title', '商品登録数の上限に達しました。')
+            ->with('upgrade_description', 'Premiumに登録すると、商品登録数の制限がなくなり、CSV登録や売上分析も利用できます。')
+            ->with('upgrade_features', $this->premiumUpgradeFeatures());
+    }
+
+    private function ensureFreeCategoryLimit(Request $request, mixed $categoryId, ?AuctionItem $auctionItem = null)
+    {
+        $user = $request->user();
+        $categoryId = is_numeric($categoryId) ? (int) $categoryId : null;
+
+        if (! $user || $user->hasActiveSubscription() || $categoryId === null) {
+            return null;
+        }
+
+        $categoryIsAlreadyUsed = AuctionItem::query()
+            ->where('user_id', $user->id)
+            ->where('category_id', $categoryId)
+            ->when($auctionItem, fn ($query) => $query->where('id', '!=', $auctionItem->id))
+            ->exists();
+
+        if ($categoryIsAlreadyUsed) {
+            return null;
+        }
+
+        $usedCategoryCount = AuctionItem::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('category_id')
+            ->when($auctionItem, fn ($query) => $query->where('id', '!=', $auctionItem->id))
+            ->distinct('category_id')
+            ->count('category_id');
+
+        if ($usedCategoryCount < User::FREE_CATEGORY_LIMIT) {
+            return null;
+        }
+
+        return redirect()
+            ->route('subscriptions.index')
+            ->with('error', 'Freeプランで利用できるカテゴリは'.User::FREE_CATEGORY_LIMIT.'件までです。Premiumに登録するとカテゴリ数の制限がなくなります。')
+            ->with('upgrade_title', 'カテゴリ数の上限に達しました。')
+            ->with('upgrade_description', 'Premiumに登録すると、カテゴリ数の制限がなくなり、ジャンル別売上分析も利用できます。')
+            ->with('upgrade_features', $this->premiumUpgradeFeatures());
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function premiumUpgradeFeatures(): array
+    {
+        return [
+            '商品登録数の制限なし',
+            'カテゴリ数の制限なし',
+            'CSV登録・CSV変換登録',
+            '売上分析・CSV出力',
+            'ジャンル別売上分析',
+            '重複チェック',
+        ];
+    }
+
     private function auctionItemImageFile(Request $request): ?UploadedFile
     {
         if ($request->hasFile('camera_image')) {
@@ -820,29 +781,6 @@ class AuctionItemController extends Controller
         if ($auctionItem->user_id !== Auth::id()) {
             abort(403);
         }
-    }
-
-    private function hasReachedFreeItemLimit(): bool
-    {
-        $user = Auth::user();
-
-        if (! $user || $user->isPremium()) {
-            return false;
-        }
-
-        return $this->currentUserItemCount() >= $this->freeAuctionItemLimit();
-    }
-
-    private function currentUserItemCount(): int
-    {
-        return AuctionItem::query()
-            ->where('user_id', Auth::id())
-            ->count();
-    }
-
-    private function freeAuctionItemLimit(): int
-    {
-        return Auth::user()?->freeAuctionItemLimit() ?? 30;
     }
 
     private function parentCategories()
@@ -967,19 +905,6 @@ class AuctionItemController extends Controller
         return $successfulBidFee + $salesFee;
     }
 
-    private function isImportableMercariShopsSale(array $data): bool
-    {
-        $managementId = trim((string) ($data['明細番号'] ?? ''));
-        $title = trim((string) ($data['商品名'] ?? ''));
-        $detailType = trim((string) ($data['明細種別'] ?? ''));
-        $profit = $this->parseSignedCsvMoney($data['販売利益'] ?? null);
-
-        return $managementId !== ''
-            && $title !== ''
-            && $detailType === self::MERCARI_SHOPS_PURCHASE_DETAIL_TYPE
-            && $profit >= 0;
-    }
-
     private function buildYahooAuctionComment(array $data): ?string
     {
         $parts = [
@@ -988,21 +913,6 @@ class AuctionItemController extends Controller
             '売上: '.trim((string) ($data['売上'] ?? '')),
             '決済金額: '.trim((string) ($data['決済金額'] ?? '')),
             '受取金額: '.trim((string) ($data['受取金額'] ?? '')),
-        ];
-
-        $comment = implode(' / ', array_filter($parts, fn ($part) => ! str_ends_with($part, ': ')));
-
-        return $comment !== '' ? mb_substr($comment, 0, self::CSV_MAX_CELL_LENGTH) : null;
-    }
-
-    private function buildMercariShopsComment(array $data): ?string
-    {
-        $parts = [
-            'メルカリShops売上明細CSVから変換',
-            '注文番号: '.trim((string) ($data['注文番号'] ?? '')),
-            '明細種別: '.trim((string) ($data['明細種別'] ?? '')),
-            '販売利益: '.trim((string) ($data['販売利益'] ?? '')),
-            'ショップ名: '.trim((string) ($data['ショップ名'] ?? '')),
         ];
 
         $comment = implode(' / ', array_filter($parts, fn ($part) => ! str_ends_with($part, ': ')));
@@ -1025,23 +935,6 @@ class AuctionItemController extends Controller
         }
 
         return max(0, (int) round((float) $normalized));
-    }
-
-    private function parseSignedCsvMoney(mixed $value): int
-    {
-        $value = mb_convert_kana(trim((string) $value), 'n');
-
-        if ($value === '' || $value === '-') {
-            return 0;
-        }
-
-        $normalized = preg_replace('/[^\d.-]/', '', $value) ?? '';
-
-        if ($normalized === '' || $normalized === '-') {
-            return 0;
-        }
-
-        return (int) round((float) $normalized);
     }
 
     private function normalizePlatform(mixed $platform): string

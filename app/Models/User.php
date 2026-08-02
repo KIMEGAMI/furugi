@@ -3,12 +3,11 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable([
@@ -25,18 +24,22 @@ use Illuminate\Notifications\Notifiable;
     'is_admin',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     public const DEMO_EMAIL = 'user@shinji.work';
 
-    public const PLAN_FREE = 'free';
+    public const SUBSCRIPTION_ACTIVE = 'active';
 
-    public const PLAN_PREMIUM = 'premium';
+    public const SUBSCRIPTION_INACTIVE = 'inactive';
 
-    public const FREE_AUCTION_ITEM_LIMIT = 30;
+    public const LEGACY_SUBSCRIPTION_PREMIUM = 'premium';
+
+    public const FREE_AUCTION_ITEM_LIMIT = 50;
+
+    public const FREE_CATEGORY_LIMIT = 5;
 
     protected function casts(): array
     {
@@ -49,9 +52,9 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    public function isPremium(): bool
+    public function hasActiveSubscription(): bool
     {
-        if ($this->subscription_plan !== self::PLAN_PREMIUM) {
+        if (! in_array($this->subscription_plan, [self::SUBSCRIPTION_ACTIVE, self::LEGACY_SUBSCRIPTION_PREMIUM], true)) {
             return false;
         }
 
@@ -62,9 +65,9 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->premium_ends_at !== null && $this->premium_ends_at->isFuture();
     }
 
-    public function freeAuctionItemLimit(): int
+    public function isPremium(): bool
     {
-        return self::FREE_AUCTION_ITEM_LIMIT;
+        return $this->hasActiveSubscription();
     }
 
     public function isAdmin(): bool

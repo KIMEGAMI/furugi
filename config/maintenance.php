@@ -16,6 +16,5 @@ return [
         'login/demo',
         'logout',
         'admin/maintenance',
-        'stripe/webhook',
     ],
 ];

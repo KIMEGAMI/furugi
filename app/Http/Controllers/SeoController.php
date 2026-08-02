@@ -12,7 +12,6 @@ class SeoController extends Controller
         '/auction-items',
         '/category-sales',
         '/dashboard',
-        '/premium',
         '/profile',
         '/sales',
     ];

@@ -43,10 +43,6 @@ class CreateAdminUser extends Command
                 'name' => 'Admin',
                 'password' => Hash::make($password),
                 'email_verified_at' => now(),
-                'subscription_plan' => User::PLAN_PREMIUM,
-                'subscription_status' => 'active',
-                'premium_started_at' => now(),
-                'premium_ends_at' => now()->addYears(10),
                 'is_admin' => true,
             ]
         );

@@ -4,17 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Models\AuctionItem;
 use App\Models\Notice;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    private const STALE_INVENTORY_DAYS = 30;
+
+    private const MIN_MONTHLY_SALES_TARGET = 50000;
+
+    private const SALES_TARGET_GROWTH_RATE = 1.15;
+
+    private const SALES_TARGET_ROUND_UNIT = 10000;
+
+    private const LOW_PROFIT_MARGIN_PERCENT = 25;
+
     public function index(): View
     {
-        $user = Auth::user();
         $userId = (int) Auth::id();
-        $isPremium = $user?->isPremium() ?? false;
+        $user = Auth::user();
         $now = now();
         $year = (int) $now->format('Y');
 
@@ -28,12 +37,15 @@ class DashboardController extends Controller
         $totalSalesFee = $soldItems->sum(fn ($item) => (int) ($item->sales_fee ?? 0));
         $totalShippingFee = $soldItems->sum(fn ($item) => (int) ($item->shipping_fee ?? 0));
         $totalProfit = $soldItems->sum(fn ($item) => (int) ($item->profit ?? 0));
-        $profitMargin = $totalSales > 0 ? round(($totalProfit / $totalSales) * 100, 1) : 0;
+        $profitMargin = $totalSales > 0 ? round(($totalProfit / $totalSales) * 100, 1) : 0.0;
         $monthlyStats = $this->monthlyStats($userId, $year);
         $currentMonthStats = $monthlyStats->firstWhere('label', ((int) $now->format('n')).'月') ?? ['sales' => 0, 'profit' => 0, 'count' => 0];
         $previousMonthStats = $monthlyStats->firstWhere('label', ((int) $now->copy()->subMonth()->format('n')).'月') ?? ['sales' => 0, 'profit' => 0, 'count' => 0];
         $monthlySalesAverage = (int) round($monthlyStats->where('sales', '>', 0)->avg('sales') ?? 0);
-        $monthlySalesTarget = max(50000, (int) ceil(max($monthlySalesAverage, (int) $currentMonthStats['sales']) * 1.15 / 10000) * 10000);
+        $monthlySalesTarget = max(
+            self::MIN_MONTHLY_SALES_TARGET,
+            (int) ceil(max($monthlySalesAverage, (int) $currentMonthStats['sales']) * self::SALES_TARGET_GROWTH_RATE / self::SALES_TARGET_ROUND_UNIT) * self::SALES_TARGET_ROUND_UNIT
+        );
         $monthlyTargetProgress = $monthlySalesTarget > 0 ? min(100, round(((int) $currentMonthStats['sales'] / $monthlySalesTarget) * 100, 1)) : 0;
         $salesTrendPercent = (int) $previousMonthStats['sales'] > 0
             ? round((((int) $currentMonthStats['sales'] - (int) $previousMonthStats['sales']) / (int) $previousMonthStats['sales']) * 100, 1)
@@ -42,7 +54,7 @@ class DashboardController extends Controller
             ? round((((int) $currentMonthStats['profit'] - (int) $previousMonthStats['profit']) / (int) $previousMonthStats['profit']) * 100, 1)
             : null;
         $inventoryCost = $sellingItems->sum(fn ($item) => (int) ($item->purchase_price ?? 0));
-        $staleItems = $sellingItems->filter(fn ($item) => $item->created_at && $item->created_at->lte($now->copy()->subDays(30)));
+        $staleItems = $sellingItems->filter(fn ($item) => $item->created_at && $item->created_at->lte($now->copy()->subDays(self::STALE_INVENTORY_DAYS)));
         $staleInventoryCost = $staleItems->sum(fn ($item) => (int) ($item->purchase_price ?? 0));
         $averageProfit = $soldCount > 0 ? (int) round($totalProfit / $soldCount) : 0;
         $averageDaysToSell = (int) round($soldItems
@@ -62,15 +74,15 @@ class DashboardController extends Controller
             'maxMonthlySales' => max(1, (int) $monthlyStats->max('sales')),
             'maxMonthlyProfit' => max(1, (int) $monthlyStats->max('profit')),
             'platformStats' => $this->platformStats($userId),
+            'hasActiveSubscription' => $user?->hasActiveSubscription() ?? false,
+            'freeItemLimit' => User::FREE_AUCTION_ITEM_LIMIT,
             'recentItems' => AuctionItem::where('user_id', $userId)->latest('updated_at')->take(6)->get(),
-            'isPremium' => $isPremium,
-            'freeItemLimit' => $user?->freeAuctionItemLimit() ?? 30,
             'dashboardNotices' => Notice::query()
                 ->published()
                 ->latest('published_at')
                 ->paginate(Notice::DASHBOARD_LIMIT, ['*'], 'notice_page')
                 ->withQueryString(),
-            'premiumInsights' => $isPremium ? [
+            'businessInsights' => [
                 'current_month_sales' => (int) $currentMonthStats['sales'],
                 'current_month_profit' => (int) $currentMonthStats['profit'],
                 'current_month_count' => (int) $currentMonthStats['count'],
@@ -85,34 +97,33 @@ class DashboardController extends Controller
                 'stale_inventory_cost' => $staleInventoryCost,
                 'average_days_to_sell' => $averageDaysToSell,
                 'actions' => $this->insightActions($staleItems->count(), $profitMargin, (int) $currentMonthStats['sales'], $monthlySalesTarget, $monthlyTargetProgress),
-            ] : [],
+            ],
         ]);
     }
 
     private function monthlyStats(int $userId, int $year)
     {
-        $monthlyRows = AuctionItem::selectRaw('
-                MONTH(sold_at) as month_number,
-                SUM(sold_price) as sales_total,
-                SUM(profit) as profit_total,
-                COUNT(*) as sold_count
-            ')
+        $monthlyRows = AuctionItem::query()
             ->where('user_id', $userId)
             ->where('status', AuctionItem::STATUS_SOLD)
             ->whereNotNull('sold_at')
             ->whereYear('sold_at', $year)
-            ->groupBy(DB::raw('MONTH(sold_at)'))
             ->get()
-            ->keyBy('month_number');
+            ->groupBy(fn (AuctionItem $item) => (int) $item->sold_at->format('n'))
+            ->map(fn ($items) => [
+                'sales_total' => $items->sum(fn (AuctionItem $item) => (int) ($item->sold_price ?? 0)),
+                'profit_total' => $items->sum(fn (AuctionItem $item) => (int) ($item->profit ?? 0)),
+                'sold_count' => $items->count(),
+            ]);
 
         return collect(range(1, 12))->map(function ($month) use ($monthlyRows) {
             $row = $monthlyRows->get($month);
 
             return [
                 'label' => $month.'月',
-                'sales' => (int) ($row->sales_total ?? 0),
-                'profit' => (int) ($row->profit_total ?? 0),
-                'count' => (int) ($row->sold_count ?? 0),
+                'sales' => (int) ($row['sales_total'] ?? 0),
+                'profit' => (int) ($row['profit_total'] ?? 0),
+                'count' => (int) ($row['sold_count'] ?? 0),
             ];
         });
     }
@@ -142,28 +153,28 @@ class DashboardController extends Controller
         if ($staleCount > 0) {
             $actions->push([
                 'tone' => 'amber',
-                'title' => '滞留在庫を見直しましょう',
-                'body' => '30日以上動いていない出品中の商品が'.$staleCount.'件あります。価格・写真・説明文を見直すと販売回転が上がる可能性があります。',
+                'title' => '長期在庫を確認してください',
+                'body' => self::STALE_INVENTORY_DAYS.'日以上動いていない商品が'.$staleCount.'件あります。価格や説明文の見直し候補です。',
                 'href' => route('auction-items.index', ['status' => AuctionItem::STATUS_SELLING]),
                 'label' => '在庫を見る',
             ]);
         }
 
-        if ($profitMargin > 0 && $profitMargin < 25) {
+        if ($profitMargin > 0 && $profitMargin < self::LOW_PROFIT_MARGIN_PERCENT) {
             $actions->push([
                 'tone' => 'rose',
-                'title' => '利益率を改善しましょう',
-                'body' => '累計利益率は'.$profitMargin.'%です。送料・販売手数料・仕入れ価格の見直し余地があります。',
+                'title' => '利益率を確認してください',
+                'body' => '現在の利益率は'.$profitMargin.'%です。送料、手数料、仕入れ上限を見直す余地があります。',
                 'href' => route('sales.index'),
-                'label' => '売上を確認',
+                'label' => '売上を見る',
             ]);
         }
 
         if ($currentMonthSales < $monthlySalesTarget) {
             $actions->push([
                 'tone' => 'cyan',
-                'title' => '今月目標まであと'.number_format($monthlySalesTarget - $currentMonthSales).'円',
-                'body' => '今月の売上進捗は'.$monthlyTargetProgress.'%です。出品数を増やすか、回転の早いカテゴリを優先しましょう。',
+                'title' => '目標まであと¥'.number_format($monthlySalesTarget - $currentMonthSales),
+                'body' => '今月の売上目標進捗は'.$monthlyTargetProgress.'%です。出品中商品の見直しと追加登録を検討してください。',
                 'href' => route('auction-items.create'),
                 'label' => '商品を登録',
             ]);
@@ -172,10 +183,10 @@ class DashboardController extends Controller
         if ($actions->isEmpty()) {
             $actions->push([
                 'tone' => 'emerald',
-                'title' => '運用状況は良好です',
-                'body' => '売上・利益率・在庫回転のバランスが取れています。ジャンル別分析で伸びているカテゴリを深掘りしましょう。',
+                'title' => '良い状態を維持できています',
+                'body' => '売上、利益率、在庫状況が安定しています。ジャンル別分析で次の仕入れ候補を探してください。',
                 'href' => route('category-sales.index'),
-                'label' => 'ジャンル分析へ',
+                'label' => 'ジャンル分析',
             ]);
         }
 

@@ -8,14 +8,11 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    private const STRIPE_API_BASE = 'https://api.stripe.com/v1';
-
     private const USERS_PER_PAGE = 20;
 
     public function index(Request $request): View
@@ -37,19 +34,23 @@ class UserController extends Controller
         if ($admin->is($user)) {
             return redirect()
                 ->route('admin.users.index')
-                ->with('error', '自分自身のアカウントは強制退会できません。');
+                ->with('error', '自分自身のアカウントは削除できません。');
         }
 
         if ($user->isAdmin()) {
             return redirect()
                 ->route('admin.users.index')
-                ->with('error', '管理者アカウントは強制退会できません。');
+                ->with('error', '管理者アカウントは削除できません。');
         }
 
-        if (! $this->cancelStripeSubscriptionIfNeeded($user)) {
+        $validated = $request->validate([
+            'confirmation_email' => ['required', 'string', 'max:255'],
+        ]);
+
+        if (! hash_equals($user->email, $validated['confirmation_email'])) {
             return redirect()
                 ->route('admin.users.index')
-                ->with('error', 'Stripe契約の停止に失敗したため、強制退会を中止しました。');
+                ->with('error', '確認用メールアドレスが一致しないため、ユーザを削除しませんでした。');
         }
 
         $this->deleteUserAuctionItemImages($user->id);
@@ -62,7 +63,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('admin.users.index')
-            ->with('status', 'ユーザーを強制退会しました。');
+            ->with('status', 'ユーザを削除しました。');
     }
 
     private function authorizeAdmin(Request $request): User
@@ -104,24 +105,5 @@ class UserController extends Controller
         }
 
         return str_starts_with($path, 'auction-items/');
-    }
-
-    private function cancelStripeSubscriptionIfNeeded(User $user): bool
-    {
-        if (! is_string($user->stripe_subscription_id) || $user->stripe_subscription_id === '') {
-            return true;
-        }
-
-        $secret = config('services.stripe.secret');
-
-        if (! is_string($secret) || $secret === '') {
-            return false;
-        }
-
-        $response = Http::asForm()
-            ->withToken($secret)
-            ->delete(self::STRIPE_API_BASE.'/subscriptions/'.rawurlencode($user->stripe_subscription_id));
-
-        return $response->successful();
     }
 }

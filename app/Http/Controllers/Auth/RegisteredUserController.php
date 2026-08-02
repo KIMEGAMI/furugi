@@ -11,21 +11,15 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): View
     {
         return view('auth.register');
     }
 
     /**
-     * Handle an incoming registration request.
-     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
@@ -34,6 +28,8 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'terms_accepted' => ['accepted'],
+            'privacy_accepted' => ['accepted'],
         ]);
 
         $user = User::create([
@@ -44,18 +40,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        try {
-            $user->sendEmailVerificationNotification();
-        } catch (TransportExceptionInterface) {
-            return redirect()
-                ->route('verification.notice')
-                ->withErrors([
-                    'email' => '登録は完了しましたが、認証メールの送信に失敗しました。管理者はメール設定を確認してください。',
-                ]);
-        }
-
-        return redirect()
-            ->route('verification.notice')
-            ->with('status', 'verification-link-sent');
+        return redirect()->route('dashboard');
     }
 }
