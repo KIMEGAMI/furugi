@@ -8,11 +8,16 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Throwable;
 
 class UserController extends Controller
 {
+    private const STRIPE_API_BASE = 'https://api.stripe.com/v1';
+
     private const USERS_PER_PAGE = 20;
 
     public function index(Request $request): View
@@ -51,6 +56,12 @@ class UserController extends Controller
             return redirect()
                 ->route('admin.users.index')
                 ->with('error', '確認用メールアドレスが一致しないため、ユーザを削除しませんでした。');
+        }
+
+        if (! $this->cancelStripeSubscriptionIfNeeded($user)) {
+            return redirect()
+                ->route('admin.users.index')
+                ->with('error', 'Stripe契約の停止に失敗したため、ユーザを削除しませんでした。');
         }
 
         $this->deleteUserAuctionItemImages($user->id);
@@ -105,5 +116,33 @@ class UserController extends Controller
         }
 
         return str_starts_with($path, 'auction-items/');
+    }
+
+    private function cancelStripeSubscriptionIfNeeded(User $user): bool
+    {
+        if (! is_string($user->stripe_subscription_id) || $user->stripe_subscription_id === '') {
+            return true;
+        }
+
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '') {
+            return false;
+        }
+
+        try {
+            $response = Http::asForm()
+                ->withToken($secret)
+                ->delete(self::STRIPE_API_BASE.'/subscriptions/'.rawurlencode($user->stripe_subscription_id));
+        } catch (Throwable $exception) {
+            Log::warning('Admin user deletion Stripe cancellation failed.', [
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        return $response->successful();
     }
 }

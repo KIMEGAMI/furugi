@@ -6,12 +6,12 @@
                     <p class="text-sm font-black text-blue-700">ADMIN</p>
                     <h1 class="mt-2 text-3xl font-black text-slate-950">ユーザ一覧</h1>
                     <p class="mt-2 text-sm font-bold text-slate-700">
-                        登録ユーザを確認できます。削除は取り消せないため、対象メールアドレスの入力を必須にしています。
+                        登録ユーザのプラン状態を確認できます。削除は取り消せないため、対象メールアドレスの入力を必須にしています。
                     </p>
                 </div>
 
                 <a href="{{ route('admin.maintenance.index') }}" class="inline-flex w-fit items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white hover:bg-slate-800">
-                    管理画面へ戻る
+                    管理者画面へ戻る
                 </a>
             </div>
 
@@ -39,6 +39,7 @@
                         <thead class="bg-slate-950">
                             <tr>
                                 <th class="px-5 py-4 text-left text-xs font-black tracking-wider text-white">ユーザ</th>
+                                <th class="px-5 py-4 text-left text-xs font-black tracking-wider text-white">プラン</th>
                                 <th class="px-5 py-4 text-left text-xs font-black tracking-wider text-white">権限</th>
                                 <th class="px-5 py-4 text-right text-xs font-black tracking-wider text-white">商品数</th>
                                 <th class="px-5 py-4 text-left text-xs font-black tracking-wider text-white">登録日</th>
@@ -49,6 +50,7 @@
                             @foreach ($users as $listedUser)
                                 @php
                                     $isCurrentUser = $listedUser->is(Auth::user());
+                                    $isPremium = $listedUser->isPremium();
                                     $canForceDelete = ! $isCurrentUser && ! $listedUser->isAdmin();
                                 @endphp
 
@@ -56,6 +58,19 @@
                                     <td class="px-5 py-4 align-top">
                                         <div class="font-black text-slate-950">{{ $listedUser->name }}</div>
                                         <div class="mt-1 text-sm font-bold text-slate-600">{{ $listedUser->email }}</div>
+                                    </td>
+                                    <td class="px-5 py-4 align-top">
+                                        @if ($isPremium)
+                                            <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-900">Premium</span>
+                                        @else
+                                            <span class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-black text-slate-900">Free</span>
+                                        @endif
+
+                                        @if ($listedUser->subscription_status)
+                                            <div class="mt-2 text-xs font-bold text-slate-600">
+                                                {{ $listedUser->subscription_status }}
+                                            </div>
+                                        @endif
                                     </td>
                                     <td class="px-5 py-4 align-top">
                                         @if ($listedUser->isAdmin())
@@ -72,7 +87,7 @@
                                     </td>
                                     <td class="px-5 py-4 text-right align-top">
                                         @if ($canForceDelete)
-                                            <form method="POST" action="{{ route('admin.users.destroy', $listedUser) }}" class="ml-auto flex max-w-xs flex-col items-end gap-2" onsubmit="return confirm('このユーザを削除します。商品、通知、セッションも削除されます。実行しますか？');">
+                                            <form method="POST" action="{{ route('admin.users.destroy', $listedUser) }}" class="ml-auto flex max-w-xs flex-col items-end gap-2" onsubmit="return confirm('このユーザを削除します。Stripe契約がある場合は停止し、商品、通知、セッションも削除されます。実行しますか？');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <label for="confirmation_email_{{ $listedUser->id }}" class="sr-only">確認用メールアドレス</label>

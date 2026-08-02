@@ -162,7 +162,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/billing/success', [SubscriptionController::class, 'success'])
         ->name('subscriptions.success');
-
 });
 
 require __DIR__.'/auth.php';
