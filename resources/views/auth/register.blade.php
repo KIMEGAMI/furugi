@@ -67,6 +67,29 @@
                         <div class="mx-auto mt-6 h-1 w-16 rounded-full bg-blue-600"></div>
                     </div>
 
+                    <div class="mb-6">
+                        <a href="{{ route('google.redirect') }}" class="flex w-full items-center justify-center gap-3 rounded-xl border border-cyan-300 bg-white px-4 py-4 text-sm font-black text-black shadow-lg transition hover:bg-cyan-50">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                                <img
+                                    src="{{ asset('images/google-login-icon.png') }}"
+                                    alt=""
+                                    class="h-full w-full scale-[3.4] object-cover"
+                                    loading="lazy"
+                                >
+                            </span>
+                            <span>Googleでアカウント作成</span>
+                        </a>
+
+                        <div class="relative mt-6">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-slate-200"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="bg-white px-3 font-bold text-slate-600">またはメールで登録</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <form method="POST" action="{{ route('register') }}" class="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
                         @csrf
 
