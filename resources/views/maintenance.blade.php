@@ -1,3 +1,8 @@
+@php
+    $title = $title ?? 'サービスは一時的に利用できません';
+    $message = $message ?? '現在メンテナンス中です。作業完了後、通常どおりログインしてご利用いただけます。';
+@endphp
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
