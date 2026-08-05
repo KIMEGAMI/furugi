@@ -545,7 +545,7 @@ class AuctionItemController extends Controller
                 'title' => $title,
                 'comment' => $this->buildYahooAuctionComment($data),
                 'platform' => AuctionItem::PLATFORM_YAHOO,
-                'category_id' => null,
+                'category_id' => $this->resolveExistingAuctionItemCategoryId($title, AuctionItem::PLATFORM_YAHOO, $managementId),
                 'image_path' => null,
                 'sold_image_path' => null,
                 'purchase_price' => 0,
@@ -648,7 +648,7 @@ class AuctionItemController extends Controller
                 'title' => trim((string) $data['商品名']),
                 'comment' => $this->buildMercariShopsComment($data),
                 'platform' => AuctionItem::PLATFORM_MERCARI,
-                'category_id' => null,
+                'category_id' => $this->resolveExistingAuctionItemCategoryId(trim((string) $data['商品名']), AuctionItem::PLATFORM_MERCARI, $managementId),
                 'image_path' => null,
                 'sold_image_path' => null,
                 'purchase_price' => 0,
@@ -1157,6 +1157,32 @@ class AuctionItemController extends Controller
             ->where('name', $childName)
             ->whereHas('parent', fn ($query) => $query->where('name', $parentName))
             ->value('id');
+    }
+
+    private function resolveExistingAuctionItemCategoryId(string $title, string $platform, string $managementId = ''): ?int
+    {
+        $title = trim($title);
+        $managementId = trim($managementId);
+        $platformValues = AuctionItem::platformFilterValues(AuctionItem::normalizePlatformName($platform));
+
+        $query = AuctionItem::query()
+            ->where('user_id', Auth::id())
+            ->whereNotNull('category_id')
+            ->whereIn('platform', $platformValues)
+            ->where(function ($query) use ($managementId, $title) {
+                if ($managementId !== '') {
+                    $query->where('management_id', $managementId);
+                }
+
+                if ($title !== '') {
+                    $query->orWhere('title', $title);
+                }
+            })
+            ->orderByRaw("status = ? desc", [AuctionItem::STATUS_SELLING])
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id');
+
+        return $query->value('category_id');
     }
 
     /**

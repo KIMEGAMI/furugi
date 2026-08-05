@@ -18,7 +18,7 @@ class SalesAnalysisTest extends TestCase
         $child->setRelation('parent', $parent);
 
         $categorizedItem = new AuctionItem([
-            'platform' => 'メルカリ',
+            'platform' => AuctionItem::PLATFORM_MERCARI,
             'sold_price' => 1000,
             'purchase_price' => 300,
             'sales_fee' => 100,
@@ -39,7 +39,7 @@ class SalesAnalysisTest extends TestCase
             'buildCategoryPlatformCrossSales',
             [
                 collect([$categorizedItem, $unsetItem]),
-                collect(['メルカリ', '未設定']),
+                collect([AuctionItem::PLATFORM_MERCARI, '未設定']),
             ]
         );
 

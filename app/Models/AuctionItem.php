@@ -90,7 +90,7 @@ class AuctionItem extends Model
 
     public function isSold(): bool
     {
-        return $this->status === 'sold';
+        return $this->status === self::STATUS_SOLD;
     }
 
     public static function normalizePlatformName(mixed $platform): string

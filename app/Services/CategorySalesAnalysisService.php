@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuctionItem;
+use App\Models\Category;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -18,6 +19,7 @@ class CategorySalesAnalysisService
             ->where('user_id', $userId)
             ->where('status', AuctionItem::STATUS_SOLD)
             ->get();
+        $categoryLookup = $this->buildCategoryLookup($userId);
         $soldItems = $selectedMonth
             ? $allSoldItems->filter(
                 fn ($item) => $this->itemDate($item, $hasSoldAt)->format('Y-m') === $selectedMonth->format('Y-m')
@@ -26,8 +28,8 @@ class CategorySalesAnalysisService
 
         $totalSales = $soldItems->sum(fn ($item) => (int) ($item->sold_price ?? 0));
         $totalProfit = $soldItems->sum(fn ($item) => $this->calculateItemProfit($item));
-        $parentCategorySales = $this->summarizeSalesGroups($soldItems->groupBy(fn ($item) => $this->parentCategoryLabel($item)));
-        $childCategorySales = $this->summarizeSalesGroups($soldItems->groupBy(fn ($item) => $this->categoryLabel($item)));
+        $parentCategorySales = $this->summarizeSalesGroups($soldItems->groupBy(fn ($item) => $this->parentCategoryLabel($item, $categoryLookup)));
+        $childCategorySales = $this->summarizeSalesGroups($soldItems->groupBy(fn ($item) => $this->categoryLabel($item, $categoryLookup)));
         $platformNames = collect(AuctionItem::PLATFORMS)
             ->merge($soldItems->map(fn ($item) => $this->platformLabel($item)))
             ->unique()
@@ -45,7 +47,7 @@ class CategorySalesAnalysisService
             'childCategorySales' => $childCategorySales,
             'parentCategoryRanking' => $this->addRankingAndShare($parentCategorySales, $totalSales),
             'childCategoryRanking' => $this->addRankingAndShare($childCategorySales, $totalSales),
-            'categoryPlatformCrossSales' => $this->buildCategoryPlatformCrossSales($soldItems, $platformNames),
+            'categoryPlatformCrossSales' => $this->buildCategoryPlatformCrossSales($soldItems, $platformNames, $categoryLookup),
             'platformNames' => $platformNames,
             'chartLabels' => $parentCategorySales->pluck('label')->values(),
             'chartSalesData' => $parentCategorySales->pluck('sales')->values(),
@@ -105,10 +107,12 @@ class CategorySalesAnalysisService
             });
     }
 
-    private function buildCategoryPlatformCrossSales(Collection $soldItems, Collection $platformNames): Collection
+    private function buildCategoryPlatformCrossSales(Collection $soldItems, Collection $platformNames, ?Collection $categoryLookup = null): Collection
     {
+        $categoryLookup ??= collect();
+
         return $soldItems
-            ->groupBy(fn ($item) => $this->parentCategoryLabel($item))
+            ->groupBy(fn ($item) => $this->parentCategoryLabel($item, $categoryLookup))
             ->map(function (Collection $categoryItems, string $category) use ($platformNames) {
                 $platforms = $platformNames->mapWithKeys(function (string $platform) use ($categoryItems) {
                     $items = $categoryItems->filter(fn ($item) => $this->platformLabel($item) === $platform);
@@ -153,23 +157,64 @@ class CategorySalesAnalysisService
         return (int) round((int) ($item->sold_price ?? 0) * ((float) ($item->sales_fee_rate ?? 0) / 100));
     }
 
-    private function categoryLabel(AuctionItem $item): string
+    private function buildCategoryLookup(int $userId): Collection
     {
-        if (! $item->category) {
+        return AuctionItem::query()
+            ->with(['category.parent'])
+            ->where('user_id', $userId)
+            ->whereNotNull('category_id')
+            ->get()
+            ->reduce(function (Collection $lookup, AuctionItem $item) {
+                if (! $item->category) {
+                    return $lookup;
+                }
+
+                $managementKey = $this->managementLookupKey($item);
+                $titleKey = $this->titlePlatformLookupKey($item);
+
+                if ($managementKey !== '' && ! $lookup->has($managementKey)) {
+                    $lookup->put($managementKey, $item->category);
+                }
+
+                if ($titleKey !== '' && ! $lookup->has($titleKey)) {
+                    $lookup->put($titleKey, $item->category);
+                }
+
+                return $lookup;
+            }, collect());
+    }
+
+    private function categoryForItem(AuctionItem $item, Collection $categoryLookup): ?Category
+    {
+        if ($item->category) {
+            return $item->category;
+        }
+
+        return $categoryLookup->get($this->managementLookupKey($item))
+            ?? $categoryLookup->get($this->titlePlatformLookupKey($item));
+    }
+
+    private function categoryLabel(AuctionItem $item, Collection $categoryLookup): string
+    {
+        $category = $this->categoryForItem($item, $categoryLookup);
+
+        if (! $category) {
             return '未設定';
         }
 
-        if (! $item->category->parent) {
-            return $item->category->name;
+        if (! $category->parent) {
+            return $category->name;
         }
 
-        return $item->category->parent->name.' / '.$item->category->name;
+        return $category->parent->name.' / '.$category->name;
     }
 
-    private function parentCategoryLabel(AuctionItem $item): string
+    private function parentCategoryLabel(AuctionItem $item, Collection $categoryLookup): string
     {
-        return $item->category?->parent?->name
-            ?? $item->category?->name
+        $category = $this->categoryForItem($item, $categoryLookup);
+
+        return $category?->parent?->name
+            ?? $category?->name
             ?? '未設定';
     }
 
@@ -178,5 +223,28 @@ class CategorySalesAnalysisService
         $platform = AuctionItem::normalizePlatformName($item->platform);
 
         return $platform !== '' ? $platform : '未設定';
+    }
+
+    private function managementLookupKey(AuctionItem $item): string
+    {
+        $managementId = trim((string) $item->management_id);
+
+        return $managementId !== '' ? 'management:'.$managementId : '';
+    }
+
+    private function titlePlatformLookupKey(AuctionItem $item): string
+    {
+        $title = $this->normalizeLookupText($item->title);
+        $platform = $this->normalizeLookupText($this->platformLabel($item));
+
+        return $title !== '' && $platform !== '' ? 'title-platform:'.$platform.'|'.$title : '';
+    }
+
+    private function normalizeLookupText(mixed $value): string
+    {
+        $value = mb_convert_kana(trim((string) $value), 'asKV');
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return mb_strtolower($value);
     }
 }
