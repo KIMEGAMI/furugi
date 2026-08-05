@@ -102,7 +102,9 @@
                         </div>
                     </div>
 
-                    <div>
+                    @include('auction_items.partials.profit-tools')
+
+                    <div class="order-first">
                         <span class="block text-xs font-black tracking-wider text-slate-600">商品画像</span>
                         <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">

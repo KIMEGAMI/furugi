@@ -175,7 +175,7 @@ class CategorySalesAnalysisService
 
     private function platformLabel(AuctionItem $item): string
     {
-        $platform = trim((string) $item->platform);
+        $platform = AuctionItem::normalizePlatformName($item->platform);
 
         return $platform !== '' ? $platform : '未設定';
     }

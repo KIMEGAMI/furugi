@@ -58,7 +58,7 @@
                         </x-nav-link>
 
                         <x-nav-link :href="route('auction-items.csv-import')" :active="request()->routeIs('auction-items.csv-import')">
-                            CSV登録{{ $hasPremiumPlan ? '' : ' Premium' }}
+                            CSV管理{{ $hasPremiumPlan ? '' : ' Premium' }}
                         </x-nav-link>
 
                         <x-nav-link :href="route('sales.index')" :active="request()->routeIs('sales.*')">
@@ -171,7 +171,7 @@
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('auction-items.csv-import')" :active="request()->routeIs('auction-items.csv-import')">
-                    CSV登録{{ $hasPremiumPlan ? '' : ' Premium' }}
+                    CSV管理{{ $hasPremiumPlan ? '' : ' Premium' }}
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('sales.index')" :active="request()->routeIs('sales.*')">

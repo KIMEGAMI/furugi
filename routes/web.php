@@ -100,6 +100,10 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('premium')
         ->name('auction-items.import.yahoo-auctions');
 
+    Route::post('/auction-items/import/mercari-shops', [AuctionItemController::class, 'importMercariShopsCsv'])
+        ->middleware('premium')
+        ->name('auction-items.import.mercari-shops');
+
     Route::get('/auction-items/duplicates', [AuctionItemController::class, 'duplicates'])
         ->middleware('premium')
         ->name('auction-items.duplicates');
@@ -107,6 +111,12 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/auction-items/duplicates', [AuctionItemController::class, 'deleteDuplicates'])
         ->middleware('premium')
         ->name('auction-items.duplicates.destroy');
+
+    Route::get('/auction-items/delete-all/confirm', [AuctionItemController::class, 'confirmBulkDestroy'])
+        ->name('auction-items.bulk-destroy.confirm');
+
+    Route::delete('/auction-items/delete-all', [AuctionItemController::class, 'bulkDestroy'])
+        ->name('auction-items.bulk-destroy');
 
     Route::resource('auction-items', AuctionItemController::class);
 
@@ -131,6 +141,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/sales/restore-csv', [SalesController::class, 'downloadRestoreCsv'])
         ->middleware('premium')
         ->name('sales.restore-csv');
+
+    Route::get('/sales/selling-csv', [SalesController::class, 'downloadSellingCsv'])
+        ->middleware('premium')
+        ->name('sales.selling-csv');
 
     Route::get('/category-sales', [CategorySalesController::class, 'index'])
         ->middleware('premium')

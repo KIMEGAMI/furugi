@@ -53,7 +53,12 @@ class DashboardController extends Controller
         $profitTrendPercent = (int) $previousMonthStats['profit'] > 0
             ? round((((int) $currentMonthStats['profit'] - (int) $previousMonthStats['profit']) / (int) $previousMonthStats['profit']) * 100, 1)
             : null;
+        $currentMonthProfitMargin = (int) $currentMonthStats['sales'] > 0
+            ? round(((int) $currentMonthStats['profit'] / (int) $currentMonthStats['sales']) * 100, 1)
+            : 0.0;
         $inventoryCost = $sellingItems->sum(fn ($item) => (int) ($item->purchase_price ?? 0));
+        $inventoryPotentialSales = $sellingItems->sum(fn ($item) => (int) ($item->sold_price ?? 0));
+        $inventoryPotentialProfit = $sellingItems->sum(fn ($item) => $this->estimateItemProfit($item));
         $staleItems = $sellingItems->filter(fn ($item) => $item->created_at && $item->created_at->lte($now->copy()->subDays(self::STALE_INVENTORY_DAYS)));
         $staleInventoryCost = $staleItems->sum(fn ($item) => (int) ($item->purchase_price ?? 0));
         $averageProfit = $soldCount > 0 ? (int) round($totalProfit / $soldCount) : 0;
@@ -86,6 +91,7 @@ class DashboardController extends Controller
                 'current_month_sales' => (int) $currentMonthStats['sales'],
                 'current_month_profit' => (int) $currentMonthStats['profit'],
                 'current_month_count' => (int) $currentMonthStats['count'],
+                'current_month_profit_margin' => $currentMonthProfitMargin,
                 'monthly_sales_target' => $monthlySalesTarget,
                 'monthly_target_progress' => $monthlyTargetProgress,
                 'sales_trend_percent' => $salesTrendPercent,
@@ -93,12 +99,28 @@ class DashboardController extends Controller
                 'profit_margin' => $profitMargin,
                 'average_profit' => $averageProfit,
                 'inventory_cost' => $inventoryCost,
+                'inventory_potential_sales' => $inventoryPotentialSales,
+                'inventory_potential_profit' => $inventoryPotentialProfit,
                 'stale_count' => $staleItems->count(),
                 'stale_inventory_cost' => $staleInventoryCost,
                 'average_days_to_sell' => $averageDaysToSell,
                 'actions' => $this->insightActions($staleItems->count(), $profitMargin, (int) $currentMonthStats['sales'], $monthlySalesTarget, $monthlyTargetProgress),
             ],
         ]);
+    }
+
+    private function estimateItemProfit(AuctionItem $item): int
+    {
+        $soldPrice = (int) ($item->sold_price ?? 0);
+        $purchasePrice = (int) ($item->purchase_price ?? 0);
+        $shippingFee = (int) ($item->shipping_fee ?? 0);
+        $salesFee = (int) ($item->sales_fee ?? 0);
+
+        if ($salesFee <= 0 && $soldPrice > 0) {
+            $salesFee = (int) round($soldPrice * ((float) ($item->sales_fee_rate ?? 0) / 100));
+        }
+
+        return $soldPrice - $purchasePrice - $salesFee - $shippingFee;
     }
 
     private function monthlyStats(int $userId, int $year)
@@ -134,6 +156,13 @@ class DashboardController extends Controller
             ->where('user_id', $userId)
             ->groupBy('platform')
             ->pluck('total', 'platform');
+        $platformRows = $platformRows->reduce(function ($rows, $count, $platform) {
+            $name = AuctionItem::normalizePlatformName($platform);
+            $name = $name !== '' ? $name : '未設定';
+            $rows[$name] = ($rows[$name] ?? 0) + (int) $count;
+
+            return $rows;
+        }, collect());
         $platformTotal = max(0, (int) $platformRows->sum());
 
         return $platformRows

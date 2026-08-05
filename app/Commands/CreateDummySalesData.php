@@ -20,7 +20,7 @@ class CreateDummySalesData extends Command
             'ヤフオク',
             'メルカリ',
             'ラクマ',
-            'PayPayフリマ',
+            'Yahooフリマ',
             'その他',
         ];
 

@@ -16,7 +16,7 @@ Artisan::command('furugi:dummy-sales', function () {
         return;
     }
 
-    $platforms = ['ヤフオク', 'メルカリ', 'ラクマ', 'PayPayフリマ', 'その他'];
+    $platforms = ['ヤフオク', 'メルカリ', 'ラクマ', 'Yahooフリマ', 'その他'];
 
     $titles = [
         'ヴィンテージ デニムジャケット',
@@ -159,6 +159,7 @@ if (! function_exists('defaultFurugiSalesFeeRate')) {
             'ヤフオク' => 10.0,
             'メルカリ' => 10.0,
             'ラクマ' => 10.0,
+            'Yahooフリマ' => 5.0,
             'PayPayフリマ' => 5.0,
             default => 0.0,
         };

@@ -13,7 +13,9 @@ class AuctionItem extends Model
 
     public const PLATFORM_RAKUMA = 'ラクマ';
 
-    public const PLATFORM_PAYPAY = 'PayPayフリマ';
+    public const PLATFORM_PAYPAY = 'Yahooフリマ';
+
+    public const PLATFORM_PAYPAY_LEGACY = 'PayPayフリマ';
 
     public const PLATFORM_OTHER = 'その他';
 
@@ -36,6 +38,7 @@ class AuctionItem extends Model
         self::PLATFORM_MERCARI => 10.0,
         self::PLATFORM_RAKUMA => 10.0,
         self::PLATFORM_PAYPAY => 5.0,
+        self::PLATFORM_PAYPAY_LEGACY => 5.0,
         self::PLATFORM_OTHER => 0.0,
     ];
 
@@ -88,5 +91,25 @@ class AuctionItem extends Model
     public function isSold(): bool
     {
         return $this->status === 'sold';
+    }
+
+    public static function normalizePlatformName(mixed $platform): string
+    {
+        $platform = trim((string) $platform);
+
+        return match ($platform) {
+            self::PLATFORM_PAYPAY_LEGACY => self::PLATFORM_PAYPAY,
+            default => $platform,
+        };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function platformFilterValues(string $platform): array
+    {
+        return $platform === self::PLATFORM_PAYPAY
+            ? [self::PLATFORM_PAYPAY, self::PLATFORM_PAYPAY_LEGACY]
+            : [$platform];
     }
 }

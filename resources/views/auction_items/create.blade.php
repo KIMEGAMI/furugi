@@ -117,6 +117,8 @@
                         </div>
                     </div>
 
+                    @include('auction_items.partials.profit-tools')
+
                     <div class="pt-2">
                         <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-3 text-sm font-black text-white shadow transition hover:bg-blue-800">
                             登録する

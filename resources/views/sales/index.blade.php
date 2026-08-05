@@ -13,98 +13,57 @@
 
     <div class="py-8 text-white">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <section class="mb-6 rounded-2xl border border-cyan-300/20 bg-slate-950/55 p-6 shadow-sm backdrop-blur-md">
-                <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p class="inline-flex rounded-full border border-cyan-300/30 bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-100">EXPORT & BACKUP</p>
-                        <h3 class="mt-3 text-xl font-black text-white">CSV出力とバックアップ</h3>
-                        <p class="mt-2 text-sm font-bold leading-6 text-cyan-100">
-                            売上CSVはSOLD商品の分析用、バックアップCSVは全商品の控え用です。どちらもExcelで開きやすいUTF-8 BOM付きで出力します。
-                        </p>
-                    </div>
-                    <div class="flex flex-col gap-3 sm:flex-row">
-                        <button type="button" onclick="document.getElementById('csvExportHelp').showModal()" class="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 py-4 text-base font-black text-cyan-100 shadow-lg hover:bg-white/20">
-                            CSV項目説明
-                        </button>
-                        <a href="{{ route('sales.csv') }}" class="inline-flex items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-500/25 px-6 py-4 text-base font-black text-white shadow-lg hover:bg-cyan-400/30">
-                            売上CSV
-                        </a>
-                        <a href="{{ route('sales.backup-csv') }}" class="inline-flex items-center justify-center rounded-xl border border-emerald-300/30 bg-emerald-500/25 px-6 py-4 text-base font-black text-white shadow-lg hover:bg-emerald-400/30">
-                            全商品バックアップ
-                        </a>
-                        <a href="{{ route('sales.restore-csv') }}" class="inline-flex items-center justify-center rounded-xl border border-amber-300/30 bg-amber-500/25 px-6 py-4 text-base font-black text-white shadow-lg hover:bg-amber-400/30">
-                            復元用CSV
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            <section class="mb-6 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-5 shadow-sm backdrop-blur-md">
-                <div class="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-                    <div>
-                        <h3 class="text-lg font-black text-white">復元しやすいバックアップ</h3>
-                        <p class="mt-2 text-sm font-bold leading-6 text-cyan-100">
-                            「全商品バックアップ」は確認用で、画像URLや更新日まで含めます。「復元用CSV」はCSV登録に戻しやすい英字ヘッダ形式です。復元時はCSV登録ページで、重複しない管理IDだけ取り込まれます。
-                        </p>
-                    </div>
-                    <a href="{{ route('auction-items.csv-import') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-black text-black shadow hover:bg-cyan-50">
-                        CSV登録ページへ
-                    </a>
-                </div>
-            </section>
-
-            <dialog id="csvExportHelp" class="w-11/12 max-w-4xl rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/70">
-                <div class="max-h-[85vh] overflow-y-auto bg-white p-6 text-slate-900">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-xl font-black text-slate-950">CSVの項目説明</h3>
-                            <p class="mt-2 text-sm font-bold leading-6 text-slate-700">
-                                1行目はヘッダ行です。売上CSVはSOLD商品の集計、全商品バックアップCSVは復旧や確認用の控えとして使えます。
-                            </p>
-                        </div>
-                        <button type="button" onclick="document.getElementById('csvExportHelp').close()" class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-black text-black hover:bg-slate-200">閉じる</button>
-                    </div>
-
-                    <div class="mt-5 overflow-x-auto">
-                        <table class="min-w-full border-collapse text-left text-sm">
-                            <thead class="bg-slate-100 text-xs font-black text-slate-900">
-                                <tr>
-                                    <th class="border border-slate-200 px-3 py-2">項目</th>
-                                    <th class="border border-slate-200 px-3 py-2">意味</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ([
-                                    '管理ID' => '商品ごとの管理番号です。',
-                                    '商品タイトル' => '登録した商品名です。',
-                                    '大ジャンル / 小ジャンル' => '商品に設定したカテゴリです。',
-                                    '出品先' => 'ヤフオク、メルカリ、ラクマなどの販売先です。',
-                                    '仕入れ値' => '商品登録時に入力した仕入れ原価です。',
-                                    '販売価格 / 売値' => '販売金額または予定販売価格です。',
-                                    '販売手数料率 / 販売手数料' => '販売先ごとの手数料率と計算後の手数料です。',
-                                    '送料' => '商品ごとに登録した送料です。',
-                                    '実利益' => '販売価格から仕入れ値、手数料、送料を引いた金額です。',
-                                    'SOLD日' => 'SOLDにした日付です。',
-                                    '商品画像URL / SOLD画像URL' => '全商品バックアップCSVに含まれる画像のURLです。',
-                                    '復元用CSV' => 'CSV登録へ戻しやすい英字ヘッダ形式です。画像ファイル自体は含まれません。',
-                                ] as $heading => $body)
-                                    <tr>
-                                        <td class="border border-slate-200 px-3 py-2 font-bold text-slate-950">{{ $heading }}</td>
-                                        <td class="border border-slate-200 px-3 py-2 text-slate-800">{{ $body }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </dialog>
-
             <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/55 p-5"><p class="text-sm font-bold text-cyan-100">累計売上</p><p class="mt-2 text-2xl font-black text-white">¥{{ number_format($totalSales) }}</p></div>
                 <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/55 p-5"><p class="text-sm font-bold text-cyan-100">累計仕入れ</p><p class="mt-2 text-2xl font-black text-white">¥{{ number_format($totalPurchase) }}</p></div>
                 <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/55 p-5"><p class="text-sm font-bold text-cyan-100">手数料・送料</p><p class="mt-2 text-2xl font-black text-white">¥{{ number_format($totalSalesFee + $totalShippingFee) }}</p></div>
                 <div class="rounded-2xl border border-lime-300/30 bg-slate-950/55 p-5"><p class="text-sm font-bold text-cyan-100">累計実利益</p><p class="mt-2 text-2xl font-black {{ $totalProfit < 0 ? 'text-red-300' : 'text-lime-300' }}">¥{{ number_format($totalProfit) }}</p></div>
                 <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/55 p-5"><p class="text-sm font-bold text-cyan-100">SOLD / 出品中</p><p class="mt-2 text-2xl font-black text-white">{{ number_format($soldCount) }} / {{ number_format($sellingCount) }}</p></div>
+            </section>
+
+            <section id="monthly-pdf-report" class="mt-8 rounded-2xl border border-cyan-300/20 bg-white p-6 text-slate-950 shadow-sm">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-black tracking-widest text-cyan-700">PDF REPORT</p>
+                        <h3 class="mt-2 text-2xl font-black">{{ $monthlyReport['title'] }}</h3>
+                        <p class="mt-2 text-sm font-bold text-slate-600">印刷画面からPDF保存できます。月次報告、振り返り、仕入れ判断用の控えとして使えます。</p>
+                    </div>
+                    <button type="button" onclick="window.print()" class="no-print inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow hover:bg-slate-800">
+                        PDF保存 / 印刷
+                    </button>
+                </div>
+
+                <div class="mt-5 grid gap-3 md:grid-cols-4">
+                    <div class="rounded-xl bg-slate-100 p-4"><p class="text-xs font-black text-slate-600">選択月売上</p><p class="mt-1 text-xl font-black">¥{{ number_format($selectedMonthRow['sales']) }}</p></div>
+                    <div class="rounded-xl bg-slate-100 p-4"><p class="text-xs font-black text-slate-600">選択月利益</p><p class="mt-1 text-xl font-black">¥{{ number_format($selectedMonthRow['profit']) }}</p></div>
+                    <div class="rounded-xl bg-slate-100 p-4"><p class="text-xs font-black text-slate-600">利益率</p><p class="mt-1 text-xl font-black">{{ number_format($selectedMonthRow['profit_rate'], 1) }}%</p></div>
+                    <div class="rounded-xl bg-slate-100 p-4"><p class="text-xs font-black text-slate-600">販売件数</p><p class="mt-1 text-xl font-black">{{ number_format($selectedMonthRow['count']) }}件</p></div>
+                </div>
+
+                <div class="mt-5 grid gap-4 lg:grid-cols-2">
+                    <div class="rounded-xl border border-slate-200 p-4">
+                        <h4 class="text-sm font-black text-slate-900">前月比較</h4>
+                        <dl class="mt-3 space-y-2 text-sm font-bold text-slate-700">
+                            <div class="flex justify-between gap-3"><dt>売上差</dt><dd>¥{{ number_format($monthlyReport['sales_diff']) }}</dd></div>
+                            <div class="flex justify-between gap-3"><dt>利益差</dt><dd>¥{{ number_format($monthlyReport['profit_diff']) }}</dd></div>
+                            <div class="flex justify-between gap-3"><dt>SOLD件数差</dt><dd>{{ number_format($monthlyReport['count_diff']) }}件</dd></div>
+                        </dl>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 p-4">
+                        <h4 class="text-sm font-black text-slate-900">次月アクション</h4>
+                        <ul class="mt-3 space-y-2 text-sm font-bold leading-6 text-slate-700">
+                            @foreach ($monthlyReport['actions'] as $action)
+                                <li>・{{ $action }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+
+                @if ($monthlyReport['best_platform'])
+                    <p class="mt-4 rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+                        今月の注力候補: {{ $monthlyReport['best_platform']['platform'] }} / 利益 ¥{{ number_format($monthlyReport['best_platform']['profit']) }} / 利益率 {{ number_format($monthlyReport['best_platform']['profit_rate'], 1) }}%
+                    </p>
+                @endif
             </section>
 
             <section class="mt-8 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
@@ -174,6 +133,15 @@
                 <div class="rounded-2xl border border-cyan-300/20 bg-slate-950/55 p-6 shadow-sm backdrop-blur-md">
                     <h3 class="text-lg font-black text-white">出品先別売上</h3>
                     <div class="mt-6 h-80"><canvas id="platformSalesChart"></canvas></div>
+                    <div class="mt-5 space-y-2">
+                        @foreach ($platformChartBreakdown as $row)
+                            <div class="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl bg-white/10 px-4 py-3 text-sm">
+                                <span class="font-black text-white">{{ $row['platform'] }}</span>
+                                <span class="font-bold text-cyan-100">¥{{ number_format($row['sales']) }}</span>
+                                <span class="rounded-full bg-cyan-300 px-3 py-1 text-xs font-black text-slate-950">{{ number_format($row['share'], 1) }}%</span>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </section>
 
@@ -187,6 +155,35 @@
             </div>
         </div>
     </div>
+
+    <style>
+        @media print {
+            body {
+                background: #ffffff !important;
+            }
+
+            body * {
+                visibility: hidden;
+            }
+
+            #monthly-pdf-report,
+            #monthly-pdf-report * {
+                visibility: visible;
+            }
+
+            #monthly-pdf-report {
+                position: absolute;
+                inset: 0 auto auto 0;
+                width: 100%;
+                border: 0 !important;
+                box-shadow: none !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>

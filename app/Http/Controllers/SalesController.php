@@ -59,6 +59,7 @@ class SalesController extends Controller
             $monthlySales->sortByDesc('profit')->first(),
             $monthlySales->sortBy('profit')->first()
         );
+        $monthlyReport = $this->monthlyReport($selectedMonthRow, $previousMonthRow, $platformSales, $baseMonth);
 
         return view('sales.index', [
             'periodStart' => $periodStart,
@@ -80,6 +81,11 @@ class SalesController extends Controller
             'monthlyChartProfit' => $monthlySales->pluck('profit')->values(),
             'platformChartLabels' => $platformSales->pluck('platform')->values(),
             'platformChartSales' => $platformSales->pluck('sales')->values(),
+            'platformChartBreakdown' => $platformSales->map(fn ($row) => [
+                'platform' => $row['platform'],
+                'sales' => $row['sales'],
+                'share' => $totalSales > 0 ? round(((int) $row['sales'] / $totalSales) * 100, 1) : 0.0,
+            ])->values(),
             'platformRanking' => $this->addRankingAndShare(
                 $platformSales->map(fn ($row) => [
                     'label' => $row['platform'],
@@ -95,6 +101,7 @@ class SalesController extends Controller
             'selectedMonthRow' => $selectedMonthRow,
             'previousMonthRow' => $previousMonthRow,
             'monthlyInsights' => $monthlyInsights,
+            'monthlyReport' => $monthlyReport,
         ]);
     }
 
@@ -223,6 +230,44 @@ class SalesController extends Controller
         ]);
     }
 
+    public function downloadSellingCsv(): Response
+    {
+        $items = AuctionItem::query()
+            ->with(['category.parent'])
+            ->where('user_id', Auth::id())
+            ->where('status', AuctionItem::STATUS_SELLING)
+            ->orderBy('management_id')
+            ->get();
+
+        $csv = "\xEF\xBB\xBF";
+        $csv .= "management_id,title,comment,platform,parent_category,category,purchase_price,sold_price,sales_fee_rate,shipping_fee,status,sold_at\n";
+
+        foreach ($items as $item) {
+            $salesFeeRate = (float) ($item->sales_fee_rate ?? 0);
+            $row = [
+                $item->management_id ?? '',
+                $item->title ?? '',
+                $item->comment ?? '',
+                $this->platformLabel($item),
+                $item->category?->parent?->name ?? '',
+                $item->category?->name ?? '',
+                (int) ($item->purchase_price ?? 0),
+                (int) ($item->sold_price ?? 0),
+                rtrim(rtrim(number_format($salesFeeRate, 2), '0'), '.'),
+                (int) ($item->shipping_fee ?? 0),
+                AuctionItem::STATUS_SELLING,
+                '',
+            ];
+
+            $csv .= collect($row)->map(fn ($value) => $this->escapeCsvCell($value))->implode(',')."\n";
+        }
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="furugi_selling_import_'.now()->format('Ymd_His').'.csv"',
+        ]);
+    }
+
     private function baseMonth(mixed $selectedMonth): Carbon
     {
         if (is_string($selectedMonth) && $selectedMonth !== '') {
@@ -338,9 +383,46 @@ class SalesController extends Controller
         return '大きな悪化はありません。SOLD件数と在庫の滞留を見ながら、次の仕入れ量を調整してください。';
     }
 
+    private function monthlyReport(array $selectedMonthRow, array $previousMonthRow, Collection $platformSales, Carbon $baseMonth): array
+    {
+        $bestPlatform = $platformSales
+            ->filter(fn ($row) => (int) $row['sales'] > 0)
+            ->sortByDesc('profit')
+            ->first();
+        $profitDiff = (int) $selectedMonthRow['profit'] - (int) $previousMonthRow['profit'];
+        $salesDiff = (int) $selectedMonthRow['sales'] - (int) $previousMonthRow['sales'];
+        $countDiff = (int) $selectedMonthRow['count'] - (int) $previousMonthRow['count'];
+        $actions = [];
+
+        if ((float) $selectedMonthRow['profit_rate'] < 20) {
+            $actions[] = '利益率が20%未満です。仕入れ上限、送料、販売手数料を見直してください。';
+        }
+
+        if ($profitDiff < 0) {
+            $actions[] = '前月より利益が落ちています。売れ残り在庫の値下げ候補と高利益ジャンルを確認してください。';
+        }
+
+        if ($countDiff <= 0 && $salesDiff <= 0) {
+            $actions[] = '販売件数と売上が伸びていません。写真差し替え、再出品、説明文改善を優先してください。';
+        }
+
+        if ($actions === []) {
+            $actions[] = '利益は安定しています。利益率の高い出品先とジャンルへ仕入れを寄せると、次月も伸ばしやすくなります。';
+        }
+
+        return [
+            'title' => $baseMonth->format('Y年n月').' 月次利益レポート',
+            'best_platform' => $bestPlatform,
+            'profit_diff' => $profitDiff,
+            'sales_diff' => $salesDiff,
+            'count_diff' => $countDiff,
+            'actions' => $actions,
+        ];
+    }
+
     private function platformLabel(AuctionItem $item): string
     {
-        $platform = trim((string) $item->platform);
+        $platform = AuctionItem::normalizePlatformName($item->platform);
 
         return $platform !== '' ? $platform : '未設定';
     }

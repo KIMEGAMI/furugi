@@ -18,7 +18,7 @@
     </x-slot>
 
     @php
-        $platformName = $auctionItem->platform ?: '未設定';
+        $platformName = \App\Models\AuctionItem::normalizePlatformName($auctionItem->platform) ?: '未設定';
         $displayImagePath = $auctionItem->status === 'sold' && $auctionItem->sold_image_path ? $auctionItem->sold_image_path : $auctionItem->image_path;
         $purchasePrice = (int) ($auctionItem->purchase_price ?? 0);
         $soldPrice = (int) ($auctionItem->sold_price ?? 0);

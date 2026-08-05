@@ -5,9 +5,10 @@
                 <h2 class="text-2xl font-black text-cyan-200">商品一覧</h2>
                 <p class="mt-1 text-sm font-bold text-cyan-100">画像、販売状況、価格、利益、売れ残り期間をまとめて確認できます。</p>
             </div>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-4">
                 <a href="{{ route('auction-items.duplicates') }}" class="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-white px-5 py-3 text-sm font-bold text-black shadow transition hover:bg-amber-50">重複チェック</a>
-                <a href="{{ route('auction-items.csv-import') }}" class="inline-flex items-center justify-center rounded-xl border border-cyan-200 bg-white px-5 py-3 text-sm font-bold text-black shadow transition hover:bg-cyan-50">CSV登録</a>
+                <a href="{{ route('auction-items.csv-import') }}" class="inline-flex items-center justify-center rounded-xl border border-cyan-200 bg-white px-5 py-3 text-sm font-bold text-black shadow transition hover:bg-cyan-50">CSV管理</a>
+                <a href="{{ route('auction-items.bulk-destroy.confirm') }}" class="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-700 shadow transition hover:bg-red-100">商品全削除</a>
                 <a href="{{ route('auction-items.create') }}" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-800">商品を登録</a>
             </div>
         </div>
@@ -28,7 +29,7 @@
                     <a href="{{ route('auction-items.index', array_filter(['platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ empty($status) && ! ($unsoldOnly ?? false) ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">すべて</a>
                     <a href="{{ route('auction-items.index', array_filter(['status' => 'selling', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'selling' ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">出品中</a>
                     <a href="{{ route('auction-items.index', array_filter(['status' => 'sold', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ $status === 'sold' ? 'bg-red-600 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">SOLD</a>
-                    <a href="{{ route('auction-items.index', array_filter(['unsold' => '1', 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ ($unsoldOnly ?? false) ? 'bg-amber-500 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">{{ $unsoldFilterMinDays ?? 10 }}日以上未売却</a>
+                    <a href="{{ route('auction-items.index', array_filter(['unsold' => '1', 'unsold_before' => $unsoldBeforeInput, 'platform' => $platform, 'keyword' => $keyword, 'parent_category_id' => $parentCategoryId, 'category_id' => $categoryId])) }}" class="rounded-2xl px-4 py-3 text-center text-sm font-black transition {{ ($unsoldOnly ?? false) ? 'bg-amber-500 text-white shadow' : 'bg-slate-100 text-black hover:bg-slate-200' }}">{{ $unsoldFilterLabel ?? '未売却' }}</a>
                 </div>
             </section>
 
@@ -66,6 +67,17 @@
                         <input type="hidden" name="unsold" value="1">
                     @endif
 
+                    <div class="lg:col-span-3">
+                        <label for="unsold_before" class="block text-sm font-black text-slate-700">未売却の基準日</label>
+                        <input id="unsold_before" type="text" name="unsold_before" value="{{ $unsoldBeforeInput ?? '' }}" inputmode="numeric" placeholder="例 20260723" class="mt-2 w-full rounded-xl border-slate-300 text-black shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p class="mt-1 text-xs font-semibold text-slate-500">この日以前に登録した出品中商品だけを表示します。</p>
+                    </div>
+
+                    <div class="lg:col-span-3">
+                        <label for="unsold_before_calendar" class="block text-sm font-black text-slate-700">カレンダーで選択</label>
+                        <input id="unsold_before_calendar" type="date" value="{{ $unsoldBeforeDate ?? '' }}" class="mt-2 w-full rounded-xl border-slate-300 text-black shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+
                     <div class="flex items-end gap-3 lg:col-span-3">
                         <button type="submit" class="w-full rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow transition hover:bg-blue-800">検索</button>
                         <a href="{{ route('auction-items.index') }}" class="w-full rounded-xl bg-slate-200 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-slate-300">解除</a>
@@ -73,12 +85,69 @@
                 </form>
             </section>
 
+            @if (($inventoryAlerts['selling_count'] ?? 0) > 0)
+                <section class="mb-8 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+                    <div class="rounded-3xl border border-amber-200 bg-white p-5 shadow">
+                        <p class="text-xs font-black tracking-widest text-amber-700">UNSOLD ALERT</p>
+                        <h3 class="mt-2 text-xl font-black text-slate-950">売れ残りアラート</h3>
+                        <p class="mt-2 text-sm font-bold leading-6 text-slate-700">{{ $inventoryAlerts['message'] }}</p>
+                        <div class="mt-4 grid grid-cols-2 gap-3">
+                            <div class="rounded-2xl bg-amber-50 p-4">
+                                <p class="text-xs font-black text-amber-800">14日以上</p>
+                                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($inventoryAlerts['older_than_14_count']) }}件</p>
+                            </div>
+                            <div class="rounded-2xl bg-red-50 p-4">
+                                <p class="text-xs font-black text-red-700">30日以上</p>
+                                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($inventoryAlerts['older_than_30_count']) }}件</p>
+                            </div>
+                            <div class="rounded-2xl bg-slate-100 p-4">
+                                <p class="text-xs font-black text-slate-700">出品中仕入れ額</p>
+                                <p class="mt-1 text-xl font-black text-slate-950">¥{{ number_format($inventoryAlerts['total_cost']) }}</p>
+                            </div>
+                            <div class="rounded-2xl bg-slate-100 p-4">
+                                <p class="text-xs font-black text-slate-700">30日以上の仕入れ額</p>
+                                <p class="mt-1 text-xl font-black text-slate-950">¥{{ number_format($inventoryAlerts['stale_cost']) }}</p>
+                                <p class="mt-1 text-xs font-bold text-slate-600">{{ number_format($inventoryAlerts['stale_cost_rate'], 1) }}%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-3xl border border-emerald-200 bg-white p-5 shadow">
+                        <p class="text-xs font-black tracking-widest text-emerald-700">REPRICE LIST</p>
+                        <h3 class="mt-2 text-xl font-black text-slate-950">再出品・値下げ候補</h3>
+                        @if ($repricingCandidates->isNotEmpty())
+                            <div class="mt-4 space-y-3">
+                                @foreach ($repricingCandidates as $candidate)
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                            <div>
+                                                <p class="text-xs font-black text-slate-600">{{ $candidate['item']->management_id }} / {{ $candidate['days_listed'] }}日</p>
+                                                <p class="mt-1 font-black text-slate-950">{{ $candidate['item']->title }}</p>
+                                                <p class="mt-1 text-sm font-bold text-slate-700">{{ $candidate['reason'] }}</p>
+                                            </div>
+                                            <a href="{{ route('auction-items.edit', $candidate['item']) }}" class="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white hover:bg-emerald-800">編集</a>
+                                        </div>
+                                        <div class="mt-3 grid grid-cols-3 gap-2 text-sm">
+                                            <div class="rounded-xl bg-white p-3"><p class="text-xs font-black text-slate-500">現在利益率</p><p class="font-black text-slate-950">{{ number_format($candidate['profit_rate'], 1) }}%</p></div>
+                                            <div class="rounded-xl bg-white p-3"><p class="text-xs font-black text-slate-500">20%確保価格</p><p class="font-black text-slate-950">¥{{ number_format($candidate['target_price']) }}</p></div>
+                                            <div class="rounded-xl bg-white p-3"><p class="text-xs font-black text-slate-500">提案価格</p><p class="font-black text-emerald-700">¥{{ number_format($candidate['suggested_price']) }}</p></div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-bold leading-6 text-emerald-900">今すぐ値下げを優先したい商品はありません。</p>
+                        @endif
+                    </div>
+                </section>
+            @endif
+
             @if ($auctionItems->count() > 0)
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                     @foreach ($auctionItems as $item)
                         @php
                             $displayImagePath = $item->status === 'sold' && $item->sold_image_path ? $item->sold_image_path : $item->image_path;
-                            $platformName = $item->platform ?: '未設定';
+                            $platformName = \App\Models\AuctionItem::normalizePlatformName($item->platform) ?: '未設定';
                             $purchasePrice = (int) ($item->purchase_price ?? 0);
                             $soldPrice = (int) ($item->sold_price ?? 0);
                             $salesFeeRate = (float) ($item->sales_fee_rate ?? 0);
@@ -101,7 +170,7 @@
                                     <div class="absolute left-3 right-3 top-3 flex flex-wrap gap-2">
                                         <span class="rounded-full {{ $item->status === 'sold' ? 'bg-red-600' : 'bg-blue-700' }} px-3 py-1.5 text-xs font-black text-white shadow">{{ $statusLabel }}</span>
                                         <span class="rounded-full bg-white px-3 py-1.5 text-xs font-black text-black shadow">{{ $platformName }}</span>
-                                        @if ($item->status !== 'sold' && $daysListed >= ($unsoldFilterMinDays ?? 10))
+                                        @if ($item->status !== 'sold' && ($unsoldOnly ?? false))
                                             <span class="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black text-black shadow">未売却 {{ $daysListed }}日</span>
                                         @endif
                                     </div>
@@ -167,8 +236,31 @@
             <div class="grid grid-cols-3 gap-2">
                 <a href="{{ route('auction-items.create') }}" class="rounded-xl bg-blue-700 px-3 py-3 text-center text-xs font-black text-white shadow">商品登録</a>
                 <a href="{{ route('auction-items.index', ['status' => 'selling']) }}" class="rounded-xl bg-slate-100 px-3 py-3 text-center text-xs font-black text-black shadow">出品中</a>
-                <a href="{{ route('auction-items.csv-import') }}" class="rounded-xl bg-cyan-300 px-3 py-3 text-center text-xs font-black text-slate-950 shadow">CSV登録</a>
+                <a href="{{ route('auction-items.csv-import') }}" class="rounded-xl bg-cyan-300 px-3 py-3 text-center text-xs font-black text-slate-950 shadow">CSV管理</a>
             </div>
         </nav>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dateInput = document.getElementById('unsold_before');
+            const calendarInput = document.getElementById('unsold_before_calendar');
+
+            calendarInput?.addEventListener('change', function () {
+                if (!calendarInput.value || !dateInput) {
+                    return;
+                }
+
+                dateInput.value = calendarInput.value.replaceAll('-', '');
+            });
+
+            dateInput?.addEventListener('input', function () {
+                const compactDate = dateInput.value.replace(/[^\d]/g, '');
+
+                if (compactDate.length === 8 && calendarInput) {
+                    calendarInput.value = compactDate.slice(0, 4) + '-' + compactDate.slice(4, 6) + '-' + compactDate.slice(6, 8);
+                }
+            });
+        });
+    </script>
 </x-app-layout>

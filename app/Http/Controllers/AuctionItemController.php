@@ -8,14 +8,13 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class AuctionItemController extends Controller
 {
-    private const UNSOLD_FILTER_MIN_DAYS = 10;
-
     private const CSV_MAX_ROWS = 5000;
 
     private const CSV_MAX_CELL_LENGTH = 1000;
@@ -33,6 +32,19 @@ class AuctionItemController extends Controller
 
     private const YAHOO_AUCTION_SALE_STATUS = '売上金';
 
+    private const MERCARI_SHOPS_REQUIRED_HEADERS = [
+        '注文番号',
+        '明細番号',
+        '購入日',
+        '商品名',
+        '売上（税込）',
+        'メルカリ便送料（税込）',
+        '送料（税込）',
+        '販売手数料（税込）',
+        '販売手数料率（%）',
+        'ショップ名',
+    ];
+
     public function index(Request $request)
     {
         if ($request->boolean('unsold') && ! $request->user()?->hasActiveSubscription()) {
@@ -48,6 +60,7 @@ class AuctionItemController extends Controller
         $platform = $request->get('platform');
         $keyword = $request->get('keyword');
         $unsoldOnly = $request->boolean('unsold');
+        $unsoldBeforeDate = $this->parseUnsoldBeforeDate($request->query('unsold_before'));
         $parentCategoryId = $request->integer('parent_category_id') ?: null;
         $categoryId = $request->integer('category_id') ?: null;
 
@@ -55,15 +68,17 @@ class AuctionItemController extends Controller
             ->where('user_id', Auth::id());
 
         if ($unsoldOnly) {
-            $query
-                ->where('status', AuctionItem::STATUS_SELLING)
-                ->where('created_at', '<=', Carbon::now()->subDays(self::UNSOLD_FILTER_MIN_DAYS));
+            $query->where('status', AuctionItem::STATUS_SELLING);
+
+            if ($unsoldBeforeDate) {
+                $query->where('created_at', '<=', $unsoldBeforeDate->copy()->endOfDay());
+            }
         } elseif (in_array($status, AuctionItem::STATUSES, true)) {
             $query->where('status', $status);
         }
 
         if (in_array($platform, AuctionItem::PLATFORMS, true)) {
-            $query->where('platform', $platform);
+            $query->whereIn('platform', AuctionItem::platformFilterValues($platform));
         }
 
         if (is_string($keyword) && trim($keyword) !== '') {
@@ -85,6 +100,8 @@ class AuctionItemController extends Controller
             $query->whereIn('category_id', $childCategoryIds);
         }
 
+        $sellingAdviceItems = $this->sellingAdviceItems((int) Auth::id());
+
         return view('auction_items.index', [
             'auctionItems' => ($unsoldOnly
                 ? $query->orderBy('created_at')->orderBy('id')
@@ -94,12 +111,133 @@ class AuctionItemController extends Controller
             'platform' => $platform,
             'keyword' => $keyword,
             'unsoldOnly' => $unsoldOnly,
-            'unsoldFilterMinDays' => self::UNSOLD_FILTER_MIN_DAYS,
+            'unsoldBeforeInput' => $unsoldBeforeDate?->format('Ymd') ?? '',
+            'unsoldBeforeDate' => $unsoldBeforeDate?->format('Y-m-d') ?? '',
+            'unsoldFilterLabel' => $unsoldBeforeDate
+                ? $unsoldBeforeDate->format('Y/m/d').'以前の未売却'
+                : '未売却',
             'parentCategoryId' => $parentCategoryId,
             'categoryId' => $categoryId,
             'parentCategories' => $this->parentCategories(),
             'platforms' => AuctionItem::PLATFORMS,
+            'inventoryAlerts' => $this->inventoryAlerts($sellingAdviceItems),
+            'repricingCandidates' => $this->repricingCandidates($sellingAdviceItems),
         ]);
+    }
+
+    private function sellingAdviceItems(int $userId): Collection
+    {
+        return AuctionItem::query()
+            ->with(['category.parent'])
+            ->where('user_id', $userId)
+            ->where('status', AuctionItem::STATUS_SELLING)
+            ->orderBy('created_at')
+            ->limit(500)
+            ->get();
+    }
+
+    private function inventoryAlerts(Collection $items): array
+    {
+        $now = now();
+        $olderThan30 = $items->filter(fn (AuctionItem $item) => $item->created_at && $item->created_at->diffInDays($now) >= 30);
+        $olderThan14 = $items->filter(fn (AuctionItem $item) => $item->created_at && $item->created_at->diffInDays($now) >= 14);
+        $totalCost = $items->sum(fn (AuctionItem $item) => (int) ($item->purchase_price ?? 0));
+        $staleCost = $olderThan30->sum(fn (AuctionItem $item) => (int) ($item->purchase_price ?? 0));
+
+        return [
+            'selling_count' => $items->count(),
+            'older_than_14_count' => $olderThan14->count(),
+            'older_than_30_count' => $olderThan30->count(),
+            'total_cost' => $totalCost,
+            'stale_cost' => $staleCost,
+            'stale_cost_rate' => $totalCost > 0 ? round(($staleCost / $totalCost) * 100, 1) : 0.0,
+            'message' => $olderThan30->count() > 0
+                ? '30日以上動いていない在庫があります。値下げ、写真差し替え、説明文の見直し候補を確認してください。'
+                : '30日以上の滞留在庫はありません。現在の出品ペースを維持できます。',
+        ];
+    }
+
+    private function repricingCandidates(Collection $items): Collection
+    {
+        return $items
+            ->map(function (AuctionItem $item) {
+                $soldPrice = (int) ($item->sold_price ?? 0);
+                $purchasePrice = (int) ($item->purchase_price ?? 0);
+                $shippingFee = (int) ($item->shipping_fee ?? 0);
+                $salesFeeRate = (float) ($item->sales_fee_rate ?? 0);
+                $salesFee = $this->calculateSalesFee($soldPrice, $salesFeeRate);
+                $profit = $this->calculateProfit($soldPrice, $purchasePrice, $salesFee, $shippingFee);
+                $profitRate = $soldPrice > 0 ? round(($profit / $soldPrice) * 100, 1) : 0.0;
+                $daysListed = $item->created_at ? max(0, (int) $item->created_at->diffInDays(now())) : 0;
+                $breakEvenPrice = $this->roundUpPrice($this->minimumPriceForRate($purchasePrice, $shippingFee, $salesFeeRate, 0));
+                $targetPrice = $this->roundUpPrice($this->minimumPriceForRate($purchasePrice, $shippingFee, $salesFeeRate, 20));
+                $suggestedPrice = $soldPrice > 0
+                    ? max($targetPrice, $this->roundUpPrice($soldPrice * 0.9))
+                    : $targetPrice;
+
+                return [
+                    'item' => $item,
+                    'days_listed' => $daysListed,
+                    'profit' => $profit,
+                    'profit_rate' => $profitRate,
+                    'break_even_price' => $breakEvenPrice,
+                    'target_price' => $targetPrice,
+                    'suggested_price' => $suggestedPrice,
+                    'reason' => $daysListed >= 30
+                        ? '30日以上未売却です。価格か写真を見直す優先度が高い商品です。'
+                        : '利益率に余裕があります。早く売りたい場合は小さな値下げを検討できます。',
+                ];
+            })
+            ->filter(fn (array $row) => $row['days_listed'] >= 30 || $row['profit_rate'] >= 30)
+            ->sortByDesc(fn (array $row) => [$row['days_listed'], $row['profit_rate']])
+            ->take(6)
+            ->values();
+    }
+
+    private function minimumPriceForRate(int $purchasePrice, int $shippingFee, float $salesFeeRate, float $profitRate): float
+    {
+        $rate = max(0.01, 1 - (($salesFeeRate + $profitRate) / 100));
+
+        return ($purchasePrice + $shippingFee) / $rate;
+    }
+
+    private function roundUpPrice(float $price): int
+    {
+        if ($price <= 0) {
+            return 0;
+        }
+
+        return (int) (ceil($price / 100) * 100);
+    }
+
+    private function parseUnsoldBeforeDate(mixed $value): ?Carbon
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $normalized = mb_convert_kana($value, 'n');
+        $normalized = preg_replace('/[^\d-]/', '', $normalized) ?? '';
+
+        if (preg_match('/^\d{8}$/', $normalized) === 1) {
+            try {
+                return Carbon::createFromFormat('Ymd', $normalized)->startOfDay();
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $normalized) === 1) {
+            try {
+                return Carbon::createFromFormat('Y-m-d', $normalized)->startOfDay();
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     public function create()
@@ -221,7 +359,7 @@ class AuctionItemController extends Controller
             return $this->csvImportError('CSVのヘッダー行を読み込めませんでした。');
         }
 
-        $headers = array_map(fn ($header) => trim((string) $header), $headers);
+        $headers = $this->normalizeFurugiImportHeaders($headers);
         $missingHeaders = array_diff(['management_id', 'title'], $headers);
 
         if ($missingHeaders !== []) {
@@ -275,13 +413,15 @@ class AuctionItemController extends Controller
             }
 
             $platform = $this->normalizePlatform($data['platform'] ?? AuctionItem::PLATFORM_OTHER);
-            $purchasePrice = max(0, (int) ($data['purchase_price'] ?? 0));
-            $soldPrice = max(0, (int) ($data['sold_price'] ?? 0));
-            $shippingFee = max(0, (int) ($data['shipping_fee'] ?? 0));
-            $salesFeeRate = isset($data['sales_fee_rate']) && $data['sales_fee_rate'] !== ''
-                ? max(0, min(100, (float) $data['sales_fee_rate']))
+            $purchasePrice = $this->parseCsvMoney($data['purchase_price'] ?? 0);
+            $soldPrice = $this->parseCsvMoney($data['sold_price'] ?? 0);
+            $shippingFee = $this->parseCsvMoney($data['shipping_fee'] ?? 0);
+            $salesFeeRate = ($data['sales_fee_rate'] ?? '') !== ''
+                ? ($this->parseCsvRate($data['sales_fee_rate']) ?? $this->defaultSalesFeeRate($platform))
                 : $this->defaultSalesFeeRate($platform);
-            $salesFee = $this->calculateSalesFee($soldPrice, $salesFeeRate);
+            $salesFee = ($data['sales_fee'] ?? '') !== ''
+                ? $this->parseCsvMoney($data['sales_fee'])
+                : $this->calculateSalesFee($soldPrice, $salesFeeRate);
             $status = $this->normalizeStatus($data['status'] ?? AuctionItem::STATUS_SELLING);
             $profit = $status === AuctionItem::STATUS_SOLD
                 ? $this->calculateProfit($soldPrice, $purchasePrice, $salesFee, $shippingFee)
@@ -428,6 +568,109 @@ class AuctionItemController extends Controller
             ->with('success', "ヤフオクCSVを変換して一括登録しました。登録 {$importedCount} 件 / スキップ {$skippedCount} 件");
     }
 
+    public function importMercariShopsCsv(Request $request)
+    {
+        $request->validate([
+            'mercari_shops_csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+        ], [
+            'mercari_shops_csv_file.required' => 'メルカリShops CSVファイルを選択してください。',
+            'mercari_shops_csv_file.mimes' => 'メルカリShops CSVファイルを選択してください。',
+        ]);
+
+        $handle = $this->openUploadedCsv($request, 'mercari_shops_csv_file');
+
+        if (! is_resource($handle)) {
+            return $handle;
+        }
+
+        $headers = fgetcsv($handle);
+
+        if (! $headers) {
+            fclose($handle);
+
+            return $this->csvImportError('メルカリShops CSVのヘッダー行を読み込めませんでした。');
+        }
+
+        $headers = array_map(fn ($header) => trim((string) $header), $headers);
+        $missingHeaders = array_diff(self::MERCARI_SHOPS_REQUIRED_HEADERS, $headers);
+
+        if ($missingHeaders !== []) {
+            fclose($handle);
+
+            return $this->csvImportError('メルカリShops CSVに必要な列がありません。不足: '.implode(', ', $missingHeaders));
+        }
+
+        $importedCount = 0;
+        $skippedCount = 0;
+        $lineNumber = 1;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $lineNumber++;
+
+            if ($lineNumber > self::CSV_MAX_ROWS + 1) {
+                fclose($handle);
+
+                return $this->csvImportError('CSVは最大'.number_format(self::CSV_MAX_ROWS).'行まで取り込めます。行数を分けて再実行してください。');
+            }
+
+            if (count(array_filter($row, fn ($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+
+            $row = array_pad($row, count($headers), null);
+            $data = array_combine($headers, array_map(
+                fn ($value) => $this->sanitizeCsvCell($value),
+                array_slice($row, 0, count($headers))
+            ));
+
+            if (! $data || ! $this->isImportableMercariShopsSale($data)) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $managementId = $this->mercariShopsManagementId($data);
+
+            if (AuctionItem::where('user_id', Auth::id())->where('management_id', $managementId)->exists()) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $soldPrice = $this->parseCsvMoney($data['売上（税込）'] ?? null);
+            $salesFee = $this->parseCsvMoney($data['販売手数料（税込）'] ?? null);
+            $shippingFee = $this->parseMercariShopsShippingFee($data);
+            $salesFeeRate = $this->parseCsvRate($data['販売手数料率（%）'] ?? null);
+
+            AuctionItem::create([
+                'user_id' => Auth::id(),
+                'management_id' => $managementId,
+                'title' => trim((string) $data['商品名']),
+                'comment' => $this->buildMercariShopsComment($data),
+                'platform' => AuctionItem::PLATFORM_MERCARI,
+                'category_id' => null,
+                'image_path' => null,
+                'sold_image_path' => null,
+                'purchase_price' => 0,
+                'sold_price' => $soldPrice,
+                'sales_fee_rate' => $salesFeeRate ?? $this->defaultSalesFeeRate(AuctionItem::PLATFORM_MERCARI),
+                'sales_fee' => $salesFee,
+                'shipping_fee' => $shippingFee,
+                'profit' => $this->calculateProfit($soldPrice, 0, $salesFee, $shippingFee),
+                'sold_at' => $this->parseCsvSoldAt($data['購入日'] ?? null) ?? now(),
+                'status' => AuctionItem::STATUS_SOLD,
+            ]);
+
+            $importedCount++;
+        }
+
+        fclose($handle);
+
+        return redirect()
+            ->route('auction-items.index', ['status' => AuctionItem::STATUS_SOLD])
+            ->with('success', "メルカリShops CSVを変換して一括登録しました。登録 {$importedCount} 件 / スキップ {$skippedCount} 件");
+    }
+
     public function show(AuctionItem $auctionItem)
     {
         $this->authorizeOwner($auctionItem);
@@ -538,6 +781,46 @@ class AuctionItemController extends Controller
         return redirect()
             ->route('auction-items.index')
             ->with('success', '商品を出品中に戻しました。');
+    }
+
+    public function confirmBulkDestroy(Request $request)
+    {
+        $itemCount = AuctionItem::query()
+            ->where('user_id', Auth::id())
+            ->count();
+
+        return view('auction_items.bulk-destroy-confirm', [
+            'itemCount' => $itemCount,
+            'hasActiveSubscription' => (bool) $request->user()?->hasActiveSubscription(),
+        ]);
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'confirm_delete_all_items' => ['accepted'],
+        ], [
+            'confirm_delete_all_items.accepted' => '確認チェックを入れてから削除してください。',
+        ]);
+
+        $deletedCount = 0;
+
+        AuctionItem::query()
+            ->where('user_id', Auth::id())
+            ->select(['id', 'image_path', 'sold_image_path'])
+            ->orderBy('id')
+            ->chunkById(100, function ($items) use (&$deletedCount) {
+                foreach ($items as $item) {
+                    $this->deleteAuctionItemImage($item->image_path);
+                    $this->deleteAuctionItemImage($item->sold_image_path);
+                    $item->delete();
+                    $deletedCount++;
+                }
+            });
+
+        return redirect()
+            ->route('auction-items.index')
+            ->with('success', '商品を全削除しました。削除件数 '.$deletedCount.' 件');
     }
 
     public function destroy(AuctionItem $auctionItem)
@@ -876,6 +1159,48 @@ class AuctionItemController extends Controller
             ->value('id');
     }
 
+    /**
+     * @param array<int, mixed> $headers
+     * @return array<int, string>
+     */
+    private function normalizeFurugiImportHeaders(array $headers): array
+    {
+        $aliases = [
+            '管理ID' => 'management_id',
+            '商品ID' => 'management_id',
+            '商品タイトル' => 'title',
+            'タイトル' => 'title',
+            '大ジャンル' => 'parent_category',
+            '小ジャンル' => 'category',
+            '出品先' => 'platform',
+            'ステータス' => 'status',
+            '仕入れ値' => 'purchase_price',
+            '仕入値' => 'purchase_price',
+            '販売価格' => 'sold_price',
+            '売値' => 'sold_price',
+            '販売手数料率' => 'sales_fee_rate',
+            '販売手数料率（%）' => 'sales_fee_rate',
+            '販売手数料率(%)' => 'sales_fee_rate',
+            '販売手数料' => 'sales_fee',
+            '送料' => 'shipping_fee',
+            '実利益' => 'profit',
+            'SOLD日' => 'sold_at',
+            'sold日' => 'sold_at',
+            'コメント' => 'comment',
+            '商品画像URL' => 'image_url',
+            'SOLD画像URL' => 'sold_image_url',
+            '作成日' => 'created_at',
+            '更新日' => 'updated_at',
+        ];
+
+        return array_map(function ($header) use ($aliases) {
+            $header = trim((string) $header);
+            $header = preg_replace('/^\xEF\xBB\xBF/', '', $header) ?? $header;
+
+            return $aliases[$header] ?? $header;
+        }, $headers);
+    }
+
     private function sanitizeCsvCell(mixed $value): string
     {
         $value = trim((string) $value);
@@ -920,6 +1245,52 @@ class AuctionItemController extends Controller
         return $comment !== '' ? mb_substr($comment, 0, self::CSV_MAX_CELL_LENGTH) : null;
     }
 
+    private function isImportableMercariShopsSale(array $data): bool
+    {
+        $managementId = $this->mercariShopsManagementId($data);
+        $title = trim((string) ($data['商品名'] ?? ''));
+        $canceledAt = trim((string) ($data['キャンセル日'] ?? ''));
+        $soldPrice = $this->parseCsvMoney($data['売上（税込）'] ?? null);
+
+        return $managementId !== ''
+            && $title !== ''
+            && $canceledAt === ''
+            && $soldPrice > 0;
+    }
+
+    private function mercariShopsManagementId(array $data): string
+    {
+        $orderNumber = trim((string) ($data['注文番号'] ?? ''));
+        $detailNumber = trim((string) ($data['明細番号'] ?? ''));
+        $managementId = trim($orderNumber.'-'.$detailNumber, '-');
+
+        return mb_substr($managementId, 0, 255);
+    }
+
+    private function parseMercariShopsShippingFee(array $data): int
+    {
+        $mercariShippingFee = $this->parseCsvMoney($data['メルカリ便送料（税込）'] ?? null);
+        $shippingFee = $this->parseCsvMoney($data['送料（税込）'] ?? null);
+
+        return $mercariShippingFee + $shippingFee;
+    }
+
+    private function buildMercariShopsComment(array $data): ?string
+    {
+        $parts = [
+            'メルカリShops CSVから変換',
+            '注文番号: '.trim((string) ($data['注文番号'] ?? '')),
+            '明細番号: '.trim((string) ($data['明細番号'] ?? '')),
+            '明細種別: '.trim((string) ($data['明細種別'] ?? '')),
+            'ショップ名: '.trim((string) ($data['ショップ名'] ?? '')),
+            '販売利益: '.trim((string) ($data['販売利益'] ?? '')),
+        ];
+
+        $comment = implode(' / ', array_filter($parts, fn ($part) => ! str_ends_with($part, ': ')));
+
+        return $comment !== '' ? mb_substr($comment, 0, self::CSV_MAX_CELL_LENGTH) : null;
+    }
+
     private function parseCsvMoney(mixed $value): int
     {
         $value = mb_convert_kana(trim((string) $value), 'n');
@@ -937,9 +1308,26 @@ class AuctionItemController extends Controller
         return max(0, (int) round((float) $normalized));
     }
 
+    private function parseCsvRate(mixed $value): ?float
+    {
+        $value = mb_convert_kana(trim((string) $value), 'n');
+
+        if ($value === '' || $value === '-') {
+            return null;
+        }
+
+        $normalized = preg_replace('/[^\d.-]/', '', $value) ?? '';
+
+        if ($normalized === '' || $normalized === '-') {
+            return null;
+        }
+
+        return max(0, min(100, (float) $normalized));
+    }
+
     private function normalizePlatform(mixed $platform): string
     {
-        $platform = trim((string) $platform);
+        $platform = AuctionItem::normalizePlatformName($platform);
         $platform = str_replace(["\0", "\r", "\n", "\t"], '', $platform);
         $platform = mb_substr($platform, 0, 50);
 
@@ -955,6 +1343,13 @@ class AuctionItemController extends Controller
     private function normalizeStatus(mixed $status): string
     {
         $status = trim((string) $status);
+
+        $status = match ($status) {
+            'SOLD', '売却済み', '売却済', '販売済み', '販売済' => AuctionItem::STATUS_SOLD,
+            '出品中', '販売中' => AuctionItem::STATUS_SELLING,
+            '下書き', '下書' => AuctionItem::STATUS_DRAFT,
+            default => $status,
+        };
 
         return in_array($status, AuctionItem::STATUSES, true)
             ? $status

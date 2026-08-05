@@ -33,7 +33,7 @@
                 'availability' => 'https://schema.org/InStock',
             ],
         ],
-        'featureList' => ['画像付き商品登録', '在庫管理', 'SOLD管理', '売上と利益の分析', 'CSV登録', 'ヤフオクCSV変換', '重複チェック', 'PWA対応'],
+        'featureList' => ['画像付き商品登録', '在庫管理', 'SOLD管理', '売上と利益の分析', 'CSV管理', '外部CSV変換', '重複チェック', 'PWA対応'],
     ];
 @endphp
 
@@ -110,7 +110,7 @@
                     <p class="mt-4 text-base font-bold leading-8 text-slate-700">複数サービスへ出品していると、商品名、価格、画像、販売状況、利益の管理が散らかりやすくなります。FURUGI MANAGERは、その運用を毎日使える形に整理します。</p>
                 </div>
                 <div class="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    @foreach ([['商品管理', '画像付きで商品を登録し、出品中・SOLD・下書きを整理できます。'], ['CSV登録', '古着システム用CSV、ヤフオクCSV変換、今後の販売CSV追加に備えた登録画面を用意しています。'], ['売上分析', '売上、手数料、送料、実利益を確認し、販売の状況を追えます。'], ['運用改善', '重複チェックやジャンル別分析で、毎日の管理ロスを減らします。']] as [$heading, $body])
+                    @foreach ([['商品管理', '画像付きで商品を登録し、出品中・SOLD・下書きを整理できます。'], ['CSV管理', '古着システム用CSV、ヤフオクCSV変換、メルカリShops CSV変換、バックアップCSV、復元用CSVをまとめて管理できます。'], ['売上分析', '売上、手数料、送料、実利益を確認し、販売の状況を追えます。'], ['運用改善', '重複チェックやジャンル別分析で、毎日の管理ロスを減らします。']] as [$heading, $body])
                         <article class="rounded-lg border border-cyan-100 bg-cyan-50/70 p-6">
                             <h3 class="text-lg font-black text-cyan-950">{{ $heading }}</h3>
                             <p class="mt-3 text-sm font-bold leading-7 text-slate-700">{{ $body }}</p>
@@ -151,7 +151,7 @@
                 <div class="rounded-lg border border-cyan-100 bg-cyan-50 p-6 sm:p-8">
                     <p class="text-sm font-black tracking-[0.24em] text-cyan-700">PRICING</p>
                     <h2 class="mt-3 text-3xl font-black text-cyan-950">FreeプランとPremiumプランがあります。</h2>
-                    <p class="mt-4 max-w-3xl text-sm font-bold leading-7 text-slate-700">Freeは商品登録50件・カテゴリ5件まで利用できます。Premiumは月額480円で商品登録数とカテゴリ数の制限がなくなり、CSV登録、売上分析、ジャンル別分析、重複チェックなどを利用できます。</p>
+                    <p class="mt-4 max-w-3xl text-sm font-bold leading-7 text-slate-700">Freeは商品登録50件・カテゴリ5件まで利用できます。Premiumは月額480円で商品登録数とカテゴリ数の制限がなくなり、CSV管理、売上分析、ジャンル別分析、重複チェックなどを利用できます。</p>
                     <div class="mt-6 flex flex-wrap gap-3">
                         <a href="{{ route('marketing.pricing') }}" class="inline-flex rounded-md bg-cyan-700 px-6 py-3 text-sm font-black text-white hover:bg-cyan-800">料金体系を見る</a>
                         <a href="{{ route('register') }}" class="inline-flex rounded-md border border-cyan-300 bg-white px-6 py-3 text-sm font-black text-cyan-900 hover:bg-cyan-50">Freeで始める</a>
