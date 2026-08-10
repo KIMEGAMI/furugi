@@ -86,58 +86,35 @@
             </section>
 
             @if (($inventoryAlerts['selling_count'] ?? 0) > 0)
-                <section class="mb-8 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-                    <div class="rounded-3xl border border-amber-200 bg-white p-5 shadow">
-                        <p class="text-xs font-black tracking-widest text-amber-700">UNSOLD ALERT</p>
-                        <h3 class="mt-2 text-xl font-black text-slate-950">売れ残りアラート</h3>
-                        <p class="mt-2 text-sm font-bold leading-6 text-slate-700">{{ $inventoryAlerts['message'] }}</p>
-                        <div class="mt-4 grid grid-cols-2 gap-3">
-                            <div class="rounded-2xl bg-amber-50 p-4">
-                                <p class="text-xs font-black text-amber-800">14日以上</p>
-                                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($inventoryAlerts['older_than_14_count']) }}件</p>
-                            </div>
-                            <div class="rounded-2xl bg-red-50 p-4">
-                                <p class="text-xs font-black text-red-700">30日以上</p>
-                                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($inventoryAlerts['older_than_30_count']) }}件</p>
-                            </div>
-                            <div class="rounded-2xl bg-slate-100 p-4">
-                                <p class="text-xs font-black text-slate-700">出品中仕入れ額</p>
-                                <p class="mt-1 text-xl font-black text-slate-950">¥{{ number_format($inventoryAlerts['total_cost']) }}</p>
-                            </div>
-                            <div class="rounded-2xl bg-slate-100 p-4">
-                                <p class="text-xs font-black text-slate-700">30日以上の仕入れ額</p>
-                                <p class="mt-1 text-xl font-black text-slate-950">¥{{ number_format($inventoryAlerts['stale_cost']) }}</p>
-                                <p class="mt-1 text-xs font-bold text-slate-600">{{ number_format($inventoryAlerts['stale_cost_rate'], 1) }}%</p>
-                            </div>
+                <section class="mb-8 rounded-3xl border border-amber-200 bg-white p-5 shadow">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <p class="text-xs font-black tracking-widest text-amber-700">UNSOLD ALERT</p>
+                            <h3 class="mt-2 text-xl font-black text-slate-950">売れ残りアラート</h3>
+                            <p class="mt-2 text-sm font-bold leading-6 text-slate-700">{{ $inventoryAlerts['message'] }}</p>
                         </div>
+                        <a href="{{ route('auction-items.unsold-alerts') }}" class="inline-flex items-center justify-center rounded-xl bg-amber-600 px-5 py-3 text-sm font-black text-white shadow hover:bg-amber-700">
+                            アラート商品一覧を見る
+                        </a>
                     </div>
-
-                    <div class="rounded-3xl border border-emerald-200 bg-white p-5 shadow">
-                        <p class="text-xs font-black tracking-widest text-emerald-700">REPRICE LIST</p>
-                        <h3 class="mt-2 text-xl font-black text-slate-950">再出品・値下げ候補</h3>
-                        @if ($repricingCandidates->isNotEmpty())
-                            <div class="mt-4 space-y-3">
-                                @foreach ($repricingCandidates as $candidate)
-                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                            <div>
-                                                <p class="text-xs font-black text-slate-600">{{ $candidate['item']->management_id }} / {{ $candidate['days_listed'] }}日</p>
-                                                <p class="mt-1 font-black text-slate-950">{{ $candidate['item']->title }}</p>
-                                                <p class="mt-1 text-sm font-bold text-slate-700">{{ $candidate['reason'] }}</p>
-                                            </div>
-                                            <a href="{{ route('auction-items.edit', $candidate['item']) }}" class="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white hover:bg-emerald-800">編集</a>
-                                        </div>
-                                        <div class="mt-3 grid grid-cols-3 gap-2 text-sm">
-                                            <div class="rounded-xl bg-white p-3"><p class="text-xs font-black text-slate-500">現在利益率</p><p class="font-black text-slate-950">{{ number_format($candidate['profit_rate'], 1) }}%</p></div>
-                                            <div class="rounded-xl bg-white p-3"><p class="text-xs font-black text-slate-500">20%確保価格</p><p class="font-black text-slate-950">¥{{ number_format($candidate['target_price']) }}</p></div>
-                                            <div class="rounded-xl bg-white p-3"><p class="text-xs font-black text-slate-500">提案価格</p><p class="font-black text-emerald-700">¥{{ number_format($candidate['suggested_price']) }}</p></div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-bold leading-6 text-emerald-900">今すぐ値下げを優先したい商品はありません。</p>
-                        @endif
+                    <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                        <div class="rounded-2xl bg-amber-50 p-4">
+                            <p class="text-xs font-black text-amber-800">14日以上</p>
+                            <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($inventoryAlerts['older_than_14_count']) }}件</p>
+                        </div>
+                        <div class="rounded-2xl bg-red-50 p-4">
+                            <p class="text-xs font-black text-red-700">30日以上</p>
+                            <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($inventoryAlerts['older_than_30_count']) }}件</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-100 p-4">
+                            <p class="text-xs font-black text-slate-700">出品中仕入れ額</p>
+                            <p class="mt-1 text-xl font-black text-slate-950">¥{{ number_format($inventoryAlerts['total_cost']) }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-100 p-4">
+                            <p class="text-xs font-black text-slate-700">30日以上の仕入れ額</p>
+                            <p class="mt-1 text-xl font-black text-slate-950">¥{{ number_format($inventoryAlerts['stale_cost']) }}</p>
+                            <p class="mt-1 text-xs font-bold text-slate-600">{{ number_format($inventoryAlerts['stale_cost_rate'], 1) }}%</p>
+                        </div>
                     </div>
                 </section>
             @endif

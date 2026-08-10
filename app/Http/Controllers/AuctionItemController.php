@@ -121,7 +121,38 @@ class AuctionItemController extends Controller
             'parentCategories' => $this->parentCategories(),
             'platforms' => AuctionItem::PLATFORMS,
             'inventoryAlerts' => $this->inventoryAlerts($sellingAdviceItems),
-            'repricingCandidates' => $this->repricingCandidates($sellingAdviceItems),
+        ]);
+    }
+
+    public function unsoldAlerts(Request $request)
+    {
+        $threshold = $request->integer('threshold') === 30 ? 30 : 14;
+        $thresholdDate = now()->subDays($threshold)->endOfDay();
+
+        $query = AuctionItem::query()
+            ->with(['category.parent'])
+            ->where('user_id', Auth::id())
+            ->where('status', AuctionItem::STATUS_SELLING)
+            ->where('created_at', '<=', $thresholdDate)
+            ->orderBy('created_at')
+            ->orderBy('id');
+
+        $alertItems = $query
+            ->paginate(20)
+            ->withQueryString()
+            ->through(fn (AuctionItem $item): array => [
+                'item' => $item,
+                'days_listed' => $this->daysListed($item),
+                'category_label' => $this->categoryLabel($item),
+                'platform_label' => AuctionItem::normalizePlatformName($item->platform) ?: '未設定',
+            ]);
+
+        $sellingAdviceItems = $this->sellingAdviceItems((int) Auth::id());
+
+        return view('auction_items.unsold-alerts', [
+            'alertItems' => $alertItems,
+            'threshold' => $threshold,
+            'inventoryAlerts' => $this->inventoryAlerts($sellingAdviceItems),
         ]);
     }
 
@@ -157,57 +188,18 @@ class AuctionItemController extends Controller
         ];
     }
 
-    private function repricingCandidates(Collection $items): Collection
+    private function daysListed(AuctionItem $item): int
     {
-        return $items
-            ->map(function (AuctionItem $item) {
-                $soldPrice = (int) ($item->sold_price ?? 0);
-                $purchasePrice = (int) ($item->purchase_price ?? 0);
-                $shippingFee = (int) ($item->shipping_fee ?? 0);
-                $salesFeeRate = (float) ($item->sales_fee_rate ?? 0);
-                $salesFee = $this->calculateSalesFee($soldPrice, $salesFeeRate);
-                $profit = $this->calculateProfit($soldPrice, $purchasePrice, $salesFee, $shippingFee);
-                $profitRate = $soldPrice > 0 ? round(($profit / $soldPrice) * 100, 1) : 0.0;
-                $daysListed = $item->created_at ? max(0, (int) $item->created_at->diffInDays(now())) : 0;
-                $breakEvenPrice = $this->roundUpPrice($this->minimumPriceForRate($purchasePrice, $shippingFee, $salesFeeRate, 0));
-                $targetPrice = $this->roundUpPrice($this->minimumPriceForRate($purchasePrice, $shippingFee, $salesFeeRate, 20));
-                $suggestedPrice = $soldPrice > 0
-                    ? max($targetPrice, $this->roundUpPrice($soldPrice * 0.9))
-                    : $targetPrice;
-
-                return [
-                    'item' => $item,
-                    'days_listed' => $daysListed,
-                    'profit' => $profit,
-                    'profit_rate' => $profitRate,
-                    'break_even_price' => $breakEvenPrice,
-                    'target_price' => $targetPrice,
-                    'suggested_price' => $suggestedPrice,
-                    'reason' => $daysListed >= 30
-                        ? '30日以上未売却です。価格か写真を見直す優先度が高い商品です。'
-                        : '利益率に余裕があります。早く売りたい場合は小さな値下げを検討できます。',
-                ];
-            })
-            ->filter(fn (array $row) => $row['days_listed'] >= 30 || $row['profit_rate'] >= 30)
-            ->sortByDesc(fn (array $row) => [$row['days_listed'], $row['profit_rate']])
-            ->take(6)
-            ->values();
+        return $item->created_at ? max(0, (int) $item->created_at->diffInDays(now())) : 0;
     }
 
-    private function minimumPriceForRate(int $purchasePrice, int $shippingFee, float $salesFeeRate, float $profitRate): float
+    private function categoryLabel(AuctionItem $item): string
     {
-        $rate = max(0.01, 1 - (($salesFeeRate + $profitRate) / 100));
-
-        return ($purchasePrice + $shippingFee) / $rate;
-    }
-
-    private function roundUpPrice(float $price): int
-    {
-        if ($price <= 0) {
-            return 0;
+        if (! $item->category) {
+            return '未設定';
         }
 
-        return (int) (ceil($price / 100) * 100);
+        return ($item->category->parent?->name ? $item->category->parent->name.' / ' : '').$item->category->name;
     }
 
     private function parseUnsoldBeforeDate(mixed $value): ?Carbon

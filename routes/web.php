@@ -118,6 +118,9 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/auction-items/delete-all', [AuctionItemController::class, 'bulkDestroy'])
         ->name('auction-items.bulk-destroy');
 
+    Route::get('/auction-items/unsold-alerts', [AuctionItemController::class, 'unsoldAlerts'])
+        ->name('auction-items.unsold-alerts');
+
     Route::resource('auction-items', AuctionItemController::class);
 
     Route::patch('/auction-items/{auctionItem}/sold', [AuctionItemController::class, 'markAsSold'])
