@@ -32,9 +32,14 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_demo_login(): void
     {
+        config([
+            'demo.user_email' => 'demo@example.com',
+            'demo.user_password' => 'demo-password',
+        ]);
+
         $user = User::factory()->create([
-            'email' => 'user@shinji.work',
-            'password' => '12345678',
+            'email' => 'demo@example.com',
+            'password' => 'demo-password',
         ]);
 
         $response = $this->post(route('login.demo'));

@@ -16,8 +16,6 @@ use Throwable;
 
 class UserController extends Controller
 {
-    private const STRIPE_API_BASE = 'https://api.stripe.com/v1';
-
     private const USERS_PER_PAGE = 20;
 
     public function index(Request $request): View
@@ -132,8 +130,9 @@ class UserController extends Controller
 
         try {
             $response = Http::asForm()
+                ->timeout(10)
                 ->withToken($secret)
-                ->delete(self::STRIPE_API_BASE.'/subscriptions/'.rawurlencode($user->stripe_subscription_id));
+                ->delete($this->stripeApiBase().'/subscriptions/'.rawurlencode($user->stripe_subscription_id));
         } catch (Throwable $exception) {
             Log::warning('Admin user deletion Stripe cancellation failed.', [
                 'user_id' => $user->id,
@@ -144,5 +143,10 @@ class UserController extends Controller
         }
 
         return $response->successful();
+    }
+
+    private function stripeApiBase(): string
+    {
+        return rtrim((string) config('services.stripe.api_base'), '/');
     }
 }

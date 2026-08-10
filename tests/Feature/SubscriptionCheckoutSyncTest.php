@@ -45,7 +45,9 @@ class SubscriptionCheckoutSyncTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->post(route('subscriptions.checkout'))
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
             ->assertRedirect(route('subscriptions.index'))
             ->assertSessionHas('status', 'すでにPremium契約が有効です。契約・解約画面から契約状態を確認できます。');
 
@@ -104,7 +106,9 @@ class SubscriptionCheckoutSyncTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->post(route('subscriptions.checkout'))
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
             ->assertRedirect(route('subscriptions.index'));
 
         Http::assertNotSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions');
@@ -144,7 +148,9 @@ class SubscriptionCheckoutSyncTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->post(route('subscriptions.checkout'))
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
             ->assertRedirect('https://checkout.stripe.test/session');
 
         Http::assertSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions'

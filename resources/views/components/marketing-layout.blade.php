@@ -6,7 +6,7 @@
 ])
 
 @php
-    $siteName = config('seo.site_name', 'FURUGI MANAGER');
+    $siteName = config('seo.site_name', 'FURUPRO');
     $image = asset(ltrim(config('seo.image', '/images/furugi-manager-hero.png'), '/'));
     $organization = [
         '@context' => 'https://schema.org',
@@ -49,7 +49,7 @@
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $canonical }}">
     <meta property="og:image" content="{{ $image }}">
-    <meta property="og:image:alt" content="{{ $siteName }} 古着管理システム">
+    <meta property="og:image:alt" content="{{ $siteName }}">
 
     <meta name="twitter:card" content="{{ config('seo.twitter_card', 'summary_large_image') }}">
     <meta name="twitter:title" content="{{ $title }}">
@@ -67,9 +67,8 @@
 <body class="bg-white text-slate-950 antialiased">
     <header class="border-b border-slate-200 bg-white">
         <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-            <a href="{{ route('home') }}" class="flex items-center gap-3 font-black" aria-label="FURUGI MANAGER トップページ">
-                <img src="{{ asset('images/logo.png') }}" alt="FURUGI MANAGER" class="h-10 w-auto">
-                <span>FURUGI MANAGER</span>
+            <a href="{{ route('home') }}" class="flex items-center gap-3 font-black" aria-label="FURUPRO トップページ">
+                <span>FURUPRO</span>
             </a>
             <nav class="flex flex-wrap justify-end gap-x-4 gap-y-2 text-sm font-bold text-slate-700" aria-label="公開ページ">
                 <a href="{{ route('marketing.features') }}" class="hover:text-slate-950">機能</a>
@@ -95,7 +94,7 @@
                 <a href="{{ route('legal.commercial') }}" class="hover:text-slate-950">特定商取引法に基づく表記</a>
                 <a href="{{ route('legal.contact') }}" class="hover:text-slate-950">お問い合わせ</a>
             </nav>
-            <p>&copy; 2026 FURUGI MANAGER. All rights reserved.</p>
+            <p>&copy; 2026 FURUPRO. All rights reserved.</p>
         </div>
     </footer>
 </body>

@@ -74,7 +74,9 @@ class ProfileController extends Controller
             return false;
         }
 
-        return $user->isAdmin() || $user->email === User::DEMO_EMAIL;
+        $demoEmail = config('demo.user_email');
+
+        return $user->isAdmin() || (is_string($demoEmail) && $demoEmail !== '' && $user->email === $demoEmail);
     }
 
     private function deleteUserAuctionItemImages(int $userId): void

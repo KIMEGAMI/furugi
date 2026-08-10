@@ -27,12 +27,8 @@
             style="background-image: linear-gradient(rgba(2, 6, 23, 0.28), rgba(2, 6, 23, 0.52)), url('{{ asset('images/bg.png') }}?v={{ time() }}'); background-size: cover; background-position: center; background-attachment: fixed;"
         >
             <div>
-                <a href="/">
-                    <img
-                        src="{{ asset('images/logo.png') }}"
-                        alt="古着管理システム"
-                        class="mx-auto h-auto w-40 drop-shadow-2xl"
-                    >
+                <a href="/" class="text-3xl font-black tracking-[0.22em] text-white drop-shadow-2xl">
+                    FURUPRO
                 </a>
             </div>
 

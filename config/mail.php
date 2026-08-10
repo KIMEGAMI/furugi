@@ -111,8 +111,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'saas.system.shinji@gmail.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'FURUGI MANAGER')),
+        'address' => env('MAIL_FROM_ADDRESS'),
+        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'FURUPRO')),
     ],
 
 ];

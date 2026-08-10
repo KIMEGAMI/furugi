@@ -29,8 +29,6 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    public const DEMO_EMAIL = 'user@shinji.work';
-
     public const SUBSCRIPTION_ACTIVE = 'active';
 
     public const SUBSCRIPTION_INACTIVE = 'inactive';

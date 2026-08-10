@@ -12,7 +12,7 @@
             <p class="text-sm font-black tracking-[0.24em] text-cyan-200">PRICING</p>
             <h1 class="mt-4 max-w-4xl text-4xl font-black leading-tight md:text-5xl">料金体系</h1>
             <p class="mt-5 max-w-3xl text-base font-semibold leading-8 text-cyan-100">
-                Freeは小さく試すための無料枠です。Premiumは月額480円で登録制限をなくし、CSV、売上分析、ジャンル分析など古着販売の運用に必要な機能をまとめて利用できます。
+                Freeは小さく試すための無料プランです。Premiumは月額480円（税込）で登録制限をなくし、CSV、売上分析、ジャンル別分析など古着販売の運用に必要な機能をまとめて利用できます。
             </p>
         </div>
     </section>
@@ -26,7 +26,7 @@
                             <p class="text-sm font-black tracking-[0.18em] text-slate-500">FREE</p>
                             <h2 class="mt-2 text-3xl font-black text-slate-950">無料</h2>
                             <p class="mt-3 text-sm font-bold leading-7 text-slate-600">
-                                まず操作感を確認したい方向けの無料枠です。
+                                まず操作感を確認したい方向けの無料プランです。
                             </p>
                         </div>
                         <div class="rounded-lg bg-slate-100 px-5 py-4 text-center">
@@ -56,14 +56,14 @@
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-sm font-black tracking-[0.18em] text-cyan-700">PREMIUM</p>
-                            <h2 class="mt-2 text-3xl font-black text-slate-950">月額480円</h2>
+                            <h2 class="mt-2 text-3xl font-black text-slate-950">月額480円（税込）</h2>
                             <p class="mt-3 text-sm font-bold leading-7 text-slate-700">
-                                制限を外して、日々の登録・分析・CSV作業を本格運用できます。
+                                制限を外して、日々の商品登録・分析・CSV作業を本格運用できます。
                             </p>
                         </div>
                         <div class="rounded-lg bg-white px-5 py-4 text-center shadow-sm">
                             <p class="text-3xl font-black text-slate-950">¥480</p>
-                            <p class="mt-1 text-xs font-bold text-slate-500">月額</p>
+                            <p class="mt-1 text-xs font-bold text-slate-500">月額・税込</p>
                         </div>
                     </div>
 
@@ -74,12 +74,12 @@
                             <li>カテゴリ登録数の制限なし</li>
                             <li>画像付き商品登録</li>
                             <li>出品中・SOLD管理</li>
-                            <li>古着システムCSVの一括登録</li>
+                            <li>FURUPRO CSVの一括登録</li>
                             <li>ヤフオク売上CSV・メルカリShops CSVの変換登録</li>
                             <li>売上CSV、全商品バックアップCSV、復元用CSVの出力</li>
-                            <li>売上・利益・利益率の分析</li>
+                            <li>売上、利益、利益率の分析</li>
                             <li>大ジャンル・小ジャンル別の売上分析</li>
-                            <li>重複チェック、滞留在庫確認、運用改善に使う分析</li>
+                            <li>重複チェック、滞留在庫確認、運用改善に使える分析</li>
                         </ul>
                     </div>
 
@@ -90,9 +90,9 @@
             </div>
 
             <div class="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-5">
-                <h2 class="text-lg font-black text-amber-900">解約について</h2>
+                <h2 class="text-lg font-black text-amber-900">契約と解約について</h2>
                 <p class="mt-3 text-sm font-bold leading-7 text-amber-800">
-                    Premium登録後は、ログイン後の「契約・解約」画面からStripeの契約管理画面へ移動し、支払い方法の変更や解約を行えます。
+                    Premiumは月額480円（税込）で、解約されるまで1か月ごとに自動更新されます。解約はログイン後の「契約・解約」画面からStripeの契約管理画面へ進んで行えます。期間終了時に解約する場合は現在の請求期間終了までPremium機能を利用でき、即時解約の場合は解約完了時点で利用できなくなる場合があります。
                 </p>
             </div>
         </div>

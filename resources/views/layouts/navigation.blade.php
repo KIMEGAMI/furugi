@@ -11,7 +11,7 @@
             <div class="flex min-w-0">
                 <div class="flex shrink-0 items-center">
                     <a href="{{ $brandHref }}" class="text-xl font-black text-white">
-                        FURUGI
+                        FURUPRO
                     </a>
                 </div>
 

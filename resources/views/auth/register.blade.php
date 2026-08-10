@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @php
         $pageSeo = config('seo.pages.register');
-        $siteName = config('seo.site_name', 'FURUGI MANAGER');
+        $siteName = config('seo.site_name', 'FURUPRO');
         $image = asset(ltrim(config('seo.image', '/images/furugi-manager-hero.png'), '/'));
     @endphp
-    <title>{{ $pageSeo['title'] ?? '無料アカウント作成 | FURUGI MANAGER' }}</title>
-    <meta name="description" content="{{ $pageSeo['description'] ?? 'FURUGI MANAGERの無料アカウント作成ページです。' }}">
+    <title>{{ $pageSeo['title'] ?? '無料アカウント作成 | FURUPRO' }}</title>
+    <meta name="description" content="{{ $pageSeo['description'] ?? 'FURUPROの無料アカウント作成ページです。' }}">
     <meta name="robots" content="index,follow,max-image-preview:large">
     <link rel="canonical" href="{{ route('register') }}">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="{{ config('seo.locale', 'ja_JP') }}">
     <meta property="og:site_name" content="{{ $siteName }}">
-    <meta property="og:title" content="{{ $pageSeo['title'] ?? '無料アカウント作成 | FURUGI MANAGER' }}">
-    <meta property="og:description" content="{{ $pageSeo['description'] ?? 'FURUGI MANAGERの無料アカウント作成ページです。' }}">
+    <meta property="og:title" content="{{ $pageSeo['title'] ?? '無料アカウント作成 | FURUPRO' }}">
+    <meta property="og:description" content="{{ $pageSeo['description'] ?? 'FURUPROの無料アカウント作成ページです。' }}">
     <meta property="og:url" content="{{ route('register') }}">
     <meta property="og:image" content="{{ $image }}">
     <meta name="twitter:card" content="{{ config('seo.twitter_card', 'summary_large_image') }}">
@@ -31,7 +31,7 @@
             <section class="relative hidden bg-blue-900 lg:block">
                 <img
                     src="{{ asset('images/furugi-auth-visual.png') }}"
-                    alt="FURUGI MANAGER 古着管理システム"
+                    alt="FURUPRO"
                     class="absolute inset-0 h-full w-full object-cover"
                 >
                 <div class="absolute inset-0 bg-gradient-to-r from-blue-950/40 to-transparent"></div>
@@ -53,17 +53,13 @@
             <section class="flex items-center justify-center px-6 py-10 lg:px-16">
                 <div class="w-full max-w-xl">
                     <div class="mb-8 text-center">
-                        <a href="{{ route('home') }}">
-                            <img
-                                src="{{ asset('images/logo.png') }}"
-                                alt="FURUGI MANAGER"
-                                class="mx-auto mb-6 h-auto w-56"
-                            >
+                        <a href="{{ route('home') }}" class="mb-6 inline-flex text-3xl font-black tracking-[0.22em] text-cyan-700">
+                            FURUPRO
                         </a>
 
                         <h1 class="text-4xl font-black tracking-tight text-blue-800">アカウント作成</h1>
                         <p class="mt-3 text-sm font-bold tracking-[0.25em] text-cyan-700">CREATE ACCOUNT</p>
-                        <p class="mt-6 font-semibold text-slate-700">FURUGI MANAGERを無料で始めましょう。</p>
+                        <p class="mt-6 font-semibold text-slate-700">FURUPROを無料で始めましょう。</p>
                         <div class="mx-auto mt-6 h-1 w-16 rounded-full bg-blue-600"></div>
                     </div>
 
@@ -216,7 +212,7 @@
                         </div>
                     </form>
 
-                    <p class="mt-8 text-center text-xs text-slate-600">&copy; 2026 FURUGI MANAGER All rights reserved.</p>
+                    <p class="mt-8 text-center text-xs text-slate-600">&copy; 2026 FURUPRO All rights reserved.</p>
                 </div>
             </section>
         </div>

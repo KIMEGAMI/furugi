@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex,follow">
-    <title>ログイン | FURUGI</title>
+    <title>ログイン | FURUPRO</title>
 
     <x-pwa-head />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -16,7 +16,7 @@
             <section class="relative hidden bg-blue-900 lg:block">
                 <img
                     src="{{ asset('images/furugi-auth-visual.png') }}"
-                    alt="FURUGI 古着販売向け在庫管理システム"
+                    alt="FURUPRO"
                     class="absolute inset-0 h-full w-full object-cover"
                 >
                 <div class="absolute inset-0 bg-gradient-to-r from-blue-950/35 to-transparent"></div>
@@ -29,11 +29,11 @@
             <section class="flex items-center justify-center px-6 py-10 lg:px-16">
                 <div class="w-full max-w-xl">
                     <div class="mb-10 text-center">
-                        <a href="{{ route('home') }}">
-                            <img src="{{ asset('images/logo.png') }}" alt="FURUGI" class="mx-auto mb-6 h-auto w-56">
+                        <a href="{{ route('home') }}" class="mb-6 inline-flex text-3xl font-black tracking-[0.22em] text-cyan-700">
+                            FURUPRO
                         </a>
 
-                        <h1 class="text-4xl font-black tracking-tight text-blue-800">古着管理システム</h1>
+                        <h1 class="text-4xl font-black tracking-tight text-blue-800">FURUPRO</h1>
                         <p class="mt-3 text-sm font-bold tracking-[0.25em] text-cyan-700">CLOTHING MANAGEMENT SYSTEM</p>
                         <p class="mt-6 font-semibold text-slate-600">在庫・入出庫・販売を、もっとスマートに。</p>
                         <div class="mx-auto mt-6 h-1 w-16 rounded-full bg-blue-600"></div>
@@ -46,7 +46,7 @@
                         disabled
                         class="mb-6 w-full rounded-md border border-cyan-300 bg-cyan-50 px-5 py-4 text-center text-sm font-black text-cyan-900 shadow-sm transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        FURUGIをアプリとして追加
+                        FURUPROをアプリとして追加
                     </button>
 
                     @if (session('status'))
@@ -146,7 +146,7 @@
                         </a>
                     </div>
 
-                    <p class="mt-8 text-center text-xs text-slate-500">&copy; 2026 FURUGI All rights reserved.</p>
+                    <p class="mt-8 text-center text-xs text-slate-500">&copy; 2026 FURUPRO All rights reserved.</p>
                 </div>
             </section>
         </div>

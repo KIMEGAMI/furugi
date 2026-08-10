@@ -15,8 +15,6 @@ use Throwable;
 
 class SubscriptionController extends Controller
 {
-    private const STRIPE_API_BASE = 'https://api.stripe.com/v1';
-
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -34,6 +32,12 @@ class SubscriptionController extends Controller
 
     public function checkout(Request $request): RedirectResponse
     {
+        $request->validate([
+            'billing_terms_confirmed' => ['accepted'],
+        ], [
+            'billing_terms_confirmed.accepted' => 'Premiumプランの料金、自動更新、解約条件を確認してください。',
+        ]);
+
         $user = $request->user();
         $secret = config('services.stripe.secret');
 
@@ -66,7 +70,7 @@ class SubscriptionController extends Controller
             $response = Http::asForm()
                 ->timeout(10)
                 ->withToken($secret)
-                ->post(self::STRIPE_API_BASE.'/checkout/sessions', [
+                ->post($this->stripeApiBase().'/checkout/sessions', [
                     'mode' => 'subscription',
                     'customer' => $customerId,
                     'line_items' => [$this->subscriptionLineItem()],
@@ -120,7 +124,7 @@ class SubscriptionController extends Controller
             $response = Http::asForm()
                 ->timeout(10)
                 ->withToken($secret)
-                ->post(self::STRIPE_API_BASE.'/billing_portal/sessions', [
+                ->post($this->stripeApiBase().'/billing_portal/sessions', [
                     'customer' => $user->stripe_customer_id,
                     'return_url' => route('subscriptions.index', [], true),
                 ]);
@@ -218,7 +222,7 @@ class SubscriptionController extends Controller
         $response = Http::asForm()
             ->timeout(10)
             ->withToken($secret)
-            ->post(self::STRIPE_API_BASE.'/customers', [
+            ->post($this->stripeApiBase().'/customers', [
                 'email' => $user->email,
                 'name' => $user->name,
                 'metadata[user_id]' => (string) $user->id,
@@ -244,7 +248,7 @@ class SubscriptionController extends Controller
             $response = Http::timeout(10)
                 ->withToken($secret)
                 ->acceptJson()
-                ->get(self::STRIPE_API_BASE.'/checkout/sessions/'.$sessionId, [
+                ->get($this->stripeApiBase().'/checkout/sessions/'.$sessionId, [
                     'expand' => ['subscription'],
                 ]);
         } catch (Throwable) {
@@ -319,7 +323,7 @@ class SubscriptionController extends Controller
             $response = Http::timeout(10)
                 ->withToken($secret)
                 ->acceptJson()
-                ->get(self::STRIPE_API_BASE.'/subscriptions', [
+                ->get($this->stripeApiBase().'/subscriptions', [
                     'customer' => $user->stripe_customer_id,
                     'status' => 'all',
                     'limit' => 10,
@@ -364,7 +368,7 @@ class SubscriptionController extends Controller
             $response = Http::timeout(10)
                 ->withToken($secret)
                 ->acceptJson()
-                ->get(self::STRIPE_API_BASE.'/customers', [
+                ->get($this->stripeApiBase().'/customers', [
                     'email' => $user->email,
                     'limit' => 10,
                 ]);
@@ -445,7 +449,7 @@ class SubscriptionController extends Controller
             $response = Http::timeout(10)
                 ->withToken($secret)
                 ->acceptJson()
-                ->get(self::STRIPE_API_BASE.'/subscriptions/'.$subscriptionId);
+                ->get($this->stripeApiBase().'/subscriptions/'.$subscriptionId);
         } catch (Throwable) {
             return [];
         }
@@ -480,10 +484,15 @@ class SubscriptionController extends Controller
                 'unit_amount' => (int) config('services.stripe.subscription_amount', 480),
                 'recurring' => ['interval' => 'month'],
                 'product_data' => [
-                    'name' => config('services.stripe.subscription_product_name', 'FURUGI Premium'),
-                    'description' => config('services.stripe.subscription_product_description', 'FURUGI paid subscription.'),
+                    'name' => config('services.stripe.subscription_product_name', 'FURUPRO Premium'),
+                    'description' => config('services.stripe.subscription_product_description', 'FURUPRO paid subscription.'),
                 ],
             ],
         ];
+    }
+
+    private function stripeApiBase(): string
+    {
+        return rtrim((string) config('services.stripe.api_base'), '/');
     }
 }

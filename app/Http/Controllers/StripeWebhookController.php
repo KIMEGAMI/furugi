@@ -8,11 +8,10 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class StripeWebhookController extends Controller
 {
-    private const STRIPE_API_BASE = 'https://api.stripe.com/v1';
-
     private const WEBHOOK_TOLERANCE_SECONDS = 300;
 
     public function __invoke(Request $request): Response
@@ -127,9 +126,19 @@ class StripeWebhookController extends Controller
             return [];
         }
 
-        $response = Http::withToken($secret)
-            ->acceptJson()
-            ->get(self::STRIPE_API_BASE.'/subscriptions/'.$subscriptionId);
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get($this->stripeApiBase().'/subscriptions/'.$subscriptionId);
+        } catch (Throwable $exception) {
+            Log::warning('Stripe webhook subscription fetch failed.', [
+                'subscription_id' => $subscriptionId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return [];
+        }
 
         if ($response->failed()) {
             return [];
@@ -164,5 +173,10 @@ class StripeWebhookController extends Controller
         $computedSignature = hash_hmac('sha256', $signedPayload, $webhookSecret);
 
         return hash_equals($computedSignature, $expectedSignature);
+    }
+
+    private function stripeApiBase(): string
+    {
+        return rtrim((string) config('services.stripe.api_base'), '/');
     }
 }

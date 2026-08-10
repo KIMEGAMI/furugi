@@ -35,7 +35,7 @@ class SeoController extends Controller
                     ? asset(ltrim(config('seo.image', '/images/furugi-manager-hero.png'), '/'))
                     : null,
                 'image_title' => $routeName === 'home'
-                    ? config('seo.site_name', 'FURUGI MANAGER')
+                    ? config('seo.site_name', 'FURUPRO')
                     : null,
             ];
         }

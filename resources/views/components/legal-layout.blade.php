@@ -6,7 +6,7 @@
 ])
 
 @php
-    $siteName = config('seo.site_name', config('app.name', 'FURUGI MANAGER'));
+    $siteName = config('seo.site_name', config('app.name', 'FURUPRO'));
     $pageTitle = $title.' | '.$siteName;
     $metaDescription = $description ?? $siteName.'の'.$title.'ページです。サービス内容、個人情報の取り扱い、よくある質問を確認できます。';
     $canonical = url()->current();
@@ -58,9 +58,8 @@
 <body class="bg-slate-100 text-slate-900 antialiased">
     <header class="border-b border-slate-200 bg-white">
         <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-            <a href="{{ route('home') }}" class="flex items-center gap-3 font-black text-slate-950" aria-label="FURUGI MANAGER トップページ">
-                <img src="{{ asset('images/logo.png') }}" alt="FURUGI MANAGER" class="h-9 w-auto">
-                <span>FURUGI MANAGER</span>
+            <a href="{{ route('home') }}" class="flex items-center gap-3 font-black text-slate-950" aria-label="FURUPRO トップページ">
+                <span>FURUPRO</span>
             </a>
             <nav class="flex flex-wrap justify-end gap-x-4 gap-y-2 text-sm font-bold text-slate-700" aria-label="公開ページ">
                 <a href="{{ route('home') }}" class="hover:text-slate-950">トップ</a>
@@ -78,7 +77,7 @@
                 <div class="border-b border-slate-200 pb-6">
                     <p class="text-sm font-black tracking-[0.2em] text-cyan-700">{{ $eyebrow }}</p>
                     <h1 class="mt-3 text-3xl font-black leading-tight text-slate-950 md:text-4xl">{{ $title }}</h1>
-                    <p class="mt-4 text-sm font-bold text-slate-500">最終更新日: 2026年7月21日</p>
+                    <p class="mt-4 text-sm font-bold text-slate-500">最終更新日: 2026年8月9日</p>
                 </div>
                 <div class="legal-content mt-8">
                     {{ $slot }}

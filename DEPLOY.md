@@ -60,7 +60,7 @@ sudo -u www-data php artisan key:generate
 Set production values.
 
 ```dotenv
-APP_NAME="古着管理システム"
+APP_NAME="FURUPRO"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://furugi.shinji.work
@@ -109,10 +109,10 @@ Create or update an admin user in the database. The command asks for the passwor
 sudo -u www-data php artisan admin:create admin@shinji.work
 ```
 
-The demo login button expects this user to exist:
+The demo login button uses these environment variables:
 
-- Email: `user@shinji.work`
-- Password: `12345678`
+- `DEMO_USER_EMAIL`
+- `DEMO_USER_PASSWORD`
 
 Create or update the demo user on the server if needed.
 
@@ -122,10 +122,10 @@ sudo -u www-data php artisan tinker
 
 ```php
 \App\Models\User::updateOrCreate(
-    ['email' => 'user@shinji.work'],
+    ['email' => config('demo.user_email')],
     [
         'name' => 'Demo User',
-        'password' => '12345678',
+        'password' => config('demo.user_password'),
         'email_verified_at' => now(),
     ]
 );

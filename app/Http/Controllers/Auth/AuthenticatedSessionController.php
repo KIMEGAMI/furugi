@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,8 +12,6 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    private const DEMO_PASSWORD = '12345678';
-
     public function create(): View
     {
         return view('auth.login');
@@ -31,7 +28,16 @@ class AuthenticatedSessionController extends Controller
 
     public function demo(Request $request): RedirectResponse
     {
-        if (! Auth::attempt(['email' => User::DEMO_EMAIL, 'password' => self::DEMO_PASSWORD])) {
+        $email = config('demo.user_email');
+        $password = config('demo.user_password');
+
+        if (! is_string($email) || $email === '' || ! is_string($password) || $password === '') {
+            throw ValidationException::withMessages([
+                'email' => 'デモユーザーが設定されていません。管理者にお問い合わせください。',
+            ]);
+        }
+
+        if (! Auth::attempt(['email' => $email, 'password' => $password])) {
             throw ValidationException::withMessages([
                 'email' => 'デモユーザーにログインできませんでした。管理者にお問い合わせください。',
             ]);
