@@ -222,7 +222,7 @@
                         </article>
                     @endforeach
                 </div>
-                <div class="mt-8">{{ $auctionItems->links() }}</div>
+                <div class="mt-8">{{ $auctionItems->links('vendor.pagination.furupro') }}</div>
             @else
                 <div class="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow">
                     <h3 class="text-2xl font-black text-slate-900">表示できる商品がありません</h3>
