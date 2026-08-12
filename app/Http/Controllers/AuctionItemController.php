@@ -110,7 +110,7 @@ class AuctionItemController extends Controller
             'unsoldBeforeDate' => $unsoldBeforeDate?->format('Y-m-d') ?? '',
             'unsoldFilterLabel' => $unsoldBeforeDate
                 ? $unsoldBeforeDate->format('Y/m/d').'以前の未売却'
-                : '未売却',
+                : self::UNSOLD_DEFAULT_DAYS.'日以上未売却',
             'parentCategoryId' => $parentCategoryId,
             'categoryId' => $categoryId,
             'parentCategories' => $this->parentCategories(),
@@ -1065,22 +1065,46 @@ class AuctionItemController extends Controller
 
     private function duplicateAuctionItemGroups()
     {
-        return AuctionItem::query()
+        $items = AuctionItem::query()
             ->where('user_id', Auth::id())
             ->orderBy('platform')
             ->orderBy('title')
             ->orderBy('id')
-            ->get()
-            ->groupBy(fn (AuctionItem $item) => $this->duplicateAuctionItemKey($item))
+            ->get();
+
+        $managementIdGroups = $items
+            ->groupBy(fn (AuctionItem $item) => $this->duplicateAuctionItemManagementIdKey($item))
+            ->filter(fn ($groupItems, string $key) => $key !== '' && $groupItems->count() > 1)
+            ->map(fn ($groupItems, string $key) => [
+                'key' => 'management_id|'.$key,
+                'reason' => '管理ID',
+                'title' => $groupItems->first()->title,
+                'platform' => '複数',
+                'items' => $groupItems
+                    ->sortByDesc(fn (AuctionItem $item) => $this->latestDuplicateSortValue($item))
+                    ->values(),
+            ]);
+
+        $managementIdGroupSignatures = $managementIdGroups
+            ->map(fn (array $group) => $this->duplicateGroupSignature($group['items']))
+            ->all();
+
+        $titleGroups = $items
+            ->groupBy(fn (AuctionItem $item) => $this->duplicateAuctionItemTitleKey($item))
             ->filter(fn ($items, string $key) => $key !== '' && $items->count() > 1)
+            ->reject(fn ($items) => in_array($this->duplicateGroupSignature($items), $managementIdGroupSignatures, true))
             ->map(fn ($items, string $key) => [
                 'key' => $key,
+                'reason' => '出品先 + 商品タイトル',
                 'title' => $items->first()->title,
                 'platform' => $items->first()->platform,
                 'items' => $items
                     ->sortByDesc(fn (AuctionItem $item) => $this->latestDuplicateSortValue($item))
                     ->values(),
-            ])
+            ]);
+
+        return $managementIdGroups
+            ->concat($titleGroups)
             ->values();
     }
 
@@ -1111,7 +1135,21 @@ class AuctionItemController extends Controller
         return $deleteItems->count();
     }
 
-    private function duplicateAuctionItemKey(AuctionItem $item): string
+    private function duplicateGroupSignature($items): string
+    {
+        return $items
+            ->map(fn (AuctionItem $item) => $item->id)
+            ->sort()
+            ->values()
+            ->implode('|');
+    }
+
+    private function duplicateAuctionItemManagementIdKey(AuctionItem $item): string
+    {
+        return $this->normalizeDuplicateText($item->management_id);
+    }
+
+    private function duplicateAuctionItemTitleKey(AuctionItem $item): string
     {
         $title = $this->normalizeDuplicateText($item->title);
         $platform = $this->normalizeDuplicateText($item->platform);
