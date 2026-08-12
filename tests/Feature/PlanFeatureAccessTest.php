@@ -39,7 +39,7 @@ class PlanFeatureAccessTest extends TestCase
         $this->actingAs($user)->get(route('category-sales.index'))->assertOk();
     }
 
-    public function test_free_user_cannot_create_more_than_ten_items(): void
+    public function test_free_user_cannot_create_more_than_free_item_limit(): void
     {
         $user = User::factory()->create(['subscription_plan' => User::SUBSCRIPTION_INACTIVE]);
 
@@ -47,14 +47,16 @@ class PlanFeatureAccessTest extends TestCase
             $this->createAuctionItem($user, 'FREE-'.$index);
         }
 
+        $overflowManagementId = 'FREE-'.(User::FREE_AUCTION_ITEM_LIMIT + 1);
+
         $this->actingAs($user)
-            ->post(route('auction-items.store'), $this->auctionItemPayload('FREE-11'))
+            ->post(route('auction-items.store'), $this->auctionItemPayload($overflowManagementId))
             ->assertRedirect(route('subscriptions.index'))
             ->assertSessionHas('error');
 
         $this->assertDatabaseMissing('auction_items', [
             'user_id' => $user->id,
-            'management_id' => 'FREE-11',
+            'management_id' => $overflowManagementId,
         ]);
     }
 

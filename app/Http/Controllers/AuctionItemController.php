@@ -21,6 +21,8 @@ class AuctionItemController extends Controller
 
     private const IMAGE_MAX_KILOBYTES = 2048;
 
+    private const UNSOLD_DEFAULT_DAYS = 10;
+
     private const YAHOO_AUCTION_REQUIRED_HEADERS = [
         '取扱内容',
         '商品ID',
@@ -47,15 +49,6 @@ class AuctionItemController extends Controller
 
     public function index(Request $request)
     {
-        if ($request->boolean('unsold') && ! $request->user()?->hasActiveSubscription()) {
-            return redirect()
-                ->route('subscriptions.index')
-                ->with('error', '滞留在庫チェックはPremiumプラン限定です。Premiumに登録すると、売れ残り商品の確認や運用改善に使える分析機能を利用できます。')
-                ->with('upgrade_title', '滞留在庫チェックはPremiumプランで利用できます。')
-                ->with('upgrade_description', '売れ残り商品の確認、売上分析、ジャンル別分析、重複チェックまでまとめて利用できます。')
-                ->with('upgrade_features', $this->premiumUpgradeFeatures());
-        }
-
         $status = $request->get('status');
         $platform = $request->get('platform');
         $keyword = $request->get('keyword');
@@ -72,6 +65,8 @@ class AuctionItemController extends Controller
 
             if ($unsoldBeforeDate) {
                 $query->where('created_at', '<=', $unsoldBeforeDate->copy()->endOfDay());
+            } else {
+                $query->where('created_at', '<=', now()->subDays(self::UNSOLD_DEFAULT_DAYS)->endOfDay());
             }
         } elseif (in_array($status, AuctionItem::STATUSES, true)) {
             $query->where('status', $status);
@@ -115,7 +110,7 @@ class AuctionItemController extends Controller
             'unsoldBeforeDate' => $unsoldBeforeDate?->format('Y-m-d') ?? '',
             'unsoldFilterLabel' => $unsoldBeforeDate
                 ? $unsoldBeforeDate->format('Y/m/d').'以前の未売却'
-                : '未売却',
+                : self::UNSOLD_DEFAULT_DAYS.'日以上未売却',
             'parentCategoryId' => $parentCategoryId,
             'categoryId' => $categoryId,
             'parentCategories' => $this->parentCategories(),
@@ -1070,22 +1065,46 @@ class AuctionItemController extends Controller
 
     private function duplicateAuctionItemGroups()
     {
-        return AuctionItem::query()
+        $items = AuctionItem::query()
             ->where('user_id', Auth::id())
             ->orderBy('platform')
             ->orderBy('title')
             ->orderBy('id')
-            ->get()
-            ->groupBy(fn (AuctionItem $item) => $this->duplicateAuctionItemKey($item))
+            ->get();
+
+        $managementIdGroups = $items
+            ->groupBy(fn (AuctionItem $item) => $this->duplicateAuctionItemManagementIdKey($item))
+            ->filter(fn ($groupItems, string $key) => $key !== '' && $groupItems->count() > 1)
+            ->map(fn ($groupItems, string $key) => [
+                'key' => 'management_id|'.$key,
+                'reason' => '管理ID',
+                'title' => $groupItems->first()->title,
+                'platform' => '複数',
+                'items' => $groupItems
+                    ->sortByDesc(fn (AuctionItem $item) => $this->latestDuplicateSortValue($item))
+                    ->values(),
+            ]);
+
+        $managementIdGroupSignatures = $managementIdGroups
+            ->map(fn (array $group) => $this->duplicateGroupSignature($group['items']))
+            ->all();
+
+        $titleGroups = $items
+            ->groupBy(fn (AuctionItem $item) => $this->duplicateAuctionItemTitleKey($item))
             ->filter(fn ($items, string $key) => $key !== '' && $items->count() > 1)
+            ->reject(fn ($items) => in_array($this->duplicateGroupSignature($items), $managementIdGroupSignatures, true))
             ->map(fn ($items, string $key) => [
                 'key' => $key,
+                'reason' => '出品先 + 商品タイトル',
                 'title' => $items->first()->title,
                 'platform' => $items->first()->platform,
                 'items' => $items
                     ->sortByDesc(fn (AuctionItem $item) => $this->latestDuplicateSortValue($item))
                     ->values(),
-            ])
+            ]);
+
+        return $managementIdGroups
+            ->concat($titleGroups)
             ->values();
     }
 
@@ -1116,7 +1135,21 @@ class AuctionItemController extends Controller
         return $deleteItems->count();
     }
 
-    private function duplicateAuctionItemKey(AuctionItem $item): string
+    private function duplicateGroupSignature($items): string
+    {
+        return $items
+            ->map(fn (AuctionItem $item) => $item->id)
+            ->sort()
+            ->values()
+            ->implode('|');
+    }
+
+    private function duplicateAuctionItemManagementIdKey(AuctionItem $item): string
+    {
+        return $this->normalizeDuplicateText($item->management_id);
+    }
+
+    private function duplicateAuctionItemTitleKey(AuctionItem $item): string
     {
         $title = $this->normalizeDuplicateText($item->title);
         $platform = $this->normalizeDuplicateText($item->platform);
