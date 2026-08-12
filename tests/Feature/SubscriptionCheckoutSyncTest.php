@@ -130,11 +130,11 @@ class SubscriptionCheckoutSyncTest extends TestCase
         ]);
 
         Http::fake([
-            'https://api.stripe.com/v1/customers*' => Http::response([
-                'data' => [],
-            ]),
             'https://api.stripe.com/v1/customers' => Http::response([
                 'id' => 'cus_new',
+            ]),
+            'https://api.stripe.com/v1/customers*' => Http::response([
+                'data' => [],
             ]),
             'https://api.stripe.com/v1/checkout/sessions' => Http::response([
                 'url' => 'https://checkout.stripe.test/session',
@@ -155,7 +155,7 @@ class SubscriptionCheckoutSyncTest extends TestCase
 
         Http::assertSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions'
             && $request['customer'] === 'cus_new'
-            && $request['metadata']['user_id'] === (string) $user->id
-            && $request['subscription_data']['metadata']['user_id'] === (string) $user->id);
+            && $request['metadata[user_id]'] === (string) $user->id
+            && $request['subscription_data[metadata][user_id]'] === (string) $user->id);
     }
 }

@@ -43,7 +43,7 @@ class ExampleTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'application/manifest+json; charset=UTF-8');
-        $response->assertJsonPath('short_name', 'FURUGI');
+        $response->assertJsonPath('short_name', 'FURUPRO');
         $response->assertJsonPath('display', 'standalone');
     }
 
@@ -64,7 +64,7 @@ class ExampleTest extends TestCase
         $response->assertOk();
         $response->assertSee('rel="manifest"', false);
         $response->assertSee('data-pwa-install', false);
-        $response->assertSee('FURUGIをアプリとして追加', false);
+        $response->assertSee('FURUPROをアプリとして追加', false);
     }
 
     public function test_marketing_pages_are_available(): void

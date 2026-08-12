@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AdminBulkMail;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,14 +49,9 @@ class BulkMailController extends Controller
         $this->recipientQuery()->chunkById($chunkSize, function ($users) use ($validated, &$sentCount, &$failedCount): void {
             foreach ($users as $recipient) {
                 try {
-                    Mail::send('emails.admin-bulk', [
-                        'body' => $validated['body'],
-                    ], function ($message) use ($recipient, $validated): void {
-                        $message
-                            ->from(config('admin_mail.from_address'), config('admin_mail.from_name'))
-                            ->to($recipient->email, $recipient->name)
-                            ->subject($validated['subject']);
-                    });
+                    Mail::to($recipient->email, $recipient->name)
+                        ->send((new AdminBulkMail($validated['subject'], $validated['body']))
+                            ->from(config('admin_mail.from_address'), config('admin_mail.from_name')));
 
                     $sentCount++;
                 } catch (Throwable) {

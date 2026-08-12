@@ -35,6 +35,10 @@ class User extends Authenticatable
 
     public const LEGACY_SUBSCRIPTION_PREMIUM = 'premium';
 
+    public const PLAN_FREE = self::SUBSCRIPTION_INACTIVE;
+
+    public const PLAN_PREMIUM = self::SUBSCRIPTION_ACTIVE;
+
     public const FREE_AUCTION_ITEM_LIMIT = 50;
 
     public const FREE_CATEGORY_LIMIT = 5;

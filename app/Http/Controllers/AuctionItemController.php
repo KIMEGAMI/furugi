@@ -21,6 +21,8 @@ class AuctionItemController extends Controller
 
     private const IMAGE_MAX_KILOBYTES = 2048;
 
+    private const UNSOLD_DEFAULT_DAYS = 10;
+
     private const YAHOO_AUCTION_REQUIRED_HEADERS = [
         '取扱内容',
         '商品ID',
@@ -47,15 +49,6 @@ class AuctionItemController extends Controller
 
     public function index(Request $request)
     {
-        if ($request->boolean('unsold') && ! $request->user()?->hasActiveSubscription()) {
-            return redirect()
-                ->route('subscriptions.index')
-                ->with('error', '滞留在庫チェックはPremiumプラン限定です。Premiumに登録すると、売れ残り商品の確認や運用改善に使える分析機能を利用できます。')
-                ->with('upgrade_title', '滞留在庫チェックはPremiumプランで利用できます。')
-                ->with('upgrade_description', '売れ残り商品の確認、売上分析、ジャンル別分析、重複チェックまでまとめて利用できます。')
-                ->with('upgrade_features', $this->premiumUpgradeFeatures());
-        }
-
         $status = $request->get('status');
         $platform = $request->get('platform');
         $keyword = $request->get('keyword');
@@ -72,6 +65,8 @@ class AuctionItemController extends Controller
 
             if ($unsoldBeforeDate) {
                 $query->where('created_at', '<=', $unsoldBeforeDate->copy()->endOfDay());
+            } else {
+                $query->where('created_at', '<=', now()->subDays(self::UNSOLD_DEFAULT_DAYS)->endOfDay());
             }
         } elseif (in_array($status, AuctionItem::STATUSES, true)) {
             $query->where('status', $status);
