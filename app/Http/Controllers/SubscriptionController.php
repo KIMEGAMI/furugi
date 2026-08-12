@@ -67,20 +67,26 @@ class SubscriptionController extends Controller
         }
 
         try {
+            $checkoutPayload = [
+                'mode' => 'subscription',
+                'customer' => $customerId,
+                'line_items' => [$this->subscriptionLineItem()],
+                'success_url' => route('subscriptions.success', [], true).'?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => route('subscriptions.index', [], true),
+                'locale' => config('services.stripe.checkout_locale', 'ja'),
+                'client_reference_id' => (string) $user->id,
+                'metadata[user_id]' => (string) $user->id,
+                'subscription_data[metadata][user_id]' => (string) $user->id,
+            ];
+
+            if ($this->canUseTrial($user)) {
+                $checkoutPayload['subscription_data[trial_period_days]'] = $this->trialPeriodDays();
+            }
+
             $response = Http::asForm()
                 ->timeout(10)
                 ->withToken($secret)
-                ->post($this->stripeApiBase().'/checkout/sessions', [
-                    'mode' => 'subscription',
-                    'customer' => $customerId,
-                    'line_items' => [$this->subscriptionLineItem()],
-                    'success_url' => route('subscriptions.success', [], true).'?session_id={CHECKOUT_SESSION_ID}',
-                    'cancel_url' => route('subscriptions.index', [], true),
-                    'locale' => config('services.stripe.checkout_locale', 'ja'),
-                    'client_reference_id' => (string) $user->id,
-                    'metadata[user_id]' => (string) $user->id,
-                    'subscription_data[metadata][user_id]' => (string) $user->id,
-                ]);
+                ->post($this->stripeApiBase().'/checkout/sessions', $checkoutPayload);
         } catch (Throwable) {
             return redirect()
                 ->route('subscriptions.index')
@@ -420,7 +426,10 @@ class SubscriptionController extends Controller
         $customerId = data_get($subscription, 'customer');
         $status = (string) data_get($subscription, 'status', '');
         $periodEnd = data_get($subscription, 'current_period_end');
+        $trialStart = data_get($subscription, 'trial_start');
+        $trialEnd = data_get($subscription, 'trial_end');
         $isActive = in_array($status, ['active', 'trialing'], true);
+        $usedTrial = $status === 'trialing' || is_numeric($trialStart) || is_numeric($trialEnd);
 
         $user->forceFill([
             'subscription_plan' => $isActive ? User::SUBSCRIPTION_ACTIVE : User::SUBSCRIPTION_INACTIVE,
@@ -429,6 +438,7 @@ class SubscriptionController extends Controller
             'stripe_subscription_id' => is_string($subscriptionId) ? $subscriptionId : $user->stripe_subscription_id,
             'premium_started_at' => $isActive && $user->premium_started_at === null ? now() : $user->premium_started_at,
             'premium_ends_at' => is_numeric($periodEnd) ? Carbon::createFromTimestamp((int) $periodEnd) : $user->premium_ends_at,
+            'trial_used_at' => $usedTrial && $user->trial_used_at === null ? now() : $user->trial_used_at,
         ])->save();
 
         return true;
@@ -494,5 +504,15 @@ class SubscriptionController extends Controller
     private function stripeApiBase(): string
     {
         return rtrim((string) config('services.stripe.api_base'), '/');
+    }
+
+    private function canUseTrial(User $user): bool
+    {
+        return $this->trialPeriodDays() > 0 && $user->trial_used_at === null;
+    }
+
+    private function trialPeriodDays(): int
+    {
+        return max(0, (int) config('services.stripe.trial_period_days', 7));
     }
 }

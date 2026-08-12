@@ -21,6 +21,7 @@ use Illuminate\Notifications\Notifiable;
     'stripe_subscription_id',
     'premium_started_at',
     'premium_ends_at',
+    'trial_used_at',
     'is_admin',
 ])]
 #[Hidden(['password', 'remember_token'])]
@@ -50,6 +51,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'premium_started_at' => 'datetime',
             'premium_ends_at' => 'datetime',
+            'trial_used_at' => 'datetime',
             'is_admin' => 'boolean',
         ];
     }

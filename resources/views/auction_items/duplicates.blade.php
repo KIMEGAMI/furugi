@@ -70,6 +70,7 @@
                                 <div>
                                     <p class="text-xs font-black tracking-widest text-cyan-700">重複候補 {{ $groupIndex + 1 }}</p>
                                     <h3 class="mt-2 text-xl font-black text-slate-950">{{ $group['title'] }}</h3>
+                                    <p class="mt-1 text-sm font-bold text-amber-700">判定: {{ $group['reason'] ?? '出品先 + 商品タイトル' }}</p>
                                     <p class="mt-1 text-sm font-bold text-slate-600">出品先: {{ $group['platform'] }}</p>
                                 </div>
                                 <div class="flex flex-col gap-3 sm:items-end">

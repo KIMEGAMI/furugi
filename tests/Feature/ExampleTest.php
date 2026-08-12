@@ -34,7 +34,21 @@ class ExampleTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
         $response->assertSee('Disallow: /dashboard', false);
+        $response->assertSee('Disallow: /billing', false);
+        $response->assertSee('Disallow: /maintenance-login', false);
         $response->assertSee('Sitemap:', false);
+    }
+
+    public function test_llms_txt_is_available(): void
+    {
+        $response = $this->get('/llms.txt');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
+        $response->assertSee('# FURUPRO', false);
+        $response->assertSee('/features', false);
+        $response->assertSee('Pricing: Free is 0 JPY. Premium is 480 JPY per month including tax.', false);
+        $response->assertDontSee('/dashboard', false);
     }
 
     public function test_pwa_manifest_is_available(): void

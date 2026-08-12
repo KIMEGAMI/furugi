@@ -11,21 +11,60 @@
     $metaDescription = $description ?? $siteName.'の'.$title.'ページです。サービス内容、個人情報の取り扱い、よくある質問を確認できます。';
     $canonical = url()->current();
     $image = asset(ltrim(config('seo.image', '/images/furugi-manager-hero.png'), '/'));
+    $homeUrl = route('home');
+    $organizationId = $homeUrl.'#organization';
+    $websiteId = $homeUrl.'#website';
+    $organization = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        '@id' => $organizationId,
+        'name' => config('seo.organization.name'),
+        'url' => config('seo.organization.url'),
+        'logo' => [
+            '@type' => 'ImageObject',
+            'url' => asset(ltrim(config('seo.organization.logo'), '/')),
+        ],
+    ];
+    $website = [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebSite',
+        '@id' => $websiteId,
+        'name' => $siteName,
+        'url' => $homeUrl,
+        'publisher' => ['@id' => $organizationId],
+        'inLanguage' => 'ja',
+    ];
     $webPage = [
         '@context' => 'https://schema.org',
         '@type' => 'WebPage',
+        '@id' => $canonical.'#webpage',
         'name' => $pageTitle,
         'description' => $metaDescription,
         'url' => $canonical,
-        'isPartOf' => [
-            '@type' => 'WebSite',
-            'name' => $siteName,
-            'url' => route('home'),
-        ],
+        'isPartOf' => ['@id' => $websiteId],
+        'publisher' => ['@id' => $organizationId],
         'inLanguage' => 'ja',
         'dateModified' => config('seo.updated_at'),
     ];
-    $schemas = array_filter(array_merge([$webPage], is_array($schema) ? $schema : []));
+    $breadcrumb = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            [
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => $siteName,
+                'item' => $homeUrl,
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 2,
+                'name' => $title,
+                'item' => $canonical,
+            ],
+        ],
+    ];
+    $schemas = array_filter(array_merge([$organization, $website, $webPage, $breadcrumb], is_array($schema) ? $schema : []));
 @endphp
 
 <!DOCTYPE html>
@@ -36,6 +75,7 @@
     <title>{{ $pageTitle }}</title>
     <meta name="description" content="{{ $metaDescription }}">
     <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large">
+    <meta name="theme-color" content="#0f172a">
     <link rel="canonical" href="{{ $canonical }}">
     <meta property="og:type" content="article">
     <meta property="og:locale" content="{{ config('seo.locale', 'ja_JP') }}">
@@ -44,10 +84,14 @@
     <meta property="og:description" content="{{ $metaDescription }}">
     <meta property="og:url" content="{{ $canonical }}">
     <meta property="og:image" content="{{ $image }}">
+    <meta property="og:image:alt" content="{{ $siteName }}">
+    <meta property="og:image:width" content="{{ config('seo.image_width', 1200) }}">
+    <meta property="og:image:height" content="{{ config('seo.image_height', 630) }}">
     <meta name="twitter:card" content="{{ config('seo.twitter_card', 'summary_large_image') }}">
     <meta name="twitter:title" content="{{ $pageTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
     <meta name="twitter:image" content="{{ $image }}">
+    <meta name="twitter:image:alt" content="{{ $siteName }}">
     <x-pwa-head />
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=2">
     @vite(['resources/css/app.css', 'resources/js/app.js'])

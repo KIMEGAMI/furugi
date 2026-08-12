@@ -1,11 +1,45 @@
 @php
     $pageSeo = config('seo.pages')['marketing.pricing'] ?? [];
+    $pricingFaqs = [
+        ['Freeプランはいくらですか？', 'Freeプランは月額0円です。商品登録50件、カテゴリ登録5件まで利用できます。'],
+        ['Premiumプランはいくらですか？', 'Premiumプランは月額480円（税込）です。商品登録数とカテゴリ数の制限がなくなり、CSV管理、売上分析、ジャンル別分析などを利用できます。'],
+        ['Premiumは解約できますか？', 'ログイン後の契約管理画面からStripeの契約管理画面へ進み、解約できます。'],
+    ];
+    $schema = [
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => 'FURUPRO Premium',
+            'description' => $pageSeo['description'],
+            'brand' => [
+                '@type' => 'Brand',
+                'name' => config('seo.site_name'),
+            ],
+            'offers' => [
+                '@type' => 'Offer',
+                'url' => route('marketing.pricing'),
+                'price' => '480',
+                'priceCurrency' => 'JPY',
+                'availability' => 'https://schema.org/InStock',
+            ],
+        ],
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => collect($pricingFaqs)->map(fn ($faq) => [
+                '@type' => 'Question',
+                'name' => $faq[0],
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $faq[1]],
+            ])->values()->all(),
+        ],
+    ];
 @endphp
 
 <x-marketing-layout
     :title="$pageSeo['title']"
     :description="$pageSeo['description']"
     :canonical="route('marketing.pricing')"
+    :schema="$schema"
 >
     <section class="bg-slate-950 py-16 text-white">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -94,6 +128,15 @@
                 <p class="mt-3 text-sm font-bold leading-7 text-amber-800">
                     Premiumは月額480円（税込）で、解約されるまで1か月ごとに自動更新されます。解約はログイン後の「契約・解約」画面からStripeの契約管理画面へ進んで行えます。期間終了時に解約する場合は現在の請求期間終了までPremium機能を利用でき、即時解約の場合は解約完了時点で利用できなくなる場合があります。
                 </p>
+            </div>
+
+            <div class="mt-8 grid gap-4 lg:grid-cols-3">
+                @foreach ($pricingFaqs as [$question, $answer])
+                    <article class="rounded-lg border border-slate-200 bg-white p-5">
+                        <h2 class="text-base font-black text-slate-950">{{ $question }}</h2>
+                        <p class="mt-3 text-sm font-bold leading-7 text-slate-700">{{ $answer }}</p>
+                    </article>
+                @endforeach
             </div>
         </div>
     </section>

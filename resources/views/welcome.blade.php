@@ -7,9 +7,48 @@
     $canonical = route('home');
     $heroImage = asset('images/furugi-manager-hero.png');
     $valueImage = asset('images/furugi-manager-value.png');
+    $organizationId = $canonical.'#organization';
+    $websiteId = $canonical.'#website';
+    $organizationSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        '@id' => $organizationId,
+        'name' => config('seo.organization.name'),
+        'url' => config('seo.organization.url'),
+        'logo' => [
+            '@type' => 'ImageObject',
+            'url' => asset(ltrim(config('seo.organization.logo'), '/')),
+        ],
+    ];
+    $websiteSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebSite',
+        '@id' => $websiteId,
+        'name' => $siteName,
+        'url' => $canonical,
+        'publisher' => ['@id' => $organizationId],
+        'inLanguage' => 'ja',
+    ];
+    $webPageSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebPage',
+        '@id' => $canonical.'#webpage',
+        'name' => $title,
+        'description' => $description,
+        'url' => $canonical,
+        'isPartOf' => ['@id' => $websiteId],
+        'publisher' => ['@id' => $organizationId],
+        'primaryImageOfPage' => [
+            '@type' => 'ImageObject',
+            'url' => $heroImage,
+        ],
+        'inLanguage' => 'ja',
+        'dateModified' => config('seo.updated_at'),
+    ];
     $softwareSchema = [
         '@context' => 'https://schema.org',
         '@type' => 'SoftwareApplication',
+        '@id' => $canonical.'#software',
         'name' => $siteName,
         'applicationCategory' => config('seo.software.category'),
         'operatingSystem' => config('seo.software.operating_system'),
@@ -17,6 +56,7 @@
         'url' => $canonical,
         'image' => [$heroImage, $valueImage],
         'inLanguage' => 'ja',
+        'publisher' => ['@id' => $organizationId],
         'offers' => [
             [
                 '@type' => 'Offer',
@@ -35,6 +75,7 @@
         ],
         'featureList' => ['画像付き商品登録', '在庫管理', 'SOLD管理', '売上と利益の分析', 'CSV管理', '外部CSV変換', '重複チェック', 'PWA対応'],
     ];
+    $schemas = [$organizationSchema, $websiteSchema, $webPageSchema, $softwareSchema];
 @endphp
 
 <!DOCTYPE html>
@@ -46,7 +87,9 @@
     <meta name="description" content="{{ $description }}">
     <meta name="keywords" content="{{ $keywords }}">
     <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1">
+    <meta name="theme-color" content="#0f172a">
     <link rel="canonical" href="{{ $canonical }}">
+    <link rel="preload" as="image" href="{{ $heroImage }}" fetchpriority="high">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="{{ config('seo.locale', 'ja_JP') }}">
     <meta property="og:site_name" content="{{ $siteName }}">
@@ -55,14 +98,19 @@
     <meta property="og:url" content="{{ $canonical }}">
     <meta property="og:image" content="{{ $heroImage }}">
     <meta property="og:image:alt" content="FURUPRO 古着販売向け在庫管理システム">
+    <meta property="og:image:width" content="{{ config('seo.image_width', 1200) }}">
+    <meta property="og:image:height" content="{{ config('seo.image_height', 630) }}">
     <meta name="twitter:card" content="{{ config('seo.twitter_card', 'summary_large_image') }}">
     <meta name="twitter:title" content="{{ $title }}">
     <meta name="twitter:description" content="{{ $description }}">
     <meta name="twitter:image" content="{{ $heroImage }}">
+    <meta name="twitter:image:alt" content="FURUPRO 古着販売向け在庫管理システム">
     <x-pwa-head />
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=2">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script type="application/ld+json">@json($softwareSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
+    @foreach ($schemas as $schema)
+        <script type="application/ld+json">@json($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
+    @endforeach
 </head>
 <body class="bg-white text-slate-950 antialiased">
     <header class="fixed inset-x-0 top-0 z-30 border-b border-white/30 bg-white/85 backdrop-blur-md">

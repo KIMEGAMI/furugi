@@ -34,6 +34,7 @@ Route::get('/service-worker.js', [PwaController::class, 'serviceWorker'])->name(
 
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/llms.txt', [SeoController::class, 'llms'])->name('seo.llms');
 
 Route::get('/terms', [LegalPageController::class, 'terms'])->name('legal.terms');
 Route::get('/privacy', [LegalPageController::class, 'privacy'])->name('legal.privacy');

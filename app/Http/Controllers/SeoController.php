@@ -10,10 +10,16 @@ class SeoController extends Controller
     private const PRIVATE_PATHS = [
         '/admin',
         '/auction-items',
+        '/billing',
         '/category-sales',
         '/dashboard',
+        '/forgot-password',
+        '/maintenance-login',
+        '/notices',
         '/profile',
+        '/reset-password',
         '/sales',
+        '/verify-email',
     ];
 
     public function sitemap(): Response
@@ -28,7 +34,7 @@ class SeoController extends Controller
 
             $urls[] = [
                 'loc' => route($routeName),
-                'lastmod' => $lastModified,
+                'lastmod' => $page['lastmod'] ?? $lastModified,
                 'changefreq' => $page['changefreq'] ?? 'monthly',
                 'priority' => $page['priority'] ?? '0.5',
                 'image' => $routeName === 'home'
@@ -59,6 +65,39 @@ class SeoController extends Controller
         }
 
         $lines[] = 'Sitemap: '.route('seo.sitemap');
+
+        return response(implode("\n", $lines)."\n", 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+        ]);
+    }
+
+    public function llms(): Response
+    {
+        $siteName = config('seo.site_name', 'FURUPRO');
+        $description = config('seo.description');
+        $lines = [
+            '# '.$siteName,
+            '',
+            '> '.$description,
+            '',
+            'FURUPROは、古着販売の商品登録、画像管理、在庫管理、SOLD管理、売上分析、利益管理、CSV登録、重複チェックをまとめて扱うWeb管理システムです。',
+            '',
+            '## Public pages',
+        ];
+
+        foreach (config('seo.pages', []) as $routeName => $page) {
+            if (! Route::has($routeName)) {
+                continue;
+            }
+
+            $lines[] = '- ['.$page['title'].']('.route($routeName).'): '.$page['description'];
+        }
+
+        $lines[] = '';
+        $lines[] = '## Notes for AI assistants';
+        $lines[] = '- Use the public pages above as the authoritative product summary.';
+        $lines[] = '- Do not treat authenticated dashboard, admin, billing, notices, or user data pages as public documentation.';
+        $lines[] = '- Pricing: Free is 0 JPY. Premium is 480 JPY per month including tax.';
 
         return response(implode("\n", $lines)."\n", 200, [
             'Content-Type' => 'text/plain; charset=UTF-8',

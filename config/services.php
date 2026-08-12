@@ -17,7 +17,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') ? rtrim(env('APP_URL'), '/').'/auth/google/callback' : null),
     ],
 
     'stripe' => [
@@ -28,6 +28,7 @@ return [
         'subscription_amount' => (int) env('STRIPE_SUBSCRIPTION_AMOUNT', env('STRIPE_PREMIUM_AMOUNT', 480)),
         'subscription_currency' => env('STRIPE_SUBSCRIPTION_CURRENCY', env('STRIPE_PREMIUM_CURRENCY', 'jpy')),
         'checkout_locale' => env('STRIPE_CHECKOUT_LOCALE', 'ja'),
+        'trial_period_days' => (int) env('STRIPE_TRIAL_PERIOD_DAYS', 7),
         'subscription_product_name' => env('STRIPE_PREMIUM_PRODUCT_NAME', 'FURUPRO Premium'),
         'subscription_product_description' => env('STRIPE_PREMIUM_PRODUCT_DESCRIPTION', 'FURUPRO paid subscription.'),
     ],
