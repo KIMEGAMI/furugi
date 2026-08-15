@@ -62,6 +62,64 @@ class SubscriptionCheckoutSyncTest extends TestCase
         ]);
     }
 
+    public function test_unverified_email_does_not_claim_existing_stripe_subscription_by_email(): void
+    {
+        config([
+            'services.stripe.secret' => 'sk_test_example',
+            'services.stripe.subscription_price_id' => 'price_test',
+        ]);
+
+        Http::fake([
+            'https://api.stripe.com/v1/customers?email=claim%40example.com*' => Http::response([
+                'data' => [
+                    ['id' => 'cus_existing'],
+                ],
+            ]),
+            'https://api.stripe.com/v1/subscriptions?customer=cus_existing*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_existing',
+                        'customer' => 'cus_existing',
+                        'status' => 'active',
+                        'current_period_end' => now()->addMonth()->timestamp,
+                    ],
+                ],
+            ]),
+            'https://api.stripe.com/v1/customers' => Http::response([
+                'id' => 'cus_new',
+            ]),
+            'https://api.stripe.com/v1/checkout/sessions' => Http::response([
+                'url' => 'https://checkout.stripe.test/session',
+            ]),
+        ]);
+
+        $user = User::factory()->unverified()->create([
+            'email' => 'claim@example.com',
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'subscription_status' => null,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect('https://checkout.stripe.test/session');
+
+        Http::assertNotSent(fn ($request) => str_starts_with($request->url(), 'https://api.stripe.com/v1/customers?email='));
+        Http::assertNotSent(fn ($request) => str_starts_with($request->url(), 'https://api.stripe.com/v1/subscriptions?customer=cus_existing'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'subscription_status' => null,
+            'stripe_customer_id' => 'cus_new',
+            'stripe_subscription_id' => null,
+        ]);
+    }
+
     public function test_existing_active_subscription_on_another_customer_blocks_new_checkout(): void
     {
         config(['services.stripe.secret' => 'sk_test_example']);
@@ -161,6 +219,24 @@ class SubscriptionCheckoutSyncTest extends TestCase
             && $request['subscription_data[trial_period_days]'] === 7);
     }
 
+    public function test_billing_page_checkout_buttons_include_confirmed_terms(): void
+    {
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'subscription_status' => null,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('subscriptions.index'))
+            ->assertOk()
+            ->assertSee('name="billing_terms_confirmed"', false)
+            ->assertSee('Stripe決済画面へ進む', false)
+            ->assertSee('同意してStripe決済画面へ進む', false);
+    }
+
     public function test_trial_is_not_added_after_user_has_used_trial(): void
     {
         config([
@@ -197,6 +273,83 @@ class SubscriptionCheckoutSyncTest extends TestCase
         Http::assertSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions'
             && $request['customer'] === 'cus_new'
             && ! isset($request['subscription_data[trial_period_days]']));
+    }
+
+    public function test_local_premium_without_stripe_subscription_can_start_checkout(): void
+    {
+        config([
+            'services.stripe.secret' => 'sk_test_example',
+            'services.stripe.subscription_price_id' => 'price_test',
+        ]);
+
+        Http::fake([
+            'https://api.stripe.com/v1/customers' => Http::response([
+                'id' => 'cus_new',
+            ]),
+            'https://api.stripe.com/v1/customers*' => Http::response([
+                'data' => [],
+            ]),
+            'https://api.stripe.com/v1/checkout/sessions' => Http::response([
+                'url' => 'https://checkout.stripe.test/session',
+            ]),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect('https://checkout.stripe.test/session');
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions'
+            && $request['customer'] === 'cus_new');
+    }
+
+    public function test_stale_stripe_ids_from_previous_key_can_start_new_checkout(): void
+    {
+        config([
+            'services.stripe.secret' => 'sk_test_new_key',
+            'services.stripe.subscription_price_id' => 'price_test',
+        ]);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_old*' => Http::response([], 404),
+            'https://api.stripe.com/v1/customers?email=stale%40example.com*' => Http::response([
+                'data' => [],
+            ]),
+            'https://api.stripe.com/v1/customers/cus_old' => Http::response([], 404),
+            'https://api.stripe.com/v1/customers' => Http::response([
+                'id' => 'cus_new',
+            ]),
+            'https://api.stripe.com/v1/checkout/sessions' => Http::response([
+                'url' => 'https://checkout.stripe.test/session',
+            ]),
+        ]);
+
+        $user = User::factory()->create([
+            'email' => 'stale@example.com',
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_old',
+            'stripe_subscription_id' => 'sub_old',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect('https://checkout.stripe.test/session');
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions'
+            && $request['customer'] === 'cus_new');
     }
 
     public function test_trial_subscription_sync_marks_trial_as_used(): void

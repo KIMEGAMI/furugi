@@ -19,19 +19,21 @@ class SubscriptionController extends Controller
     {
         $user = $request->user();
 
-        $this->syncKnownStripeSubscriptionForUser($user);
+        $hasManageableStripeSubscription = $this->syncKnownStripeSubscriptionForUser($user);
         $user->refresh();
 
         return view('subscriptions.index', [
             'user' => $user,
             'hasActiveSubscription' => $user->hasActiveSubscription(),
-            'hasStripeSubscription' => $this->hasStripeSubscriptionIdentifiers($user),
+            'hasStripeSubscription' => $hasManageableStripeSubscription && $this->hasStripeSubscriptionIdentifiers($user),
             'price' => config('services.stripe.subscription_amount', 480),
         ]);
     }
 
     public function checkout(Request $request): RedirectResponse
     {
+        return app(SubscriptionCheckoutController::class)($request);
+
         $request->validate([
             'billing_terms_confirmed' => ['accepted'],
         ], [
@@ -112,6 +114,8 @@ class SubscriptionController extends Controller
 
     public function portal(Request $request): RedirectResponse
     {
+        return app(SubscriptionPortalController::class)->portal($request);
+
         $user = $request->user();
         $secret = config('services.stripe.secret');
 
@@ -143,7 +147,7 @@ class SubscriptionController extends Controller
         if ($response->failed()) {
             return redirect()
                 ->route('subscriptions.index')
-                ->with('error', '契約・解約画面を作成できませんでした。時間をおいて再度お試しください。');
+                ->with('error', '契約管理画面を作成できませんでした。StripeダッシュボードのCustomer portal設定、Stripeキー、顧客IDを確認してください。');
         }
 
         $portalUrl = $response->json('url');
@@ -159,6 +163,8 @@ class SubscriptionController extends Controller
 
     public function cancelFeedback(Request $request): RedirectResponse
     {
+        return app(SubscriptionPortalController::class)->cancelFeedback($request);
+
         $user = $request->user();
 
         $validated = $request->validate([
@@ -366,7 +372,7 @@ class SubscriptionController extends Controller
     {
         $secret = config('services.stripe.secret');
 
-        if (! is_string($secret) || $secret === '' || ! is_string($user->email) || $user->email === '') {
+        if (! $user->hasVerifiedEmail() || ! is_string($secret) || $secret === '' || ! is_string($user->email) || $user->email === '') {
             return false;
         }
 

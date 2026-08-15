@@ -1,0 +1,96 @@
+rules:
+  - id: furugi.blade.raw-output
+    languages:
+      - generic
+    paths:
+      include:
+        - resources/views/**/*.blade.php
+      exclude:
+        - resources/views/seo/sitemap.blade.php
+    pattern-regex: '\{!!\s*[^!]+!!\}'
+    message: 'Bladeの未エスケープ出力 `{!! !!}` はXSSにつながります。原則 `{{ }}` を使い、HTMLを許可する場合はサーバー側で明示的にサニタイズしてください。'
+    severity: ERROR
+    metadata:
+      category: security
+      cwe:
+        - 'CWE-79: Improper Neutralization of Input During Web Page Generation'
+      owasp:
+        - A03:2021 - Injection
+
+  - id: furugi.javascript.dangerous-html-sink
+    languages:
+      - generic
+    paths:
+      include:
+        - resources/**/*.blade.php
+        - resources/**/*.js
+        - resources/**/*.ts
+    pattern-regex: "(innerHTML|outerHTML)\\s*=\\s*(?!['\"`]\\s*['\"`])|insertAdjacentHTML\\s*\\("
+    message: 'HTML文字列をDOMへ直接挿入するとXSSの原因になります。textContent、DOM API、または信頼できるサニタイズ処理を使ってください。'
+    severity: ERROR
+    metadata:
+      category: security
+      cwe:
+        - 'CWE-79: Improper Neutralization of Input During Web Page Generation'
+      owasp:
+        - A03:2021 - Injection
+
+  - id: furugi.php.dangerous-code-execution
+    languages:
+      - php
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: shell_exec(...)
+      - pattern: system(...)
+      - pattern: passthru(...)
+      - pattern: proc_open(...)
+      - pattern: popen(...)
+    message: '動的コード実行またはOSコマンド実行は原則禁止です。必要な場合は入力を固定値に限定し、事前に設計レビューしてください。'
+    severity: ERROR
+    metadata:
+      category: security
+      cwe:
+        - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command'
+        - 'CWE-94: Improper Control of Generation of Code'
+      owasp:
+        - A03:2021 - Injection
+
+  - id: furugi.laravel.raw-sql-without-bindings
+    languages:
+      - php
+    pattern-either:
+      - pattern: $QUERY->whereRaw($SQL)
+      - pattern: $QUERY->orWhereRaw($SQL)
+      - pattern: $QUERY->havingRaw($SQL)
+      - pattern: $QUERY->orHavingRaw($SQL)
+      - pattern: $QUERY->orderByRaw($SQL)
+      - pattern: $QUERY->groupByRaw($SQL)
+      - pattern: DB::statement($SQL)
+      - pattern: DB::unprepared($SQL)
+    message: 'Raw SQLをバインドなしで実行するとSQLインジェクションにつながります。クエリビルダ、Eloquent、またはプレースホルダー配列を使ってください。'
+    severity: ERROR
+    metadata:
+      category: security
+      cwe:
+        - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command'
+      owasp:
+        - A03:2021 - Injection
+
+  - id: furugi.vue-or-alpine.raw-html-directive
+    languages:
+      - generic
+    paths:
+      include:
+        - resources/**/*.blade.php
+        - resources/**/*.js
+        - resources/**/*.ts
+    pattern-regex: '\b(v-html|x-html)\s*='
+    message: 'v-html / x-html はXSSリスクが高いため禁止します。テキスト表示に変更するか、信頼できるサニタイズ済みHTMLだけに限定してください。'
+    severity: ERROR
+    metadata:
+      category: security
+      cwe:
+        - 'CWE-79: Improper Neutralization of Input During Web Page Generation'
+      owasp:
+        - A03:2021 - Injection
