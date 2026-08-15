@@ -47,7 +47,7 @@ class ExampleTest extends TestCase
         $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
         $response->assertSee('# FURUPRO', false);
         $response->assertSee('/features', false);
-        $response->assertSee('Pricing: Free is 0 JPY. Premium is 480 JPY per month including tax.', false);
+        $response->assertSee('Pricing: Free is 0 JPY. Premium includes a 7-day free trial, then 480 JPY per month including tax.', false);
         $response->assertDontSee('/dashboard', false);
     }
 

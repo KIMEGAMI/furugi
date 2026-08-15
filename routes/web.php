@@ -19,6 +19,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\SeoController;
+use App\Http\Controllers\SubscriptionCheckoutController;
+use App\Http\Controllers\SubscriptionPortalController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -169,13 +171,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/premium', fn () => redirect()->route('subscriptions.index'))
         ->name('subscriptions.legacy');
 
-    Route::post('/billing/checkout', [SubscriptionController::class, 'checkout'])
+    Route::post('/billing/checkout', SubscriptionCheckoutController::class)
         ->name('subscriptions.checkout');
 
-    Route::post('/billing/portal', [SubscriptionController::class, 'portal'])
+    Route::post('/billing/portal', [SubscriptionPortalController::class, 'portal'])
         ->name('subscriptions.portal');
 
-    Route::post('/billing/cancel-feedback', [SubscriptionController::class, 'cancelFeedback'])
+    Route::post('/billing/cancel-feedback', [SubscriptionPortalController::class, 'cancelFeedback'])
         ->name('subscriptions.cancel-feedback');
 
     Route::get('/billing/success', [SubscriptionController::class, 'success'])

@@ -934,9 +934,9 @@ class AuctionItemController extends Controller
 
         return redirect()
             ->route('subscriptions.index')
-            ->with('error', 'Freeプランの商品登録は'.User::FREE_AUCTION_ITEM_LIMIT.'件までです。Premiumに登録すると商品登録数の制限がなくなります。')
+            ->with('error', 'Freeプランの商品登録は'.User::FREE_AUCTION_ITEM_LIMIT.'件までです。Premiumは7日間無料お試し後、月額480円（税込）で商品登録数の制限がなくなります。')
             ->with('upgrade_title', '商品登録数の上限に達しました。')
-            ->with('upgrade_description', 'Premiumに登録すると、商品登録数の制限がなくなり、CSV登録や売上分析も利用できます。')
+            ->with('upgrade_description', '7日間無料お試しで、商品登録数の制限解除、CSV登録、売上分析を実際の古着販売データで確認できます。')
             ->with('upgrade_features', $this->premiumUpgradeFeatures());
     }
 
@@ -972,9 +972,9 @@ class AuctionItemController extends Controller
 
         return redirect()
             ->route('subscriptions.index')
-            ->with('error', 'Freeプランで利用できるカテゴリは'.User::FREE_CATEGORY_LIMIT.'件までです。Premiumに登録するとカテゴリ数の制限がなくなります。')
+            ->with('error', 'Freeプランで利用できるカテゴリは'.User::FREE_CATEGORY_LIMIT.'件までです。Premiumは7日間無料お試し後、月額480円（税込）でカテゴリ数の制限がなくなります。')
             ->with('upgrade_title', 'カテゴリ数の上限に達しました。')
-            ->with('upgrade_description', 'Premiumに登録すると、カテゴリ数の制限がなくなり、ジャンル別売上分析も利用できます。')
+            ->with('upgrade_description', '7日間無料お試しで、カテゴリ数の制限解除とジャンル別売上分析を確認できます。売れるジャンル、残りやすいジャンルを見ながら仕入れ判断に使えます。')
             ->with('upgrade_features', $this->premiumUpgradeFeatures());
     }
 

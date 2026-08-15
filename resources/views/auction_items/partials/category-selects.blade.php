@@ -90,8 +90,7 @@
                 }
 
                 const selectedGroup = groups.find((group) => String(group.id) === String(parentSelect.value));
-                categorySelect.innerHTML = '';
-                categorySelect.append(new Option(categorySelect.dataset.placeholder || '小ジャンルを選択', ''));
+                categorySelect.replaceChildren(new Option(categorySelect.dataset.placeholder || '小ジャンルを選択', ''));
 
                 for (const child of selectedGroup ? selectedGroup.children : []) {
                     const option = new Option(child.name, child.id);

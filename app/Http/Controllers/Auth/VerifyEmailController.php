@@ -16,7 +16,15 @@ class VerifyEmailController extends Controller
      */
     public function __invoke(Request $request, string $id, string $hash): RedirectResponse
     {
+        if (! Auth::check()) {
+            return redirect()->guest(route('login'));
+        }
+
         $user = User::findOrFail($id);
+
+        if (Auth::id() !== $user->getKey()) {
+            abort(403);
+        }
 
         if (! hash_equals($hash, sha1($user->getEmailForVerification()))) {
             abort(403);
@@ -24,11 +32,6 @@ class VerifyEmailController extends Controller
 
         if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
             event(new Verified($user));
-        }
-
-        if (! Auth::check() || Auth::id() !== $user->getKey()) {
-            Auth::login($user);
-            $request->session()->regenerate();
         }
 
         return redirect()->intended(route('dashboard', absolute: false).'?verified=1');

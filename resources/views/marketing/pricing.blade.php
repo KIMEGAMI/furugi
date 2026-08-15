@@ -2,8 +2,8 @@
     $pageSeo = config('seo.pages')['marketing.pricing'] ?? [];
     $pricingFaqs = [
         ['Freeプランはいくらですか？', 'Freeプランは月額0円です。商品登録50件、カテゴリ登録5件まで利用できます。'],
-        ['Premiumプランはいくらですか？', 'Premiumプランは月額480円（税込）です。商品登録数とカテゴリ数の制限がなくなり、CSV管理、売上分析、ジャンル別分析などを利用できます。'],
-        ['Premiumは解約できますか？', 'ログイン後の契約管理画面からStripeの契約管理画面へ進み、解約できます。'],
+        ['Premiumプランはいくらですか？', 'Premiumプランは7日間無料お試し後、月額480円（税込）です。商品登録数とカテゴリ数の制限を外し、CSV管理、売上分析、ジャンル別分析、重複チェックまでまとめて使えるため、古着販売の毎日の作業を短くできます。'],
+        ['Premiumは解約できますか？', 'ログイン後の契約管理画面からStripeの契約管理画面へ進み、解約できます。7日間無料お試し中に使い心地を確認してから継続を判断できます。'],
     ];
     $schema = [
         [
@@ -21,6 +21,7 @@
                 'price' => '480',
                 'priceCurrency' => 'JPY',
                 'availability' => 'https://schema.org/InStock',
+                'description' => '7日間無料お試し後、月額480円（税込）で利用できます。',
             ],
         ],
         [
@@ -46,7 +47,7 @@
             <p class="text-sm font-black tracking-[0.24em] text-cyan-200">PRICING</p>
             <h1 class="mt-4 max-w-4xl text-4xl font-black leading-tight md:text-5xl">料金体系</h1>
             <p class="mt-5 max-w-3xl text-base font-semibold leading-8 text-cyan-100">
-                Freeは小さく試すための無料プランです。Premiumは月額480円（税込）で登録制限をなくし、CSV、売上分析、ジャンル別分析など古着販売の運用に必要な機能をまとめて利用できます。
+                Freeは小さく試すための無料プランです。Premiumは7日間無料お試し後、月額480円（税込）で登録制限をなくし、CSV、売上分析、ジャンル別分析など古着販売の運用に必要な機能をまとめて利用できます。
             </p>
         </div>
     </section>
@@ -90,14 +91,14 @@
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-sm font-black tracking-[0.18em] text-cyan-700">PREMIUM</p>
-                            <h2 class="mt-2 text-3xl font-black text-slate-950">月額480円（税込）</h2>
+                            <h2 class="mt-2 text-3xl font-black text-slate-950">7日間無料お試し後、月額480円（税込）</h2>
                             <p class="mt-3 text-sm font-bold leading-7 text-slate-700">
-                                制限を外して、日々の商品登録・分析・CSV作業を本格運用できます。
+                                まずは無料で使い心地を確認。制限を外して、日々の商品登録・分析・CSV作業を本格運用できます。
                             </p>
                         </div>
                         <div class="rounded-lg bg-white px-5 py-4 text-center shadow-sm">
                             <p class="text-3xl font-black text-slate-950">¥480</p>
-                            <p class="mt-1 text-xs font-bold text-slate-500">月額・税込</p>
+                            <p class="mt-1 text-xs font-bold text-slate-500">7日間無料後・月額税込</p>
                         </div>
                     </div>
 
@@ -118,7 +119,7 @@
                     </div>
 
                     <a href="{{ route('subscriptions.index') }}" class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-cyan-700 px-6 py-3 text-sm font-black text-white shadow hover:bg-cyan-800">
-                        Premiumに登録する
+                        7日間無料でPremiumを試す
                     </a>
                 </article>
             </div>
@@ -126,7 +127,7 @@
             <div class="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-5">
                 <h2 class="text-lg font-black text-amber-900">契約と解約について</h2>
                 <p class="mt-3 text-sm font-bold leading-7 text-amber-800">
-                    Premiumは月額480円（税込）で、解約されるまで1か月ごとに自動更新されます。解約はログイン後の「契約・解約」画面からStripeの契約管理画面へ進んで行えます。期間終了時に解約する場合は現在の請求期間終了までPremium機能を利用でき、即時解約の場合は解約完了時点で利用できなくなる場合があります。
+                    Premiumは7日間無料お試し後、月額480円（税込）で、解約されるまで1か月ごとに自動更新されます。無料期間中に商品登録、CSV、売上分析、重複チェックまで試せます。解約はログイン後の「契約・解約」画面からStripeの契約管理画面へ進んで行えます。期間終了時に解約する場合は現在の請求期間終了までPremium機能を利用でき、即時解約の場合は解約完了時点で利用できなくなる場合があります。
                 </p>
             </div>
 

@@ -71,6 +71,7 @@
                 'price' => '480',
                 'priceCurrency' => 'JPY',
                 'availability' => 'https://schema.org/InStock',
+                'description' => '7日間無料お試し後、月額480円（税込）で利用できます。',
             ],
         ],
         'featureList' => ['画像付き商品登録', '在庫管理', 'SOLD管理', '売上と利益の分析', 'CSV管理', '外部CSV変換', '重複チェック', 'PWA対応'],
@@ -198,7 +199,7 @@
                 <div class="rounded-lg border border-cyan-100 bg-cyan-50 p-6 sm:p-8">
                     <p class="text-sm font-black tracking-[0.24em] text-cyan-700">PRICING</p>
                     <h2 class="mt-3 text-3xl font-black text-cyan-950">FreeプランとPremiumプランがあります。</h2>
-                    <p class="mt-4 max-w-3xl text-sm font-bold leading-7 text-slate-700">Freeは商品登録50件・カテゴリ5件まで利用できます。Premiumは月額480円（税込）で商品登録数とカテゴリ数の制限がなくなり、CSV管理、売上分析、ジャンル別分析、重複チェックなどを利用できます。</p>
+                    <p class="mt-4 max-w-3xl text-sm font-bold leading-7 text-slate-700">Freeは商品登録50件・カテゴリ5件まで利用できます。Premiumは7日間無料お試し後、月額480円（税込）で商品登録数とカテゴリ数の制限がなくなり、CSV管理、売上分析、ジャンル別分析、重複チェックなどをまとめて使えます。古着販売の登録、確認、振り返りをひとつに集めて、毎日の作業時間を減らします。</p>
                     <div class="mt-6 flex flex-wrap gap-3">
                         <a href="{{ route('marketing.pricing') }}" class="inline-flex rounded-md bg-cyan-700 px-6 py-3 text-sm font-black text-white hover:bg-cyan-800">料金体系を見る</a>
                         <a href="{{ route('register') }}" class="inline-flex rounded-md border border-cyan-300 bg-white px-6 py-3 text-sm font-black text-cyan-900 hover:bg-cyan-50">Freeで始める</a>
