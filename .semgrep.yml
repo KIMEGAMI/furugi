@@ -4,9 +4,9 @@ rules:
       - generic
     paths:
       include:
-        - resources/views/**/*.blade.php
+        - /resources/views/**/*.blade.php
       exclude:
-        - resources/views/seo/sitemap.blade.php
+        - /resources/views/seo/sitemap.blade.php
     pattern-regex: '\{!!\s*[^!]+!!\}'
     message: 'Bladeの未エスケープ出力 `{!! !!}` はXSSにつながります。原則 `{{ }}` を使い、HTMLを許可する場合はサーバー側で明示的にサニタイズしてください。'
     severity: ERROR
@@ -22,9 +22,9 @@ rules:
       - generic
     paths:
       include:
-        - resources/**/*.blade.php
-        - resources/**/*.js
-        - resources/**/*.ts
+        - /resources/**/*.blade.php
+        - /resources/**/*.js
+        - /resources/**/*.ts
     pattern-regex: "(innerHTML|outerHTML)\\s*=\\s*(?!['\"`]\\s*['\"`])|insertAdjacentHTML\\s*\\("
     message: 'HTML文字列をDOMへ直接挿入するとXSSの原因になります。textContent、DOM API、または信頼できるサニタイズ処理を使ってください。'
     severity: ERROR
@@ -82,9 +82,9 @@ rules:
       - generic
     paths:
       include:
-        - resources/**/*.blade.php
-        - resources/**/*.js
-        - resources/**/*.ts
+        - /resources/**/*.blade.php
+        - /resources/**/*.js
+        - /resources/**/*.ts
     pattern-regex: '\b(v-html|x-html)\s*='
     message: 'v-html / x-html はXSSリスクが高いため禁止します。テキスト表示に変更するか、信頼できるサニタイズ済みHTMLだけに限定してください。'
     severity: ERROR

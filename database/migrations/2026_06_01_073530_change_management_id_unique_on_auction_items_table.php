@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -19,13 +21,17 @@ return new class extends Migration
             ->filter(fn ($items, $key) => $key !== 'auction_items_user_management_unique' && $items->count() === 1);
 
         foreach ($singleManagementIndexes as $keyName => $items) {
-            DB::statement('ALTER TABLE auction_items DROP INDEX `'.$keyName.'`');
+            Schema::table('auction_items', function (Blueprint $table) use ($keyName): void {
+                $table->dropIndex((string) $keyName);
+            });
         }
 
         $indexes = collect(DB::select('SHOW INDEX FROM auction_items'));
 
         if (! $indexes->where('Key_name', 'auction_items_user_management_unique')->count()) {
-            DB::statement('ALTER TABLE auction_items ADD UNIQUE `auction_items_user_management_unique` (`user_id`, `management_id`)');
+            Schema::table('auction_items', function (Blueprint $table): void {
+                $table->unique(['user_id', 'management_id'], 'auction_items_user_management_unique');
+            });
         }
     }
 
@@ -38,7 +44,9 @@ return new class extends Migration
         $indexes = collect(DB::select('SHOW INDEX FROM auction_items'));
 
         if ($indexes->where('Key_name', 'auction_items_user_management_unique')->count()) {
-            DB::statement('ALTER TABLE auction_items DROP INDEX `auction_items_user_management_unique`');
+            Schema::table('auction_items', function (Blueprint $table): void {
+                $table->dropUnique('auction_items_user_management_unique');
+            });
         }
     }
 };
