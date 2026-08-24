@@ -3,7 +3,11 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use RuntimeException;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -17,8 +21,10 @@ class RegistrationTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_new_users_can_register_and_open_dashboard(): void
+    public function test_new_users_can_register_and_are_sent_to_email_verification_notice(): void
     {
+        Notification::fake();
+
         $response = $this->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
@@ -29,12 +35,162 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('verification.notice', absolute: false));
 
         $user = User::where('email', 'test@example.com')->firstOrFail();
-        $this->actingAs($user)
+        $this->assertNull($user->email_verified_at);
+        Notification::assertSentTo($user, VerifyEmail::class);
+
+        $this
             ->get(route('dashboard'))
-            ->assertOk();
+            ->assertRedirect(route('verification.notice', absolute: false));
+    }
+
+    public function test_registration_does_not_fail_when_verification_email_cannot_be_sent(): void
+    {
+        Notification::shouldReceive('send')
+            ->once()
+            ->andThrow(new TransportException('SMTP failed'));
+
+        $response = $this->post('/register', [
+            'name' => 'Mail Failure User',
+            'email' => 'mail-failure@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms_accepted' => '1',
+            'privacy_accepted' => '1',
+        ]);
+
+        $this->assertAuthenticated();
+        $response
+            ->assertRedirect(route('verification.notice', absolute: false))
+            ->assertSessionHas('status', 'verification-link-send-failed');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'mail-failure@example.com',
+        ]);
+
+        $user = User::where('email', 'mail-failure@example.com')->firstOrFail();
+        $this->assertFalse($user->hasVerifiedEmail());
+
+        $this
+            ->get(route('dashboard'))
+            ->assertRedirect(route('verification.notice', absolute: false));
+    }
+
+    public function test_registration_does_not_fail_when_verification_notification_throws_unexpected_error(): void
+    {
+        Notification::shouldReceive('send')
+            ->once()
+            ->andThrow(new RuntimeException('Unexpected mail failure'));
+
+        $response = $this->post('/register', [
+            'name' => 'Unexpected Mail Failure User',
+            'email' => 'unexpected-mail-failure@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms_accepted' => '1',
+            'privacy_accepted' => '1',
+        ]);
+
+        $this->assertAuthenticated();
+        $response
+            ->assertRedirect(route('verification.notice', absolute: false))
+            ->assertSessionHas('status', 'verification-link-send-failed');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'unexpected-mail-failure@example.com',
+        ]);
+
+        $user = User::where('email', 'unexpected-mail-failure@example.com')->firstOrFail();
+        $this->assertFalse($user->hasVerifiedEmail());
+
+        $this
+            ->get(route('dashboard'))
+            ->assertRedirect(route('verification.notice', absolute: false));
+    }
+
+    public function test_unverified_existing_user_can_continue_registration_to_verification_notice(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create([
+            'email' => 'pending@example.com',
+            'password' => 'password',
+        ]);
+
+        $response = $this->post('/register', [
+            'name' => 'Pending User',
+            'email' => 'pending@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms_accepted' => '1',
+            'privacy_accepted' => '1',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response
+            ->assertRedirect(route('verification.notice', absolute: false))
+            ->assertSessionHas('status', 'verification-link-sent');
+
+        Notification::assertSentTo($user, VerifyEmail::class);
+    }
+
+    public function test_unverified_existing_user_can_continue_when_verification_email_cannot_be_sent(): void
+    {
+        $user = User::factory()->unverified()->create([
+            'email' => 'pending-mail-failure@example.com',
+            'password' => 'password',
+        ]);
+
+        Notification::shouldReceive('send')
+            ->once()
+            ->andThrow(new TransportException('SMTP failed'));
+
+        $response = $this->post('/register', [
+            'name' => 'Pending Mail Failure User',
+            'email' => 'pending-mail-failure@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms_accepted' => '1',
+            'privacy_accepted' => '1',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response
+            ->assertRedirect(route('verification.notice', absolute: false))
+            ->assertSessionHas('status', 'verification-link-send-failed');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'pending-mail-failure@example.com',
+        ]);
+    }
+
+    public function test_verified_existing_user_cannot_register_again(): void
+    {
+        Notification::fake();
+
+        User::factory()->create([
+            'email' => 'registered@example.com',
+            'password' => 'password',
+        ]);
+
+        $response = $this->from('/register')->post('/register', [
+            'name' => 'Registered User',
+            'email' => 'registered@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms_accepted' => '1',
+            'privacy_accepted' => '1',
+        ]);
+
+        $this->assertGuest();
+        $response
+            ->assertRedirect('/register')
+            ->assertSessionHasErrors('email');
+
+        Notification::assertNothingSent();
     }
 
     public function test_users_cannot_register_without_terms_and_privacy_agreement(): void

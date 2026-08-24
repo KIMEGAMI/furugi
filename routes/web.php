@@ -54,10 +54,10 @@ Route::get('/maintenance-login', MaintenanceLoginController::class)->name('maint
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth'])
+    ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin/maintenance', [MaintenanceController::class, 'index'])
         ->name('admin.maintenance.index');
 

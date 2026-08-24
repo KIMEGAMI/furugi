@@ -77,7 +77,7 @@ class SubscriptionPortalTest extends TestCase
         $this
             ->actingAs($user)
             ->post(route('subscriptions.portal'))
-            ->assertRedirect(route('subscriptions.index'));
+            ->assertRedirect(route('verification.notice', absolute: false));
 
         Http::assertNotSent(fn ($request) => str_starts_with($request->url(), 'https://api.stripe.com/v1/customers?email='));
         Http::assertNotSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/billing_portal/sessions');

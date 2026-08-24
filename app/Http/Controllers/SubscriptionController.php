@@ -18,15 +18,20 @@ class SubscriptionController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
+        $isDemoUser = $user->isDemoUser();
 
-        $hasManageableStripeSubscription = $this->syncKnownStripeSubscriptionForUser($user);
+        $hasManageableStripeSubscription = $isDemoUser ? false : $this->syncKnownStripeSubscriptionForUser($user);
         $user->refresh();
 
         return view('subscriptions.index', [
             'user' => $user,
             'hasActiveSubscription' => $user->hasActiveSubscription(),
             'hasStripeSubscription' => $hasManageableStripeSubscription && $this->hasStripeSubscriptionIdentifiers($user),
+            'isDemoUser' => $isDemoUser,
             'price' => config('services.stripe.subscription_amount', 480),
+            'trialEndsAt' => $user->subscription_status === 'trialing' && $user->premium_ends_at?->isFuture()
+                ? $user->premium_ends_at
+                : null,
         ]);
     }
 
@@ -436,6 +441,7 @@ class SubscriptionController extends Controller
         $trialEnd = data_get($subscription, 'trial_end');
         $isActive = in_array($status, ['active', 'trialing'], true);
         $usedTrial = $status === 'trialing' || is_numeric($trialStart) || is_numeric($trialEnd);
+        $subscriptionEndsAt = $this->subscriptionEndsAtTimestamp($subscription);
 
         $user->forceFill([
             'subscription_plan' => $isActive ? User::SUBSCRIPTION_ACTIVE : User::SUBSCRIPTION_INACTIVE,
@@ -443,11 +449,31 @@ class SubscriptionController extends Controller
             'stripe_customer_id' => is_string($customerId) ? $customerId : $user->stripe_customer_id,
             'stripe_subscription_id' => is_string($subscriptionId) ? $subscriptionId : $user->stripe_subscription_id,
             'premium_started_at' => $isActive && $user->premium_started_at === null ? now() : $user->premium_started_at,
-            'premium_ends_at' => is_numeric($periodEnd) ? Carbon::createFromTimestamp((int) $periodEnd) : $user->premium_ends_at,
+            'premium_ends_at' => $subscriptionEndsAt !== null ? Carbon::createFromTimestamp($subscriptionEndsAt) : $user->premium_ends_at,
             'trial_used_at' => $usedTrial && $user->trial_used_at === null ? now() : $user->trial_used_at,
         ])->save();
 
         return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $subscription
+     */
+    private function subscriptionEndsAtTimestamp(array $subscription): ?int
+    {
+        $periodEnd = data_get($subscription, 'current_period_end');
+
+        if (is_numeric($periodEnd)) {
+            return (int) $periodEnd;
+        }
+
+        $trialEnd = data_get($subscription, 'trial_end');
+
+        if (data_get($subscription, 'status') === 'trialing' && is_numeric($trialEnd)) {
+            return (int) $trialEnd;
+        }
+
+        return null;
     }
 
     /**

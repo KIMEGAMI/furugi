@@ -24,6 +24,12 @@ class SubscriptionCheckoutController extends Controller
         $user = $request->user();
         $secret = config('services.stripe.secret');
 
+        if ($user->isDemoUser()) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'デモユーザーではStripe決済を利用できません。実際にPremiumを申し込む場合は、新しいアカウントを作成してください。');
+        }
+
         if ($this->syncKnownStripeSubscriptionForUser($user)) {
             return $this->alreadySubscribed();
         }
@@ -34,12 +40,31 @@ class SubscriptionCheckoutController extends Controller
                 ->with('error', 'Stripeの設定が未完了です。STRIPE_SECRET または STRIPE_SECRET_KEY を設定してください。');
         }
 
+        if ($this->requiresConfiguredPriceId() && ! $this->hasConfiguredPriceId()) {
+            Log::error('Stripe checkout blocked because production price id is not configured.', [
+                'user_id' => $user->id,
+            ]);
+
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', 'Stripe決済設定が未完了のため、現在Premium申込を停止しています。管理者へお問い合わせください。');
+        }
+
         try {
             $customerId = $this->ensureStripeCustomer($user, $secret);
             $response = Http::asForm()
                 ->timeout(10)
                 ->withToken($secret)
                 ->post($this->stripeApiBase().'/checkout/sessions', $this->checkoutPayload($user, $customerId));
+
+            if ($this->shouldRetryCheckoutWithInlinePrice($response)) {
+                Log::warning('Stripe checkout price id was not usable; retrying with inline price data.', $this->stripeFailureLogContext($response, $user));
+
+                $response = Http::asForm()
+                    ->timeout(10)
+                    ->withToken($secret)
+                    ->post($this->stripeApiBase().'/checkout/sessions', $this->checkoutPayload($user, $customerId, forceInlinePrice: true));
+            }
         } catch (Throwable $exception) {
             Log::warning('Stripe checkout request failed.', [
                 'user_id' => $user->id,
@@ -124,12 +149,12 @@ class SubscriptionCheckoutController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function checkoutPayload(User $user, string $customerId): array
+    private function checkoutPayload(User $user, string $customerId, bool $forceInlinePrice = false): array
     {
         $payload = [
             'mode' => 'subscription',
             'customer' => $customerId,
-            'line_items' => [$this->subscriptionLineItem()],
+            'line_items' => [$this->subscriptionLineItem($forceInlinePrice)],
             'success_url' => route('subscriptions.success', [], true).'?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route('subscriptions.index', [], true),
             'locale' => config('services.stripe.checkout_locale', 'ja'),
@@ -148,11 +173,11 @@ class SubscriptionCheckoutController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function subscriptionLineItem(): array
+    private function subscriptionLineItem(bool $forceInlinePrice = false): array
     {
         $priceId = config('services.stripe.subscription_price_id');
 
-        if (is_string($priceId) && $priceId !== '') {
+        if (! $forceInlinePrice && is_string($priceId) && $priceId !== '') {
             return [
                 'price' => $priceId,
                 'quantity' => 1,
@@ -171,6 +196,26 @@ class SubscriptionCheckoutController extends Controller
                 ],
             ],
         ];
+    }
+
+    private function shouldRetryCheckoutWithInlinePrice(HttpResponse $response): bool
+    {
+        return $response->failed()
+            && ! $this->requiresConfiguredPriceId()
+            && $response->json('error.param') === 'line_items[0][price]'
+            && filled(config('services.stripe.subscription_price_id'));
+    }
+
+    private function requiresConfiguredPriceId(): bool
+    {
+        return app()->environment('production');
+    }
+
+    private function hasConfiguredPriceId(): bool
+    {
+        $priceId = config('services.stripe.subscription_price_id');
+
+        return is_string($priceId) && str_starts_with($priceId, 'price_');
     }
 
     private function syncKnownStripeSubscriptionForUser(User $user): bool
@@ -298,6 +343,7 @@ class SubscriptionCheckoutController extends Controller
         $trialStart = data_get($subscription, 'trial_start');
         $trialEnd = data_get($subscription, 'trial_end');
         $usedTrial = $status === 'trialing' || is_numeric($trialStart) || is_numeric($trialEnd);
+        $subscriptionEndsAt = $this->subscriptionEndsAtTimestamp($subscription);
 
         $user->forceFill([
             'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
@@ -305,9 +351,29 @@ class SubscriptionCheckoutController extends Controller
             'stripe_customer_id' => is_string($customerId) ? $customerId : $user->stripe_customer_id,
             'stripe_subscription_id' => is_string($subscriptionId) ? $subscriptionId : $user->stripe_subscription_id,
             'premium_started_at' => $user->premium_started_at ?? now(),
-            'premium_ends_at' => is_numeric($periodEnd) ? Carbon::createFromTimestamp((int) $periodEnd) : $user->premium_ends_at,
+            'premium_ends_at' => $subscriptionEndsAt !== null ? Carbon::createFromTimestamp($subscriptionEndsAt) : $user->premium_ends_at,
             'trial_used_at' => $usedTrial && $user->trial_used_at === null ? now() : $user->trial_used_at,
         ])->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $subscription
+     */
+    private function subscriptionEndsAtTimestamp(array $subscription): ?int
+    {
+        $periodEnd = data_get($subscription, 'current_period_end');
+
+        if (is_numeric($periodEnd)) {
+            return (int) $periodEnd;
+        }
+
+        $trialEnd = data_get($subscription, 'trial_end');
+
+        if (data_get($subscription, 'status') === 'trialing' && is_numeric($trialEnd)) {
+            return (int) $trialEnd;
+        }
+
+        return null;
     }
 
     /**

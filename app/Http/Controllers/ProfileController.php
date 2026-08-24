@@ -8,9 +8,14 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
+use Throwable;
 
 class ProfileController extends Controller
 {
@@ -57,10 +62,22 @@ class ProfileController extends Controller
             'password' => ['required', 'current_password'],
         ]);
 
+        if (! $this->cancelStripeSubscriptionIfNeeded($user)) {
+            return Redirect::route('profile.edit')
+                ->withErrors([
+                    'password' => 'Stripe契約の解除に失敗したため、アカウント削除を中止しました。時間をおいて再度お試しください。',
+                ], 'userDeletion');
+        }
+
         Auth::logout();
 
         $this->deleteUserAuctionItemImages($user->id);
-        $user->delete();
+
+        DB::transaction(function () use ($user): void {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            $user->delete();
+        });
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -109,5 +126,122 @@ class ProfileController extends Controller
         }
 
         return str_starts_with($path, 'auction-items/');
+    }
+
+    private function cancelStripeSubscriptionIfNeeded(User $user): bool
+    {
+        try {
+            $subscriptionIds = $this->stripeSubscriptionIdsToCancel($user);
+
+            if ($subscriptionIds === []) {
+                return true;
+            }
+
+            $secret = config('services.stripe.secret');
+
+            if (! is_string($secret) || $secret === '') {
+                return false;
+            }
+
+            foreach ($subscriptionIds as $subscriptionId) {
+                $response = Http::asForm()
+                    ->timeout(10)
+                    ->withToken($secret)
+                    ->delete($this->stripeApiBase().'/subscriptions/'.rawurlencode($subscriptionId));
+
+                if ($response->failed()) {
+                    return false;
+                }
+            }
+        } catch (Throwable $exception) {
+            Log::warning('User account deletion Stripe cancellation failed.', [
+                'user_id' => $user->id,
+                'error_class' => $exception::class,
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function stripeSubscriptionIdsToCancel(User $user): array
+    {
+        $subscriptionIds = [];
+
+        if (is_string($user->stripe_subscription_id) && $user->stripe_subscription_id !== '') {
+            $subscriptionIds[] = $user->stripe_subscription_id;
+        }
+
+        if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
+            $customerSubscriptionIds = $this->activeStripeSubscriptionIdsForCustomer($user->stripe_customer_id);
+
+            if ($customerSubscriptionIds === null) {
+                throw new RuntimeException('Stripe subscription lookup failed.');
+            }
+
+            $subscriptionIds = [
+                ...$subscriptionIds,
+                ...$customerSubscriptionIds,
+            ];
+        }
+
+        return array_values(array_unique($subscriptionIds));
+    }
+
+    /**
+     * @return array<int, string>|null
+     */
+    private function activeStripeSubscriptionIdsForCustomer(string $customerId): ?array
+    {
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get($this->stripeApiBase().'/subscriptions', [
+                    'customer' => $customerId,
+                    'status' => 'all',
+                    'limit' => 100,
+                ]);
+        } catch (Throwable $exception) {
+            Log::warning('User account deletion Stripe subscription lookup failed.', [
+                'error_class' => $exception::class,
+            ]);
+
+            return null;
+        }
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $subscriptions = $response->json('data');
+
+        if (! is_array($subscriptions)) {
+            return null;
+        }
+
+        return collect($subscriptions)
+            ->filter(fn (mixed $subscription): bool => is_array($subscription)
+                && in_array(data_get($subscription, 'status'), ['active', 'trialing', 'past_due', 'unpaid', 'paused'], true)
+                && is_string(data_get($subscription, 'id'))
+                && data_get($subscription, 'id') !== '')
+            ->map(fn (array $subscription): string => (string) data_get($subscription, 'id'))
+            ->values()
+            ->all();
+    }
+
+    private function stripeApiBase(): string
+    {
+        return rtrim((string) config('services.stripe.api_base'), '/');
     }
 }

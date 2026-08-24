@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\EmailVerificationDelivery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class EmailVerificationNotificationController extends Controller
 {
+    public function __construct(private readonly EmailVerificationDelivery $emailVerificationDelivery)
+    {
+    }
+
     /**
      * Send a new email verification notification.
      */
@@ -18,14 +22,10 @@ class EmailVerificationNotificationController extends Controller
             return redirect()->intended(route('dashboard', absolute: false));
         }
 
-        try {
-            $request->user()->sendEmailVerificationNotification();
-        } catch (TransportExceptionInterface) {
-            return back()->withErrors([
-                'email' => '認証メールの送信に失敗しました。管理者はメール設定を確認してください。',
-            ]);
+        if (! $this->emailVerificationDelivery->send($request->user(), 'verification_resend')) {
+            return back()->with('status', EmailVerificationDelivery::failureStatus());
         }
 
-        return back()->with('status', 'verification-link-sent');
+        return back()->with('status', EmailVerificationDelivery::sentStatus());
     }
 }

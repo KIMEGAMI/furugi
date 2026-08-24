@@ -2,8 +2,9 @@
     @php
         $cancellationReasons = \App\Models\SubscriptionCancellationFeedback::REASONS;
         $isAdmin = $user->isAdmin();
+        $isDemoUser = $isDemoUser ?? $user->isDemoUser();
         $hasStripeSubscription = $hasStripeSubscription ?? false;
-        $canStartStripeCheckout = ! $isAdmin && (! $hasActiveSubscription || ! $hasStripeSubscription);
+        $canStartStripeCheckout = ! $isAdmin && ! $isDemoUser && (! $hasActiveSubscription || ! $hasStripeSubscription);
     @endphp
 
     <div class="min-h-screen bg-slate-100 py-8">
@@ -23,6 +24,12 @@
             @if (session('status'))
                 <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
                     {{ session('status') }}
+                </div>
+            @endif
+
+            @if ($isDemoUser)
+                <div class="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-bold leading-7 text-blue-900">
+                    デモユーザーではStripe決済を利用できません。Premiumの申込や契約管理を確認する場合は、新しいアカウントを作成してください。
                 </div>
             @endif
 
@@ -89,6 +96,11 @@
                                 <p class="mt-2 text-sm font-bold text-blue-700">管理者アカウントです。Stripe契約はありません。</p>
                             @elseif ($hasActiveSubscription)
                                 <p class="mt-2 text-sm font-bold text-emerald-700">Premium契約中です。</p>
+                                @if ($trialEndsAt)
+                                    <p class="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800">
+                                        無料トライアルは {{ $trialEndsAt->timezone(config('app.timezone'))->format('Y/m/d H:i') }} に終了します
+                                    </p>
+                                @endif
                             @else
                                 <p class="mt-2 text-sm font-bold text-slate-600">有効なPremium契約は確認できていません。</p>
                             @endif
@@ -113,6 +125,10 @@
                         @elseif ($isAdmin)
                             <div class="max-w-xs rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-bold leading-6 text-blue-900">
                                 管理者権限で利用できます。Stripeの契約管理は、実際にStripe契約したユーザーのみに表示されます。
+                            </div>
+                        @elseif ($isDemoUser)
+                            <div class="max-w-xs rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm font-bold leading-6 text-blue-900">
+                                デモユーザーではStripe決済画面へ進めません。
                             </div>
                         @elseif ($canStartStripeCheckout)
                             <form method="POST" action="{{ route('subscriptions.checkout') }}">

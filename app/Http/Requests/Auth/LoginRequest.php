@@ -42,8 +42,14 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        $credentials = [
+            'email' => Str::lower((string) $this->input('email')),
+            'password' => (string) $this->input('password'),
+        ];
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
+            RateLimiter::hit($this->throttleKey(), $this->decaySeconds());
+            RateLimiter::hit($this->ipThrottleKey(), $this->decaySeconds());
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -51,6 +57,7 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+        RateLimiter::clear($this->ipThrottleKey());
     }
 
     /**
@@ -60,13 +67,19 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (
+            ! RateLimiter::tooManyAttempts($this->throttleKey(), $this->maxAttempts())
+            && ! RateLimiter::tooManyAttempts($this->ipThrottleKey(), $this->ipMaxAttempts())
+        ) {
             return;
         }
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $seconds = max(
+            RateLimiter::availableIn($this->throttleKey()),
+            RateLimiter::availableIn($this->ipThrottleKey())
+        );
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [
@@ -82,5 +95,25 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+
+    private function ipThrottleKey(): string
+    {
+        return 'login-ip|'.$this->ip();
+    }
+
+    private function maxAttempts(): int
+    {
+        return max(1, (int) config('auth_security.login_max_attempts', 5));
+    }
+
+    private function ipMaxAttempts(): int
+    {
+        return max(1, (int) config('auth_security.login_ip_max_attempts', 20));
+    }
+
+    private function decaySeconds(): int
+    {
+        return max(1, (int) config('auth_security.login_decay_seconds', 60));
     }
 }

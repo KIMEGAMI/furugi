@@ -6,7 +6,10 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use RuntimeException;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
 
 class EmailVerificationTest extends TestCase
@@ -20,6 +23,42 @@ class EmailVerificationTest extends TestCase
         $response = $this->actingAs($user)->get('/verify-email');
 
         $response->assertStatus(200);
+    }
+
+    public function test_verification_email_resend_does_not_fail_when_mail_transport_fails(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        Notification::shouldReceive('send')
+            ->once()
+            ->andThrow(new TransportException('SMTP failed'));
+
+        $this
+            ->actingAs($user)
+            ->post(route('verification.send'))
+            ->assertRedirect()
+            ->assertSessionHas('status', 'verification-link-send-failed');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verification_email_resend_does_not_fail_when_notification_throws_unexpected_error(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        Notification::shouldReceive('send')
+            ->once()
+            ->andThrow(new RuntimeException('Unexpected mail failure'));
+
+        $this
+            ->actingAs($user)
+            ->post(route('verification.send'))
+            ->assertRedirect()
+            ->assertSessionHas('status', 'verification-link-send-failed');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 
     public function test_email_verification_link_does_not_authenticate_guests(): void
