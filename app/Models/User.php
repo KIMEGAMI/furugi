@@ -65,6 +65,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasActiveSubscription(): bool
     {
+        if ($this->isAdmin() || $this->isDemoUser()) {
+            return true;
+        }
+
         if (! in_array($this->subscription_plan, [self::SUBSCRIPTION_ACTIVE, self::LEGACY_SUBSCRIPTION_PREMIUM], true)) {
             return false;
         }
@@ -91,6 +95,11 @@ class User extends Authenticatable implements MustVerifyEmail
         $demoEmail = config('demo.user_email');
 
         return is_string($demoEmail) && $demoEmail !== '' && $this->email === $demoEmail;
+    }
+
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->isDemoUser() || parent::hasVerifiedEmail();
     }
 
     /** @return HasMany<AuctionItem, User> */

@@ -116,6 +116,29 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard', absolute: false));
     }
 
+    public function test_unverified_demo_user_can_authenticate_using_the_demo_login(): void
+    {
+        config([
+            'demo.user_email' => 'demo@example.com',
+            'demo.user_password' => 'demo-password',
+        ]);
+
+        $user = User::factory()->unverified()->create([
+            'email' => 'demo@example.com',
+            'password' => 'demo-password',
+        ]);
+
+        $response = $this->post(route('login.demo'));
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('dashboard', absolute: false));
+
+        $this
+            ->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk();
+    }
+
     public function test_unverified_users_can_authenticate_using_the_login_screen(): void
     {
         $user = User::factory()->unverified()->create();

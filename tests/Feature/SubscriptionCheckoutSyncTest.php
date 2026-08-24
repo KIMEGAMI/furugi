@@ -354,6 +354,33 @@ class SubscriptionCheckoutSyncTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_admin_user_cannot_start_stripe_checkout(): void
+    {
+        config([
+            'services.stripe.secret' => 'sk_test_example',
+            'services.stripe.subscription_price_id' => 'price_test',
+        ]);
+
+        Http::fake();
+
+        $user = User::factory()->create([
+            'is_admin' => true,
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect(route('subscriptions.index'))
+            ->assertSessionHas('error', '管理者アカウントは契約なしでPremium機能を利用できます。Stripe決済は不要です。');
+
+        Http::assertNothingSent();
+    }
+
     public function test_billing_page_hides_checkout_buttons_for_demo_user(): void
     {
         config([
