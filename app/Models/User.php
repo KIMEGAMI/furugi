@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
@@ -22,10 +23,14 @@ use Illuminate\Notifications\Notifiable;
     'premium_started_at',
     'premium_ends_at',
     'trial_used_at',
+    'last_login_at',
+    'last_login_ip',
+    'last_login_user_agent_hash',
+    'suspicious_login_detected_at',
     'is_admin',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -52,6 +57,8 @@ class User extends Authenticatable
             'premium_started_at' => 'datetime',
             'premium_ends_at' => 'datetime',
             'trial_used_at' => 'datetime',
+            'last_login_at' => 'datetime',
+            'suspicious_login_detected_at' => 'datetime',
             'is_admin' => 'boolean',
         ];
     }
@@ -77,6 +84,13 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin;
+    }
+
+    public function isDemoUser(): bool
+    {
+        $demoEmail = config('demo.user_email');
+
+        return is_string($demoEmail) && $demoEmail !== '' && $this->email === $demoEmail;
     }
 
     /** @return HasMany<AuctionItem, User> */

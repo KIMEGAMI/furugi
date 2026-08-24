@@ -4,20 +4,29 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\LoginSecurityService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\InvalidStateException;
+use Throwable;
 
 class GoogleController extends Controller
 {
+    public function __construct(private readonly LoginSecurityService $loginSecurity)
+    {
+    }
+
     public function redirect()
     {
         return Socialite::driver('google')->redirect();
     }
 
-    public function callback(): RedirectResponse
+    public function callback(Request $request): RedirectResponse
     {
         try {
             $googleUser = Socialite::driver('google')->user();
@@ -27,10 +36,21 @@ class GoogleController extends Controller
                 ->withErrors([
                     'email' => 'Googleログインの有効期限が切れました。もう一度Googleログインをお試しください。',
                 ]);
+        } catch (Throwable $exception) {
+            Log::warning('Google login failed before user resolution.', [
+                'error_class' => $exception::class,
+            ]);
+
+            return redirect()
+                ->route('login')
+                ->withErrors([
+                    'email' => 'Googleログインに失敗しました。時間をおいてもう一度お試しください。',
+                ]);
         }
 
         $googleId = (string) $googleUser->getId();
         $email = $googleUser->getEmail();
+        $email = is_string($email) ? Str::lower($email) : null;
 
         $user = User::where('google_id', $googleId)->first();
 
@@ -73,6 +93,7 @@ class GoogleController extends Controller
         }
 
         Auth::login($user, true);
+        $this->loginSecurity->recordSuccessfulLogin($user, $request, 'Googleログイン');
 
         return redirect()->route('dashboard');
     }

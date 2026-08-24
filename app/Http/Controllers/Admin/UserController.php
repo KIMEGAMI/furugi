@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
 use Throwable;
 
 class UserController extends Controller
@@ -118,31 +119,114 @@ class UserController extends Controller
 
     private function cancelStripeSubscriptionIfNeeded(User $user): bool
     {
-        if (! is_string($user->stripe_subscription_id) || $user->stripe_subscription_id === '') {
-            return true;
-        }
-
-        $secret = config('services.stripe.secret');
-
-        if (! is_string($secret) || $secret === '') {
-            return false;
-        }
-
         try {
-            $response = Http::asForm()
-                ->timeout(10)
-                ->withToken($secret)
-                ->delete($this->stripeApiBase().'/subscriptions/'.rawurlencode($user->stripe_subscription_id));
+            $subscriptionIds = $this->stripeSubscriptionIdsToCancel($user);
+
+            if ($subscriptionIds === []) {
+                return true;
+            }
+
+            $secret = config('services.stripe.secret');
+
+            if (! is_string($secret) || $secret === '') {
+                return false;
+            }
+
+            foreach ($subscriptionIds as $subscriptionId) {
+                $response = Http::asForm()
+                    ->timeout(10)
+                    ->withToken($secret)
+                    ->delete($this->stripeApiBase().'/subscriptions/'.rawurlencode($subscriptionId));
+
+                if ($response->failed()) {
+                    return false;
+                }
+            }
         } catch (Throwable $exception) {
             Log::warning('Admin user deletion Stripe cancellation failed.', [
                 'user_id' => $user->id,
-                'error' => $exception->getMessage(),
+                'error_class' => $exception::class,
             ]);
 
             return false;
         }
 
-        return $response->successful();
+        return true;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function stripeSubscriptionIdsToCancel(User $user): array
+    {
+        $subscriptionIds = [];
+
+        if (is_string($user->stripe_subscription_id) && $user->stripe_subscription_id !== '') {
+            $subscriptionIds[] = $user->stripe_subscription_id;
+        }
+
+        if (is_string($user->stripe_customer_id) && $user->stripe_customer_id !== '') {
+            $customerSubscriptionIds = $this->activeStripeSubscriptionIdsForCustomer($user->stripe_customer_id);
+
+            if ($customerSubscriptionIds === null) {
+                throw new RuntimeException('Stripe subscription lookup failed.');
+            }
+
+            $subscriptionIds = [
+                ...$subscriptionIds,
+                ...$customerSubscriptionIds,
+            ];
+        }
+
+        return array_values(array_unique($subscriptionIds));
+    }
+
+    /**
+     * @return array<int, string>|null
+     */
+    private function activeStripeSubscriptionIdsForCustomer(string $customerId): ?array
+    {
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get($this->stripeApiBase().'/subscriptions', [
+                    'customer' => $customerId,
+                    'status' => 'all',
+                    'limit' => 100,
+                ]);
+        } catch (Throwable $exception) {
+            Log::warning('Admin user deletion Stripe subscription lookup failed.', [
+                'error_class' => $exception::class,
+            ]);
+
+            return null;
+        }
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $subscriptions = $response->json('data');
+
+        if (! is_array($subscriptions)) {
+            return null;
+        }
+
+        return collect($subscriptions)
+            ->filter(fn (mixed $subscription): bool => is_array($subscription)
+                && in_array(data_get($subscription, 'status'), ['active', 'trialing', 'past_due', 'unpaid', 'paused'], true)
+                && is_string(data_get($subscription, 'id'))
+                && data_get($subscription, 'id') !== '')
+            ->map(fn (array $subscription): string => (string) data_get($subscription, 'id'))
+            ->values()
+            ->all();
     }
 
     private function stripeApiBase(): string

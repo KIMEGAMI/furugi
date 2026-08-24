@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Throwable;
 
 class PasswordResetLinkController extends Controller
 {
@@ -31,13 +33,19 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
+        $email = Str::lower((string) $request->email);
+
         try {
             $status = Password::sendResetLink(
-                $request->only('email')
+                ['email' => $email]
             );
-        } catch (TransportExceptionInterface) {
+        } catch (Throwable $exception) {
+            Log::warning('Password reset link delivery failed.', [
+                'error_class' => $exception::class,
+            ]);
+
             return back()
-                ->withInput($request->only('email'))
+                ->withInput(['email' => $email])
                 ->withErrors([
                     'email' => 'メール送信に失敗しました。管理者はメール設定を確認してください。',
                 ]);
@@ -45,7 +53,7 @@ class PasswordResetLinkController extends Controller
 
         return $status === Password::RESET_LINK_SENT
             ? back()->with('status', __($status))
-            : back()->withInput($request->only('email'))
+            : back()->withInput(['email' => $email])
                 ->withErrors(['email' => __($status)]);
     }
 }

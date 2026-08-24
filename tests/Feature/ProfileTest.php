@@ -4,7 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\AuctionItem;
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -79,6 +84,221 @@ class ProfileTest extends TestCase
 
         $this->assertGuest();
         $this->assertNull($user->fresh());
+    }
+
+    public function test_user_deletion_cancels_stripe_subscription_and_clears_auth_state_before_reregistering(): void
+    {
+        Notification::fake();
+
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_test_123*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_test_123',
+                        'status' => 'active',
+                    ],
+                    [
+                        'id' => 'sub_test_extra',
+                        'status' => 'trialing',
+                    ],
+                    [
+                        'id' => 'sub_test_canceled',
+                        'status' => 'canceled',
+                    ],
+                ],
+            ]),
+            'https://api.stripe.com/v1/subscriptions/sub_test_123' => Http::response([
+                'id' => 'sub_test_123',
+                'status' => 'canceled',
+            ]),
+            'https://api.stripe.com/v1/subscriptions/sub_test_extra' => Http::response([
+                'id' => 'sub_test_extra',
+                'status' => 'canceled',
+            ]),
+        ]);
+
+        $user = User::factory()->create([
+            'email' => 'reregister@example.com',
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_test_123',
+            'stripe_subscription_id' => 'sub_test_123',
+        ]);
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => $user->email,
+            'token' => 'old-token',
+            'created_at' => now(),
+        ]);
+
+        DB::table('sessions')->insert([
+            'id' => 'old-session',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Test Browser',
+            'payload' => 'payload',
+            'last_activity' => now()->timestamp,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->delete('/profile', [
+                'password' => 'password',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE'
+            && $request->url() === 'https://api.stripe.com/v1/subscriptions/sub_test_123');
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE'
+            && $request->url() === 'https://api.stripe.com/v1/subscriptions/sub_test_extra');
+        Http::assertNotSent(fn ($request) => $request->method() === 'DELETE'
+            && $request->url() === 'https://api.stripe.com/v1/subscriptions/sub_test_canceled');
+
+        $this->assertNull($user->fresh());
+        $this->assertDatabaseMissing('password_reset_tokens', ['email' => 'reregister@example.com']);
+        $this->assertDatabaseMissing('sessions', ['id' => 'old-session']);
+
+        $this->post('/register', [
+            'name' => 'Re Register',
+            'email' => 'reregister@example.com',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+            'terms_accepted' => '1',
+            'privacy_accepted' => '1',
+        ])->assertRedirect(route('verification.notice', absolute: false));
+
+        $newUser = User::where('email', 'reregister@example.com')->firstOrFail();
+
+        $this->assertNull($newUser->email_verified_at);
+        $this->assertNull($newUser->stripe_subscription_id);
+        Notification::assertSentTo($newUser, VerifyEmail::class);
+    }
+
+    public function test_user_deletion_cancels_stripe_subscription_found_by_customer_id(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_test_456*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_customer_only',
+                        'status' => 'active',
+                    ],
+                ],
+            ]),
+            'https://api.stripe.com/v1/subscriptions/sub_customer_only' => Http::response([
+                'id' => 'sub_customer_only',
+                'status' => 'canceled',
+            ]),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_test_456',
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->delete('/profile', [
+                'password' => 'password',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE'
+            && $request->url() === 'https://api.stripe.com/v1/subscriptions/sub_customer_only');
+
+        $this->assertNull($user->fresh());
+    }
+
+    public function test_user_deletion_stops_when_stripe_subscription_cancellation_fails(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions/sub_test_123' => Http::response([], 500),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_test_123',
+            'stripe_subscription_id' => 'sub_test_123',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', [
+                'password' => 'password',
+            ])
+            ->assertRedirect('/profile')
+            ->assertSessionHasErrorsIn('userDeletion', 'password');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
+    }
+
+    public function test_user_deletion_stops_when_stripe_customer_subscription_lookup_fails(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_lookup_failure*' => Http::response([], 500),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_lookup_failure',
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', [
+                'password' => 'password',
+            ])
+            ->assertRedirect('/profile')
+            ->assertSessionHasErrorsIn('userDeletion', 'password');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
+    }
+
+    public function test_user_deletion_stops_when_stripe_customer_subscription_lookup_times_out(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake(function () {
+            throw new ConnectionException('Connection timed out.');
+        });
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_lookup_timeout',
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', [
+                'password' => 'password',
+            ])
+            ->assertRedirect('/profile')
+            ->assertSessionHasErrorsIn('userDeletion', 'password');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh());
     }
 
     public function test_demo_user_cannot_see_delete_account_section(): void

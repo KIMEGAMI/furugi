@@ -1,5 +1,7 @@
 <?php
 
+$mailFromFallback = 'no-reply@'.(parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost');
+
 return [
 
     /*
@@ -111,7 +113,7 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS'),
+        'address' => env('MAIL_FROM_ADDRESS', env('ADMIN_MAIL_FROM_ADDRESS', $mailFromFallback)),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'FURUPRO')),
     ],
 

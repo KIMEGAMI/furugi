@@ -7,6 +7,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use RuntimeException;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
 
@@ -43,6 +44,19 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, ResetPassword::class);
     }
 
+    public function test_reset_password_link_can_be_requested_with_uppercase_email_input(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create([
+            'email' => 'reset-case@example.com',
+        ]);
+
+        $this->post('/forgot-password', ['email' => 'RESET-CASE@EXAMPLE.COM']);
+
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
+
     public function test_reset_password_request_returns_validation_error_when_mail_transport_fails(): void
     {
         Password::shouldReceive('sendResetLink')
@@ -56,6 +70,22 @@ class PasswordResetTest extends TestCase
         $response
             ->assertRedirect('/forgot-password')
             ->assertSessionHasErrors('email');
+    }
+
+    public function test_reset_password_request_returns_validation_error_when_unexpected_mail_error_happens(): void
+    {
+        Password::shouldReceive('sendResetLink')
+            ->once()
+            ->andThrow(new RuntimeException('Unexpected mail failure.'));
+
+        $response = $this
+            ->from('/forgot-password')
+            ->post('/forgot-password', ['email' => 'USER@EXAMPLE.COM']);
+
+        $response
+            ->assertRedirect('/forgot-password')
+            ->assertSessionHasErrors('email')
+            ->assertSessionHasInput('email', 'user@example.com');
     }
 
     public function test_reset_password_screen_can_be_rendered(): void

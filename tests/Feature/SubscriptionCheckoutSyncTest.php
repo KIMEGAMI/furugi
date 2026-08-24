@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -106,16 +108,18 @@ class SubscriptionCheckoutSyncTest extends TestCase
             ->post(route('subscriptions.checkout'), [
                 'billing_terms_confirmed' => '1',
             ])
-            ->assertRedirect('https://checkout.stripe.test/session');
+            ->assertRedirect(route('verification.notice', absolute: false));
 
         Http::assertNotSent(fn ($request) => str_starts_with($request->url(), 'https://api.stripe.com/v1/customers?email='));
         Http::assertNotSent(fn ($request) => str_starts_with($request->url(), 'https://api.stripe.com/v1/subscriptions?customer=cus_existing'));
+        Http::assertNotSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/customers');
+        Http::assertNotSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions');
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
             'subscription_status' => null,
-            'stripe_customer_id' => 'cus_new',
+            'stripe_customer_id' => null,
             'stripe_subscription_id' => null,
         ]);
     }
@@ -219,6 +223,91 @@ class SubscriptionCheckoutSyncTest extends TestCase
             && $request['subscription_data[trial_period_days]'] === 7);
     }
 
+    public function test_checkout_retries_with_inline_price_data_when_configured_price_id_is_missing(): void
+    {
+        config([
+            'services.stripe.secret' => 'sk_test_example',
+            'services.stripe.subscription_price_id' => 'price_missing',
+            'services.stripe.subscription_amount' => 480,
+            'services.stripe.subscription_currency' => 'jpy',
+        ]);
+
+        Http::fake([
+            'https://api.stripe.com/v1/customers' => Http::response([
+                'id' => 'cus_new',
+            ]),
+            'https://api.stripe.com/v1/customers*' => Http::response([
+                'data' => [],
+            ]),
+            'https://api.stripe.com/v1/checkout/sessions' => Http::sequence()
+                ->push([
+                    'error' => [
+                        'type' => 'invalid_request_error',
+                        'code' => 'resource_missing',
+                        'param' => 'line_items[0][price]',
+                    ],
+                ], 400)
+                ->push([
+                    'url' => 'https://checkout.stripe.test/session',
+                ]),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'stripe_customer_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect('https://checkout.stripe.test/session');
+
+        Http::assertSentCount(4);
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions'
+            && ($request['line_items'][0]['price'] ?? null) === 'price_missing');
+        Http::assertSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions'
+            && ($request['line_items'][0]['price_data']['unit_amount'] ?? null) === 480
+            && ($request['line_items'][0]['price_data']['currency'] ?? null) === 'jpy'
+            && ! isset($request['line_items'][0]['price']));
+    }
+
+    public function test_production_checkout_stops_when_price_id_is_missing(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+        $this->withoutMiddleware(PreventRequestForgery::class);
+
+        config([
+            'services.stripe.secret' => 'sk_live_example',
+            'services.stripe.subscription_price_id' => null,
+        ]);
+
+        Http::fake([
+            'https://api.stripe.com/v1/customers*' => Http::response([
+                'data' => [],
+            ]),
+            'https://api.stripe.com/v1/checkout/sessions' => Http::response([
+                'url' => 'https://checkout.stripe.test/session',
+            ]),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'stripe_customer_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect(route('subscriptions.index'))
+            ->assertSessionHas('error', 'Stripe決済設定が未完了のため、現在Premium申込を停止しています。管理者へお問い合わせください。');
+
+        Http::assertNotSent(fn ($request) => $request->url() === 'https://api.stripe.com/v1/checkout/sessions');
+    }
+
     public function test_billing_page_checkout_buttons_include_confirmed_terms(): void
     {
         $user = User::factory()->create([
@@ -235,6 +324,99 @@ class SubscriptionCheckoutSyncTest extends TestCase
             ->assertSee('name="billing_terms_confirmed"', false)
             ->assertSee('Stripe決済画面へ進む', false)
             ->assertSee('同意してStripe決済画面へ進む', false);
+    }
+
+    public function test_demo_user_cannot_start_stripe_checkout(): void
+    {
+        config([
+            'demo.user_email' => 'demo@example.com',
+            'services.stripe.secret' => 'sk_test_example',
+            'services.stripe.subscription_price_id' => 'price_test',
+        ]);
+
+        Http::fake();
+
+        $user = User::factory()->create([
+            'email' => 'demo@example.com',
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect(route('subscriptions.index'))
+            ->assertSessionHas('error', 'デモユーザーではStripe決済を利用できません。実際にPremiumを申し込む場合は、新しいアカウントを作成してください。');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_billing_page_hides_checkout_buttons_for_demo_user(): void
+    {
+        config([
+            'demo.user_email' => 'demo@example.com',
+            'services.stripe.secret' => 'sk_test_example',
+        ]);
+
+        Http::fake();
+
+        $user = User::factory()->create([
+            'email' => 'demo@example.com',
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('subscriptions.index'))
+            ->assertOk()
+            ->assertSee('デモユーザーではStripe決済を利用できません。', false)
+            ->assertDontSee('Stripe決済画面へ進む', false)
+            ->assertDontSee('同意してStripe決済画面へ進む', false);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_billing_page_shows_trial_end_date_during_free_trial(): void
+    {
+        $trialEndsAt = now()->addDays(6)->startOfDay();
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'trialing',
+            'stripe_customer_id' => 'cus_trial',
+            'stripe_subscription_id' => 'sub_trial',
+            'premium_ends_at' => $trialEndsAt,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('subscriptions.index'))
+            ->assertOk()
+            ->assertSee('無料トライアルは '.$trialEndsAt->timezone(config('app.timezone'))->format('Y/m/d H:i').' に終了します');
+    }
+
+    public function test_billing_page_hides_trial_end_date_after_trial_status(): void
+    {
+        $trialEndsAt = now()->addDays(20)->startOfDay();
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_active',
+            'stripe_subscription_id' => 'sub_active',
+            'premium_ends_at' => $trialEndsAt,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('subscriptions.index'))
+            ->assertOk()
+            ->assertDontSee('無料トライアルは '.$trialEndsAt->timezone(config('app.timezone'))->format('Y/m/d H:i').' に終了します');
     }
 
     public function test_trial_is_not_added_after_user_has_used_trial(): void
@@ -393,5 +575,9 @@ class SubscriptionCheckoutSyncTest extends TestCase
         $this->assertSame(User::SUBSCRIPTION_ACTIVE, $user->subscription_plan);
         $this->assertSame('trialing', $user->subscription_status);
         $this->assertNotNull($user->trial_used_at);
+        $this->assertSame(
+            Carbon::createFromTimestamp($trialEnd)->toDateTimeString(),
+            $user->premium_ends_at?->toDateTimeString()
+        );
     }
 }

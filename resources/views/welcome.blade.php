@@ -5,8 +5,15 @@
     $description = $pageSeo['description'] ?? config('seo.description');
     $keywords = config('seo.keywords');
     $canonical = route('home');
-    $heroImage = asset('images/furugi-manager-hero.png');
-    $valueImage = asset('images/furugi-manager-value.png');
+    $versionedAsset = function (string $path): string {
+        $normalizedPath = ltrim($path, '/');
+        $absolutePath = public_path($normalizedPath);
+        $version = is_file($absolutePath) ? (string) filemtime($absolutePath) : (string) config('seo.updated_at');
+
+        return asset($normalizedPath).'?v='.$version;
+    };
+    $heroImage = $versionedAsset('images/furugi-manager-hero.png');
+    $valueImage = $versionedAsset('images/furugi-manager-value.png');
     $organizationId = $canonical.'#organization';
     $websiteId = $canonical.'#website';
     $organizationSchema = [

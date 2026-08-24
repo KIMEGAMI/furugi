@@ -12,6 +12,8 @@ class ExampleTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('古着販売の在庫管理', false);
+        $response->assertSee('images/furugi-manager-hero.png?v=', false);
+        $response->assertSee('images/furugi-manager-value.png?v=', false);
     }
 
     public function test_sitemap_is_available(): void
@@ -37,6 +39,28 @@ class ExampleTest extends TestCase
         $response->assertSee('Disallow: /billing', false);
         $response->assertSee('Disallow: /maintenance-login', false);
         $response->assertSee('Sitemap:', false);
+    }
+
+    public function test_commercial_transactions_page_contains_required_disclosure_items(): void
+    {
+        $response = $this->get('/commercial-transactions');
+
+        $response->assertOk();
+        foreach ([
+            '事業者名',
+            '代表者名または運営責任者',
+            '所在地',
+            '電話番号',
+            '連絡先メールアドレス',
+            '販売価格',
+            '商品代金以外の必要料金',
+            '代金の支払時期・方法',
+            'サービス提供時期',
+            '解約・契約管理',
+            '返品・キャンセル・返金',
+        ] as $text) {
+            $response->assertSee($text, false);
+        }
     }
 
     public function test_llms_txt_is_available(): void

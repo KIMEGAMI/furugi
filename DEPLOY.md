@@ -63,7 +63,7 @@ Set production values.
 APP_NAME="FURUPRO"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://furugi.shinji.work
+APP_URL=https://furupro.shinji.work
 APP_FORCE_HTTPS=true
 
 DB_CONNECTION=mysql
@@ -84,7 +84,7 @@ If Google login is used, also set the Google OAuth values in `.env`.
 ```dotenv
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=https://furugi.shinji.work/auth/google/callback
+GOOGLE_REDIRECT_URI=https://furupro.shinji.work/auth/google/callback
 ```
 
 ## 4. Install Dependencies and Build Assets
@@ -151,12 +151,12 @@ Example:
 
 ```apache
 <VirtualHost *:80>
-    ServerName furugi.shinji.work
-    Redirect permanent / https://furugi.shinji.work/
+    ServerName furupro.shinji.work
+    Redirect permanent / https://furupro.shinji.work/
 </VirtualHost>
 
 <VirtualHost *:443>
-    ServerName furugi.shinji.work
+    ServerName furupro.shinji.work
     DocumentRoot /var/www/furugi/public
 
     <Directory /var/www/furugi/public>
@@ -168,8 +168,8 @@ Example:
     CustomLog ${APACHE_LOG_DIR}/furugi_access.log combined
 
     SSLEngine on
-    SSLCertificateFile /etc/letsencrypt/live/furugi.shinji.work/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/furugi.shinji.work/privkey.pem
+    SSLCertificateFile /etc/letsencrypt/live/furupro.shinji.work/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/furupro.shinji.work/privkey.pem
 </VirtualHost>
 ```
 
@@ -186,17 +186,17 @@ If the server does not have a certificate yet, use Certbot before enabling the f
 
 ```bash
 sudo apt install -y certbot python3-certbot-apache
-sudo certbot --apache -d furugi.shinji.work
+sudo certbot --apache -d furupro.shinji.work
 sudo certbot renew --dry-run
 ```
 
 After HTTPS is enabled, verify these production values.
 
 ```dotenv
-APP_URL=https://furugi.shinji.work
+APP_URL=https://furupro.shinji.work
 APP_FORCE_HTTPS=true
 SESSION_SECURE_COOKIE=true
-GOOGLE_REDIRECT_URI=https://furugi.shinji.work/auth/google/callback
+GOOGLE_REDIRECT_URI=https://furupro.shinji.work/auth/google/callback
 ```
 
 PWA installation requires HTTPS in normal production browsers. The login screen's app install button will only appear when the browser judges the site installable.
@@ -251,7 +251,25 @@ cd /var/www/furugi
 sudo bash deploy/scripts/restart-production-services.sh --reboot
 ```
 
-## 10. Standard Update Command
+## 10. Pre-Deploy Checks
+
+Before applying production migrations, confirm that a MySQL backup exists and that the latest backup completed successfully. Codex must not dump or modify the production database without explicit approval.
+
+Run these checks after CI and Security workflows pass.
+
+```bash
+cd /var/www/furugi
+sudo -u www-data git status
+sudo -u www-data git log -1 --oneline
+sudo -u www-data php artisan stripe:check
+sudo -u www-data php artisan test
+sudo -u www-data npm run build
+sudo -u www-data composer audit
+```
+
+Do not deploy if `stripe:check`, tests, build, CI, or Security workflow fails.
+
+## 11. Standard Manual Update Command
 
 For normal deployments after code is pushed to GitHub:
 
@@ -284,12 +302,13 @@ sudo -u www-data php artisan route:cache
 sudo -u www-data php artisan config:cache
 ```
 
-## 11. GitHub Actions CI/CD
+## 12. GitHub Actions CI/CD
 
 GitHub Actions workflows are defined in `.github/workflows`.
 
 - `CI` runs tests, builds Vite assets, and audits dependencies on pull requests and pushes to `main`.
-- `CD` deploys after `CI` succeeds on `main`, or when manually dispatched.
+- Production deployment is manual. Run it only after CI and Security workflows succeed.
+- If a deploy workflow exists, use it as a manually dispatched workflow unless the project owner explicitly enables automatic deployment.
 
 Configure the required GitHub Secrets and optional Variables described in `docs/ci-cd.md`.
 

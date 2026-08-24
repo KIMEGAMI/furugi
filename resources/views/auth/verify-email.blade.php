@@ -7,6 +7,10 @@
         <div class="mb-4 font-medium text-sm text-green-600">
             {{ __('新しい認証リンクを送信しました。') }}
         </div>
+    @elseif (session('status') == 'verification-link-send-failed')
+        <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-black">
+            {{ __('確認メールを送信できませんでした。メール認証が完了するまで登録は完了しません。時間をおいて再送信するか、管理者へお問い合わせください。') }}
+        </div>
     @endif
 
     @if ($errors->has('email'))

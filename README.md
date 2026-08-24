@@ -12,7 +12,7 @@ FURUPRO は、ヤフオク・メルカリ・Yahooフリマ・ラクマなどの�
 
 本番環境
 
-https://furugi.shinji.work
+https://furupro.shinji.work
 
 ---
 

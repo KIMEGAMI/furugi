@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuctionItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -152,8 +153,23 @@ class AdminUserManagementTest extends TestCase
         config(['services.stripe.secret' => 'sk_test_example']);
 
         Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_test_123*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_test_123',
+                        'status' => 'active',
+                    ],
+                    [
+                        'id' => 'sub_test_extra',
+                        'status' => 'past_due',
+                    ],
+                ],
+            ]),
             'https://api.stripe.com/v1/subscriptions/sub_test_123' => Http::response([
                 'id' => 'sub_test_123',
+            ]),
+            'https://api.stripe.com/v1/subscriptions/sub_test_extra' => Http::response([
+                'id' => 'sub_test_extra',
             ]),
         ]);
 
@@ -163,6 +179,7 @@ class AdminUserManagementTest extends TestCase
         $user = User::factory()->create([
             'subscription_plan' => User::PLAN_PREMIUM,
             'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_test_123',
             'stripe_subscription_id' => 'sub_test_123',
         ]);
 
@@ -176,6 +193,8 @@ class AdminUserManagementTest extends TestCase
 
         Http::assertSent(fn ($request) => $request->method() === 'DELETE'
             && $request->url() === 'https://api.stripe.com/v1/subscriptions/sub_test_123');
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE'
+            && $request->url() === 'https://api.stripe.com/v1/subscriptions/sub_test_extra');
 
         $this->assertDatabaseMissing('users', [
             'id' => $user->id,
@@ -197,6 +216,68 @@ class AdminUserManagementTest extends TestCase
             'subscription_plan' => User::PLAN_PREMIUM,
             'subscription_status' => 'active',
             'stripe_subscription_id' => 'sub_test_123',
+        ]);
+
+        $this
+            ->actingAs($admin)
+            ->delete(route('admin.users.destroy', $user), [
+                'confirmation_email' => $user->email,
+            ])
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('error', 'Stripe契約の停止に失敗したため、ユーザを削除しませんでした。');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+        ]);
+    }
+
+    public function test_admin_delete_stops_when_stripe_customer_subscription_lookup_fails(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_lookup_failure*' => Http::response([], 500),
+        ]);
+
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+        $user = User::factory()->create([
+            'subscription_plan' => User::PLAN_PREMIUM,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_lookup_failure',
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($admin)
+            ->delete(route('admin.users.destroy', $user), [
+                'confirmation_email' => $user->email,
+            ])
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('error', 'Stripe契約の停止に失敗したため、ユーザを削除しませんでした。');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+        ]);
+    }
+
+    public function test_admin_delete_stops_when_stripe_customer_subscription_lookup_times_out(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake(function () {
+            throw new ConnectionException('Connection timed out.');
+        });
+
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+        $user = User::factory()->create([
+            'subscription_plan' => User::PLAN_PREMIUM,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_lookup_timeout',
+            'stripe_subscription_id' => null,
         ]);
 
         $this
