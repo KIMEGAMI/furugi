@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\View;
+use RuntimeException;
 use Tests\TestCase;
 
 class ContactFormTest extends TestCase
@@ -50,6 +52,51 @@ class ContactFormTest extends TestCase
         $this->assertDatabaseHas('contact_inquiries', [
             'email' => 'sender@example.com',
             'status' => 'open',
+        ]);
+    }
+
+    public function test_contact_mail_keeps_message_line_breaks_and_escapes_content(): void
+    {
+        $html = View::make('emails.contact', [
+            'contact' => [
+                'name' => 'Test User',
+                'email' => 'sender@example.com',
+                'subject' => '改行確認',
+                'message' => "1行目\n2行目\n\n<script>alert('xss')</script>",
+            ],
+        ])->render();
+
+        $this->assertStringContainsString("1行目<br />\n2行目<br />\n<br />", $html);
+        $this->assertStringContainsString('&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;', $html);
+        $this->assertStringNotContainsString("<script>alert('xss')</script>", $html);
+    }
+
+    public function test_contact_form_shows_error_when_mail_transport_fails(): void
+    {
+        config([
+            'contact.to_address' => 'admin@example.com',
+            'mail.default' => 'smtp',
+        ]);
+
+        Mail::shouldReceive('send')
+            ->once()
+            ->andThrow(new RuntimeException('smtp unavailable'));
+
+        $response = $this->from('/contact')->post('/contact', [
+            'name' => 'Test User',
+            'email' => 'sender@example.com',
+            'subject' => 'SMTP確認',
+            'message' => "1行目\r\n2行目",
+        ]);
+
+        $response->assertRedirect('/contact');
+        $response->assertSessionHasErrors([
+            'message' => 'お問い合わせを送信できませんでした。時間をおいて再度お試しください。',
+        ]);
+        $response->assertSessionMissing('success');
+        $this->assertDatabaseMissing('contact_inquiries', [
+            'email' => 'sender@example.com',
+            'subject' => 'SMTP確認',
         ]);
     }
 }
