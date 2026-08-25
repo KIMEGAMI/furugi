@@ -30,6 +30,12 @@ class SubscriptionCheckoutController extends Controller
                 ->with('error', 'デモユーザーではStripe決済を利用できません。実際にPremiumを申し込む場合は、新しいアカウントを作成してください。');
         }
 
+        if ($user->isAdmin()) {
+            return redirect()
+                ->route('subscriptions.index')
+                ->with('error', '管理者アカウントは契約なしでPremium機能を利用できます。Stripe決済は不要です。');
+        }
+
         if ($this->syncKnownStripeSubscriptionForUser($user)) {
             return $this->alreadySubscribed();
         }

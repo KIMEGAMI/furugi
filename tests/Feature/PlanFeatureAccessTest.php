@@ -39,6 +39,40 @@ class PlanFeatureAccessTest extends TestCase
         $this->actingAs($user)->get(route('category-sales.index'))->assertOk();
     }
 
+    public function test_admin_user_can_open_premium_only_pages_without_stripe_subscription(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'subscription_status' => null,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this->actingAs($user)->get(route('auction-items.csv-import'))->assertOk();
+        $this->actingAs($user)->get(route('auction-items.duplicates'))->assertOk();
+        $this->actingAs($user)->get(route('sales.index'))->assertOk();
+        $this->actingAs($user)->get(route('category-sales.index'))->assertOk();
+    }
+
+    public function test_demo_user_can_open_premium_only_pages_without_stripe_subscription(): void
+    {
+        config(['demo.user_email' => 'demo@example.com']);
+
+        $user = User::factory()->create([
+            'email' => 'demo@example.com',
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'subscription_status' => null,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this->actingAs($user)->get(route('auction-items.csv-import'))->assertOk();
+        $this->actingAs($user)->get(route('auction-items.duplicates'))->assertOk();
+        $this->actingAs($user)->get(route('sales.index'))->assertOk();
+        $this->actingAs($user)->get(route('category-sales.index'))->assertOk();
+    }
+
     public function test_free_user_cannot_create_more_than_free_item_limit(): void
     {
         $user = User::factory()->create(['subscription_plan' => User::SUBSCRIPTION_INACTIVE]);

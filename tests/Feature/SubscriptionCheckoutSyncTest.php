@@ -354,6 +354,33 @@ class SubscriptionCheckoutSyncTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_admin_user_cannot_start_stripe_checkout(): void
+    {
+        config([
+            'services.stripe.secret' => 'sk_test_example',
+            'services.stripe.subscription_price_id' => 'price_test',
+        ]);
+
+        Http::fake();
+
+        $user = User::factory()->create([
+            'is_admin' => true,
+            'subscription_plan' => User::SUBSCRIPTION_INACTIVE,
+            'stripe_customer_id' => null,
+            'stripe_subscription_id' => null,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('subscriptions.checkout'), [
+                'billing_terms_confirmed' => '1',
+            ])
+            ->assertRedirect(route('subscriptions.index'))
+            ->assertSessionHas('error', '管理者アカウントは契約なしでPremium機能を利用できます。Stripe決済は不要です。');
+
+        Http::assertNothingSent();
+    }
+
     public function test_billing_page_hides_checkout_buttons_for_demo_user(): void
     {
         config([
@@ -398,6 +425,100 @@ class SubscriptionCheckoutSyncTest extends TestCase
             ->get(route('subscriptions.index'))
             ->assertOk()
             ->assertSee('無料トライアルは '.$trialEndsAt->timezone(config('app.timezone'))->format('Y/m/d H:i').' に終了します');
+    }
+
+    public function test_billing_page_shows_recent_stripe_invoices_for_active_stripe_user(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        $createdAt = Carbon::create(2026, 8, 20, 12, 0, 0, 'UTC')->timestamp;
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_invoice*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_invoice',
+                        'customer' => 'cus_invoice',
+                        'status' => 'active',
+                        'current_period_end' => now()->addMonth()->timestamp,
+                    ],
+                ],
+            ]),
+            'https://api.stripe.com/v1/invoices?customer=cus_invoice*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'in_recent',
+                        'number' => 'FURUPRO-2026-0001',
+                        'status' => 'paid',
+                        'total' => 480,
+                        'currency' => 'jpy',
+                        'created' => $createdAt,
+                        'hosted_invoice_url' => 'https://invoice.stripe.test/in_recent',
+                        'invoice_pdf' => 'https://invoice.stripe.test/in_recent.pdf',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_invoice',
+            'stripe_subscription_id' => 'sub_invoice',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('subscriptions.index'))
+            ->assertOk()
+            ->assertSee('請求書', false)
+            ->assertSee('FURUPRO-2026-0001', false)
+            ->assertSee('¥480', false)
+            ->assertSee('支払い済み', false)
+            ->assertSee('https://invoice.stripe.test/in_recent', false)
+            ->assertSee('https://invoice.stripe.test/in_recent.pdf', false);
+
+        Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://api.stripe.com/v1/invoices')
+            && $request['customer'] === 'cus_invoice'
+            && $request['limit'] === 5);
+    }
+
+    public function test_billing_page_stays_available_when_stripe_invoice_lookup_fails(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_example']);
+
+        Http::fake([
+            'https://api.stripe.com/v1/subscriptions?customer=cus_invoice_failure*' => Http::response([
+                'data' => [
+                    [
+                        'id' => 'sub_invoice_failure',
+                        'customer' => 'cus_invoice_failure',
+                        'status' => 'active',
+                        'current_period_end' => now()->addMonth()->timestamp,
+                    ],
+                ],
+            ]),
+            'https://api.stripe.com/v1/invoices?customer=cus_invoice_failure*' => Http::response([
+                'error' => [
+                    'type' => 'api_error',
+                    'code' => 'temporary_failure',
+                ],
+            ], 500),
+        ]);
+
+        $user = User::factory()->create([
+            'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
+            'subscription_status' => 'active',
+            'stripe_customer_id' => 'cus_invoice_failure',
+            'stripe_subscription_id' => 'sub_invoice_failure',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('subscriptions.index'))
+            ->assertOk()
+            ->assertSee('請求書', false)
+            ->assertSee('現在、請求書を取得できませんでした。', false);
     }
 
     public function test_billing_page_hides_trial_end_date_after_trial_status(): void

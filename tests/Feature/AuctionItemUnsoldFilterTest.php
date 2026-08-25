@@ -43,6 +43,39 @@ class AuctionItemUnsoldFilterTest extends TestCase
         $response->assertDontSee('他ユーザーの商品', false);
     }
 
+    public function test_user_can_filter_selling_items_registered_on_or_before_selected_unsold_date(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $baseDate = now()->setDate(2026, 7, 23)->startOfDay();
+
+        $beforeItem = $this->createAuctionItem($user, 'B-1', '基準日前の商品');
+        $sameDayItem = $this->createAuctionItem($user, 'B-2', '基準日当日の商品');
+        $afterItem = $this->createAuctionItem($user, 'B-3', '基準日後の商品');
+        $soldItem = $this->createAuctionItem($user, 'B-4', '基準日前の売却済み商品', AuctionItem::STATUS_SOLD);
+        $otherUserItem = $this->createAuctionItem($otherUser, 'B-5', '他ユーザーの基準日前商品');
+
+        $beforeItem->forceFill(['created_at' => $baseDate->copy()->subDay()])->save();
+        $sameDayItem->forceFill(['created_at' => $baseDate->copy()->setTime(23, 59, 59)])->save();
+        $afterItem->forceFill(['created_at' => $baseDate->copy()->addDay()])->save();
+        $soldItem->forceFill(['created_at' => $baseDate->copy()->subDay(), 'sold_at' => now()])->save();
+        $otherUserItem->forceFill(['created_at' => $baseDate->copy()->subDay()])->save();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('auction-items.index', ['unsold_before' => '20260723']));
+
+        $response->assertOk();
+        $response->assertSee('2026/07/23以前の未売却', false);
+        $response->assertSeeInOrder([
+            '基準日前の商品',
+            '基準日当日の商品',
+        ]);
+        $response->assertDontSee('基準日後の商品', false);
+        $response->assertDontSee('基準日前の売却済み商品', false);
+        $response->assertDontSee('他ユーザーの基準日前商品', false);
+    }
+
     private function createAuctionItem(
         User $user,
         string $managementId,

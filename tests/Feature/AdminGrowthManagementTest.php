@@ -20,7 +20,7 @@ class AdminGrowthManagementTest extends TestCase
             'name' => 'Sender',
             'email' => 'sender@example.com',
             'subject' => '問い合わせ',
-            'message' => '確認したい内容です。',
+            'message' => "確認したい内容です。\n2行目も確認します。",
         ]);
 
         $response = $this
@@ -30,7 +30,9 @@ class AdminGrowthManagementTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('成長管理', false)
-            ->assertSee('問い合わせ履歴', false);
+            ->assertSee('問い合わせ履歴', false)
+            ->assertSee('whitespace-pre-line', false)
+            ->assertSee('2行目も確認します。', false);
     }
 
     public function test_regular_user_cannot_view_growth_dashboard(): void

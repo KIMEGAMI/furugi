@@ -63,7 +63,7 @@
                                         {{ $inquiry->status === \App\Models\ContactInquiry::STATUS_HANDLED ? '対応済み' : '未対応' }}
                                     </span>
                                 </div>
-                                <p class="mt-3 line-clamp-3 text-sm font-semibold leading-6 text-slate-700">{{ $inquiry->message }}</p>
+                                <p class="mt-3 line-clamp-3 whitespace-pre-line text-sm font-semibold leading-6 text-slate-700">{{ $inquiry->message }}</p>
                                 <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <time class="text-xs font-bold text-slate-500">{{ $inquiry->created_at?->format('Y/m/d H:i') }}</time>
                                     @if ($inquiry->status !== \App\Models\ContactInquiry::STATUS_HANDLED)

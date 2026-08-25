@@ -15,6 +15,8 @@ use Throwable;
 
 class SubscriptionController extends Controller
 {
+    private const RECENT_INVOICE_LIMIT = 5;
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -22,12 +24,18 @@ class SubscriptionController extends Controller
 
         $hasManageableStripeSubscription = $isDemoUser ? false : $this->syncKnownStripeSubscriptionForUser($user);
         $user->refresh();
+        $hasStripeSubscription = $hasManageableStripeSubscription && $this->hasStripeSubscriptionIdentifiers($user);
+        [$stripeInvoices, $stripeInvoicesUnavailable] = $hasStripeSubscription
+            ? $this->fetchRecentStripeInvoices($user)
+            : [[], false];
 
         return view('subscriptions.index', [
             'user' => $user,
             'hasActiveSubscription' => $user->hasActiveSubscription(),
-            'hasStripeSubscription' => $hasManageableStripeSubscription && $this->hasStripeSubscriptionIdentifiers($user),
+            'hasStripeSubscription' => $hasStripeSubscription,
             'isDemoUser' => $isDemoUser,
+            'stripeInvoices' => $stripeInvoices,
+            'stripeInvoicesUnavailable' => $stripeInvoicesUnavailable,
             'price' => config('services.stripe.subscription_amount', 480),
             'trialEndsAt' => $user->subscription_status === 'trialing' && $user->premium_ends_at?->isFuture()
                 ? $user->premium_ends_at
@@ -228,6 +236,96 @@ class SubscriptionController extends Controller
             && $user->stripe_customer_id !== ''
             && is_string($user->stripe_subscription_id)
             && $user->stripe_subscription_id !== '';
+    }
+
+    /**
+     * @return array{0: array<int, array<string, mixed>>, 1: bool}
+     */
+    private function fetchRecentStripeInvoices(User $user): array
+    {
+        $secret = config('services.stripe.secret');
+
+        if (! is_string($secret) || $secret === '' || ! is_string($user->stripe_customer_id) || $user->stripe_customer_id === '') {
+            return [[], false];
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withToken($secret)
+                ->acceptJson()
+                ->get($this->stripeApiBase().'/invoices', [
+                    'customer' => $user->stripe_customer_id,
+                    'limit' => self::RECENT_INVOICE_LIMIT,
+                ]);
+        } catch (Throwable $exception) {
+            Log::warning('Stripe invoice list request failed.', [
+                'user_id' => $user->id,
+                'error_class' => $exception::class,
+            ]);
+
+            return [[], true];
+        }
+
+        if ($response->failed()) {
+            Log::warning('Stripe invoice list response failed.', [
+                'user_id' => $user->id,
+                'http_status' => $response->status(),
+                'stripe_error_type' => $response->json('error.type'),
+                'stripe_error_code' => $response->json('error.code'),
+                'stripe_request_id' => $response->header('Request-Id'),
+            ]);
+
+            return [[], true];
+        }
+
+        $invoices = $response->json('data');
+
+        if (! is_array($invoices)) {
+            return [[], true];
+        }
+
+        return [
+            collect($invoices)
+                ->filter(fn (mixed $invoice): bool => is_array($invoice))
+                ->map(fn (array $invoice): array => $this->formatStripeInvoice($invoice))
+                ->values()
+                ->all(),
+            false,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $invoice
+     * @return array<string, mixed>
+     */
+    private function formatStripeInvoice(array $invoice): array
+    {
+        $created = data_get($invoice, 'created');
+        $total = data_get($invoice, 'total');
+        $currency = data_get($invoice, 'currency');
+        $number = data_get($invoice, 'number');
+        $id = data_get($invoice, 'id');
+        $status = data_get($invoice, 'status');
+
+        return [
+            'id' => is_string($id) ? $id : '',
+            'number' => is_string($number) && $number !== '' ? $number : (is_string($id) ? $id : '未確定'),
+            'status' => is_string($status) ? $status : '',
+            'total' => is_numeric($total) ? (int) $total : null,
+            'currency' => is_string($currency) ? strtoupper($currency) : 'JPY',
+            'created_at' => is_numeric($created) ? Carbon::createFromTimestamp((int) $created) : null,
+            'hosted_invoice_url' => $this->httpsUrl(data_get($invoice, 'hosted_invoice_url')),
+            'invoice_pdf' => $this->httpsUrl(data_get($invoice, 'invoice_pdf')),
+        ];
+    }
+
+    private function httpsUrl(mixed $value): ?string
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return str_starts_with($value, 'https://') ? $value : null;
     }
 
     private function ensureStripeCustomer(User $user, string $secret): string
