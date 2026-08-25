@@ -52,8 +52,8 @@ class AuctionItemController extends Controller
         $status = $request->get('status');
         $platform = $request->get('platform');
         $keyword = $request->get('keyword');
-        $unsoldOnly = $request->boolean('unsold');
         $unsoldBeforeDate = $this->parseUnsoldBeforeDate($request->query('unsold_before'));
+        $unsoldOnly = $request->boolean('unsold') || $unsoldBeforeDate !== null;
         $parentCategoryId = $request->integer('parent_category_id') ?: null;
         $categoryId = $request->integer('category_id') ?: null;
 

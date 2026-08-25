@@ -4,7 +4,16 @@
         $isAdmin = $user->isAdmin();
         $isDemoUser = $isDemoUser ?? $user->isDemoUser();
         $hasStripeSubscription = $hasStripeSubscription ?? false;
+        $stripeInvoices = $stripeInvoices ?? [];
+        $stripeInvoicesUnavailable = $stripeInvoicesUnavailable ?? false;
         $canStartStripeCheckout = ! $isAdmin && ! $isDemoUser && (! $hasActiveSubscription || ! $hasStripeSubscription);
+        $invoiceStatusLabels = [
+            'draft' => '下書き',
+            'open' => '未払い',
+            'paid' => '支払い済み',
+            'uncollectible' => '回収不能',
+            'void' => '無効',
+        ];
     @endphp
 
     <div class="min-h-screen bg-slate-100 py-8">
@@ -141,6 +150,83 @@
                         @endif
                     </div>
                 </div>
+
+                @if ($hasActiveSubscription && $hasStripeSubscription)
+                    <div class="mt-8 rounded-lg border border-slate-200 p-5">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <h2 class="text-xl font-black text-slate-900">請求書</h2>
+                                <p class="mt-2 text-sm font-bold leading-6 text-slate-600">
+                                    Stripeで発行された直近の請求書を確認できます。
+                                </p>
+                            </div>
+                            <form method="POST" action="{{ route('subscriptions.portal') }}">
+                                @csrf
+                                <button type="submit" class="rounded-lg bg-white px-4 py-2 text-sm font-black text-slate-900 ring-1 ring-slate-300 hover:bg-slate-50">
+                                    Stripeで確認する
+                                </button>
+                            </form>
+                        </div>
+
+                        @if ($stripeInvoicesUnavailable)
+                            <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-7 text-amber-900">
+                                現在、請求書を取得できませんでした。時間をおいて再表示するか、Stripeの契約管理画面で確認してください。
+                            </div>
+                        @elseif ($stripeInvoices === [])
+                            <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm font-bold leading-7 text-slate-700">
+                                まだ表示できる請求書はありません。初回決済後にStripeから発行されます。
+                            </div>
+                        @else
+                            <div class="mt-5 overflow-x-auto">
+                                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                    <thead class="bg-slate-50 text-left text-xs font-black uppercase tracking-wider text-slate-500">
+                                        <tr>
+                                            <th class="px-4 py-3">発行日</th>
+                                            <th class="px-4 py-3">請求書番号</th>
+                                            <th class="px-4 py-3">金額</th>
+                                            <th class="px-4 py-3">状態</th>
+                                            <th class="px-4 py-3 text-right">確認</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+                                        @foreach ($stripeInvoices as $invoice)
+                                            @php
+                                                $invoiceTotal = $invoice['total'] ?? null;
+                                                $invoiceCurrency = $invoice['currency'] ?? 'JPY';
+                                                $invoiceAmount = is_int($invoiceTotal)
+                                                    ? ($invoiceCurrency === 'JPY'
+                                                        ? '¥'.number_format($invoiceTotal)
+                                                        : number_format($invoiceTotal / 100, 2).' '.$invoiceCurrency)
+                                                    : '未確定';
+                                            @endphp
+                                            <tr>
+                                                <td class="whitespace-nowrap px-4 py-3 font-bold">
+                                                    {{ $invoice['created_at'] ? $invoice['created_at']->timezone(config('app.timezone'))->format('Y/m/d') : '未確定' }}
+                                                </td>
+                                                <td class="whitespace-nowrap px-4 py-3 font-bold text-slate-950">{{ $invoice['number'] }}</td>
+                                                <td class="whitespace-nowrap px-4 py-3 font-bold">{{ $invoiceAmount }}</td>
+                                                <td class="whitespace-nowrap px-4 py-3 font-bold">
+                                                    {{ $invoiceStatusLabels[$invoice['status']] ?? ($invoice['status'] ?: '未確定') }}
+                                                </td>
+                                                <td class="whitespace-nowrap px-4 py-3 text-right">
+                                                    @if ($invoice['hosted_invoice_url'])
+                                                        <a href="{{ $invoice['hosted_invoice_url'] }}" target="_blank" rel="noopener noreferrer" class="font-black text-cyan-800 underline hover:text-cyan-950">表示</a>
+                                                    @endif
+                                                    @if ($invoice['invoice_pdf'])
+                                                        <a href="{{ $invoice['invoice_pdf'] }}" target="_blank" rel="noopener noreferrer" class="ml-4 font-black text-cyan-800 underline hover:text-cyan-950">PDF</a>
+                                                    @endif
+                                                    @if (! $invoice['hosted_invoice_url'] && ! $invoice['invoice_pdf'])
+                                                        <span class="font-bold text-slate-400">未発行</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                @endif
 
                 @if ($canStartStripeCheckout)
                     <div id="premium-checkout-confirmation" class="mt-8 rounded-lg border border-cyan-200 bg-cyan-50 p-5">

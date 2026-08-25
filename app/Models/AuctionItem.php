@@ -13,7 +13,9 @@ class AuctionItem extends Model
 
     public const PLATFORM_RAKUMA = 'ラクマ';
 
-    public const PLATFORM_PAYPAY = 'Yahooフリマ';
+    public const PLATFORM_YAHOO_FLEAMARKET = 'Yahooフリマ';
+
+    public const PLATFORM_PAYPAY = self::PLATFORM_YAHOO_FLEAMARKET;
 
     public const PLATFORM_PAYPAY_LEGACY = 'PayPayフリマ';
 
@@ -29,7 +31,7 @@ class AuctionItem extends Model
         self::PLATFORM_YAHOO,
         self::PLATFORM_MERCARI,
         self::PLATFORM_RAKUMA,
-        self::PLATFORM_PAYPAY,
+        self::PLATFORM_YAHOO_FLEAMARKET,
         self::PLATFORM_OTHER,
     ];
 
@@ -37,7 +39,7 @@ class AuctionItem extends Model
         self::PLATFORM_YAHOO => 10.0,
         self::PLATFORM_MERCARI => 10.0,
         self::PLATFORM_RAKUMA => 10.0,
-        self::PLATFORM_PAYPAY => 5.0,
+        self::PLATFORM_YAHOO_FLEAMARKET => 5.0,
         self::PLATFORM_PAYPAY_LEGACY => 5.0,
         self::PLATFORM_OTHER => 0.0,
     ];
@@ -98,7 +100,7 @@ class AuctionItem extends Model
         $platform = trim((string) $platform);
 
         return match ($platform) {
-            self::PLATFORM_PAYPAY_LEGACY => self::PLATFORM_PAYPAY,
+            self::PLATFORM_PAYPAY_LEGACY => self::PLATFORM_YAHOO_FLEAMARKET,
             default => $platform,
         };
     }
@@ -108,8 +110,8 @@ class AuctionItem extends Model
      */
     public static function platformFilterValues(string $platform): array
     {
-        return $platform === self::PLATFORM_PAYPAY
-            ? [self::PLATFORM_PAYPAY, self::PLATFORM_PAYPAY_LEGACY]
+        return $platform === self::PLATFORM_YAHOO_FLEAMARKET
+            ? [self::PLATFORM_YAHOO_FLEAMARKET, self::PLATFORM_PAYPAY_LEGACY]
             : [$platform];
     }
 }
