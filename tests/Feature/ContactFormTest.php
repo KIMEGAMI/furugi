@@ -66,7 +66,9 @@ class ContactFormTest extends TestCase
             ],
         ])->render();
 
-        $this->assertStringContainsString("1行目<br />\n2行目<br />\n<br />", $html);
+        $this->assertStringContainsString('1行目<br>', $html);
+        $this->assertStringContainsString('2行目<br>', $html);
+        $this->assertMatchesRegularExpression('/<br>\s*&lt;script&gt;/', $html);
         $this->assertStringContainsString('&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;', $html);
         $this->assertStringNotContainsString("<script>alert('xss')</script>", $html);
     }

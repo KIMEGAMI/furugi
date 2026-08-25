@@ -29,7 +29,11 @@
 
         <div style="margin:0; padding:16px; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px;">
             <div style="margin:0 0 10px; color:#475569; font-size:13px; font-weight:700;">お問い合わせ内容</div>
-            <div style="font-size:15px; line-height:1.8;">{!! nl2br(e($messageText)) !!}</div>
+            <div style="font-size:15px; line-height:1.8;">
+                @foreach (explode("\n", $messageText) as $line)
+                    {{ $line }}@if (! $loop->last)<br>@endif
+                @endforeach
+            </div>
         </div>
     </div>
 </body>
