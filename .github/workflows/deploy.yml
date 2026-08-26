@@ -70,10 +70,6 @@ jobs:
               sudo chown -R www-data:www-data "$writable_path"
             fi
           done
-          if [ -f "$DEPLOY_PATH/.env" ]; then
-            sudo chgrp www-data "$DEPLOY_PATH/.env"
-            sudo chmod 640 "$DEPLOY_PATH/.env"
-          fi
           sudo -u www-data php -r "if (version_compare(PHP_VERSION, '$MIN_PHP_VERSION', '<')) { fwrite(STDERR, 'PHP $MIN_PHP_VERSION or newer is required. Current: '.PHP_VERSION.PHP_EOL); exit(1); }"
           sudo -u www-data git -c safe.directory="$DEPLOY_PATH" pull origin main
           sudo -u www-data composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
