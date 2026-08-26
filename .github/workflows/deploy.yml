@@ -65,7 +65,11 @@ jobs:
           DEPLOY_PATH="$1"
           MIN_PHP_VERSION="$2"
           cd "$DEPLOY_PATH"
-          sudo chown -R www-data:www-data "$DEPLOY_PATH/.git"
+          for writable_path in "$DEPLOY_PATH/.git" "$DEPLOY_PATH/node_modules" "$DEPLOY_PATH/public/build"; do
+            if [ -e "$writable_path" ]; then
+              sudo chown -R www-data:www-data "$writable_path"
+            fi
+          done
           sudo -u www-data php -r "if (version_compare(PHP_VERSION, '$MIN_PHP_VERSION', '<')) { fwrite(STDERR, 'PHP $MIN_PHP_VERSION or newer is required. Current: '.PHP_VERSION.PHP_EOL); exit(1); }"
           sudo -u www-data git -c safe.directory="$DEPLOY_PATH" pull origin main
           sudo -u www-data composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
