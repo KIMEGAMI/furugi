@@ -70,16 +70,16 @@ jobs:
               sudo chown -R www-data:www-data "$writable_path"
             fi
           done
-          sudo -u www-data php -r "if (version_compare(PHP_VERSION, '$MIN_PHP_VERSION', '<')) { fwrite(STDERR, 'PHP $MIN_PHP_VERSION or newer is required. Current: '.PHP_VERSION.PHP_EOL); exit(1); }"
+          php -r "if (version_compare(PHP_VERSION, '$MIN_PHP_VERSION', '<')) { fwrite(STDERR, 'PHP $MIN_PHP_VERSION or newer is required. Current: '.PHP_VERSION.PHP_EOL); exit(1); }"
           sudo -u www-data git -c safe.directory="$DEPLOY_PATH" pull origin main
           sudo -u www-data composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
           sudo -u www-data npm ci --ignore-scripts
           sudo -u www-data npm run build
-          sudo -u www-data php artisan migrate --force
-          sudo -u www-data php artisan optimize:clear
-          sudo -u www-data php artisan config:cache
-          sudo -u www-data php artisan route:cache
-          sudo -u www-data php artisan view:cache
-          sudo -u www-data php artisan queue:restart || true
+          php artisan migrate --force
+          php artisan optimize:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan queue:restart || true
           sudo systemctl reload apache2
           SCRIPT
