@@ -49,6 +49,22 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Diagnose SSH host key
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || env.DEPLOY_PORT }}
+        run: |
+          set -euo pipefail
+          echo "Known hosts entries: $(wc -l < ~/.ssh/known_hosts)"
+          if ! ssh-keygen -F "$DEPLOY_HOST" -f ~/.ssh/known_hosts >/dev/null; then
+            echo "::error::DEPLOY_SSH_KNOWN_HOSTS does not contain an entry for DEPLOY_HOST."
+            ssh-keygen -lf ~/.ssh/known_hosts || true
+            exit 1
+          fi
+          ssh-keygen -lf ~/.ssh/known_hosts
+          ssh -vvv -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" true
+
       - name: Deploy over SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
