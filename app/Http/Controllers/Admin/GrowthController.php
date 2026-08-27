@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuctionItem;
 use App\Models\ContactInquiry;
+use App\Models\SubscriptionCancellationFeedback;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class GrowthController extends Controller
@@ -43,10 +45,21 @@ class GrowthController extends Controller
                 'total_items' => AuctionItem::query()->count(),
                 'sold_items' => AuctionItem::query()->where('status', AuctionItem::STATUS_SOLD)->count(),
                 'open_inquiries' => ContactInquiry::query()->where('status', ContactInquiry::STATUS_OPEN)->count(),
+                'cancellation_feedback_count' => SubscriptionCancellationFeedback::query()->count(),
             ],
             'recentUsers' => $recentUsers,
             'recentInquiries' => ContactInquiry::query()
                 ->with('handledBy')
+                ->latest('created_at')
+                ->take(10)
+                ->get(),
+            'cancellationReasons' => SubscriptionCancellationFeedback::query()
+                ->select('reason', DB::raw('COUNT(*) as total'))
+                ->groupBy('reason')
+                ->orderByDesc('total')
+                ->get(),
+            'recentCancellationFeedback' => SubscriptionCancellationFeedback::query()
+                ->with('user')
                 ->latest('created_at')
                 ->take(10)
                 ->get(),
