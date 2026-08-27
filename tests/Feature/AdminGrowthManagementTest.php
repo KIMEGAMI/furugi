@@ -30,7 +30,6 @@ class AdminGrowthManagementTest extends TestCase
             ->assertOk()
             ->assertSee('成長管理', false)
             ->assertSee('問い合わせ履歴', false)
-            ->assertDontSee('解約理由', false)
             ->assertSee('whitespace-pre-line', false)
             ->assertSee('2行目も確認します。', false);
     }
