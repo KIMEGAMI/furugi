@@ -5,7 +5,8 @@
         $hasStripeSubscription = $hasStripeSubscription ?? false;
         $stripeInvoices = $stripeInvoices ?? [];
         $stripeInvoicesUnavailable = $stripeInvoicesUnavailable ?? false;
-        $canStartStripeCheckout = ! $isAdmin && ! $isDemoUser && (! $hasActiveSubscription || ! $hasStripeSubscription);
+        $canStartStripeCheckout = ! $isAdmin && ! $isDemoUser && ! $hasActiveSubscription;
+        $canOpenCancellationPortal = ! $isAdmin && ! $isDemoUser && $hasActiveSubscription;
         $invoiceStatusLabels = [
             'draft' => '下書き',
             'open' => '未払い',
@@ -288,8 +289,8 @@
                         解約はStripeの契約管理画面内で行います。契約中のユーザーは、下のボタンからStripeの契約管理画面へ移動できます。
                     </p>
 
-                    @if ($hasActiveSubscription && $hasStripeSubscription)
-                        <form method="POST" action="{{ route('subscriptions.portal') }}" class="mt-5">
+                    @if ($canOpenCancellationPortal)
+                        <form method="POST" action="{{ route('subscriptions.cancel-feedback') }}" class="mt-5">
                             @csrf
                             <button type="submit" class="rounded-lg bg-amber-700 px-6 py-3 text-sm font-black text-white shadow hover:bg-amber-800">
                                 解約へ進む
