@@ -1,8 +1,4 @@
 <x-app-layout>
-    @php
-        $reasonLabels = \App\Models\SubscriptionCancellationFeedback::REASONS;
-    @endphp
-
     <div class="min-h-screen bg-slate-100 py-8">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -10,7 +6,7 @@
                     <p class="text-sm font-black text-blue-700">ADMIN</p>
                     <h1 class="mt-2 text-3xl font-black text-slate-950">成長管理</h1>
                     <p class="mt-2 text-sm font-bold text-slate-700">
-                        契約者300人を目指すための登録状況、問い合わせ、解約理由を確認します。
+                        契約者300人を目指すための登録状況と問い合わせを確認します。
                     </p>
                 </div>
 
@@ -44,11 +40,11 @@
                 <div class="rounded-2xl bg-white p-5 shadow">
                     <p class="text-xs font-black tracking-widest text-amber-700">対応待ち</p>
                     <p class="mt-2 text-3xl font-black text-slate-950">{{ number_format($summary['open_inquiries']) }}</p>
-                    <p class="mt-2 text-sm font-bold text-slate-600">解約理由 {{ number_format($summary['cancellation_feedback_count']) }}件</p>
+                    <p class="mt-2 text-sm font-bold text-slate-600">未対応問い合わせ</p>
                 </div>
             </section>
 
-            <section class="mt-6 grid gap-6 xl:grid-cols-2">
+            <section class="mt-6">
                 <article class="rounded-2xl bg-white p-5 shadow">
                     <h2 class="text-xl font-black text-slate-950">問い合わせ履歴</h2>
                     <div class="mt-4 space-y-3">
@@ -79,35 +75,6 @@
                             </div>
                         @empty
                             <p class="rounded-xl bg-slate-50 p-4 text-sm font-bold text-slate-600">問い合わせはまだありません。</p>
-                        @endforelse
-                    </div>
-                </article>
-
-                <article class="rounded-2xl bg-white p-5 shadow">
-                    <h2 class="text-xl font-black text-slate-950">解約理由</h2>
-                    <div class="mt-4 space-y-3">
-                        @forelse ($cancellationReasons as $row)
-                            <div class="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
-                                <span class="text-sm font-black text-slate-800">{{ $reasonLabels[$row->reason] ?? $row->reason }}</span>
-                                <span class="text-lg font-black text-slate-950">{{ number_format($row->total) }}</span>
-                            </div>
-                        @empty
-                            <p class="rounded-xl bg-slate-50 p-4 text-sm font-bold text-slate-600">解約理由はまだ記録されていません。</p>
-                        @endforelse
-                    </div>
-
-                    <h3 class="mt-6 text-lg font-black text-slate-950">直近の声</h3>
-                    <div class="mt-3 space-y-3">
-                        @forelse ($recentCancellationFeedback as $feedback)
-                            <div class="rounded-xl bg-slate-50 p-4">
-                                <p class="text-sm font-black text-slate-950">{{ $feedback->user?->email ?? '削除済みユーザー' }}</p>
-                                <p class="mt-1 text-xs font-bold text-slate-600">{{ $reasonLabels[$feedback->reason] ?? $feedback->reason }} / {{ $feedback->created_at?->format('Y/m/d H:i') }}</p>
-                                @if ($feedback->detail)
-                                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-700">{{ $feedback->detail }}</p>
-                                @endif
-                            </div>
-                        @empty
-                            <p class="rounded-xl bg-slate-50 p-4 text-sm font-bold text-slate-600">直近の解約理由はありません。</p>
                         @endforelse
                     </div>
                 </article>

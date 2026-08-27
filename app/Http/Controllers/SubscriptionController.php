@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SubscriptionCancellationFeedback;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
 
@@ -177,29 +175,6 @@ class SubscriptionController extends Controller
     public function cancelFeedback(Request $request): RedirectResponse
     {
         return app(SubscriptionPortalController::class)->cancelFeedback($request);
-
-        $user = $request->user();
-
-        $validated = $request->validate([
-            'reason' => ['required', 'string', Rule::in(array_keys(SubscriptionCancellationFeedback::REASONS))],
-            'detail' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        try {
-            SubscriptionCancellationFeedback::create([
-                'user_id' => $user->id,
-                'reason' => $validated['reason'],
-                'detail' => $validated['detail'] ?? null,
-                'subscription_status' => $user->subscription_status,
-            ]);
-        } catch (Throwable $exception) {
-            Log::warning('Failed to store subscription cancellation feedback.', [
-                'user_id' => $user->id,
-                'error' => $exception->getMessage(),
-            ]);
-        }
-
-        return $this->portal($request);
     }
 
     public function success(Request $request): RedirectResponse
