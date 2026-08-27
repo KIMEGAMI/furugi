@@ -1,6 +1,5 @@
 <x-app-layout>
     @php
-        $cancellationReasons = \App\Models\SubscriptionCancellationFeedback::REASONS;
         $isAdmin = $user->isAdmin();
         $isDemoUser = $isDemoUser ?? $user->isDemoUser();
         $hasStripeSubscription = $hasStripeSubscription ?? false;
@@ -286,30 +285,12 @@
                 <div class="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-5">
                     <h2 class="text-lg font-black text-amber-900">解約について</h2>
                     <p class="mt-3 text-sm font-bold leading-7 text-amber-800">
-                        解約はStripeの契約管理画面内で行います。契約中のユーザーは、解約理由を送信したあとStripeの契約管理画面へ移動できます。
+                        解約はStripeの契約管理画面内で行います。契約中のユーザーは、下のボタンからStripeの契約管理画面へ移動できます。
                     </p>
 
                     @if ($hasActiveSubscription && $hasStripeSubscription)
-                        <form method="POST" action="{{ route('subscriptions.cancel-feedback') }}" class="mt-5 space-y-4">
+                        <form method="POST" action="{{ route('subscriptions.portal') }}" class="mt-5">
                             @csrf
-
-                            <div>
-                                <label for="reason" class="block text-sm font-black text-amber-950">解約理由</label>
-                                <select id="reason" name="reason" class="mt-2 w-full rounded-lg border-amber-300 text-slate-950 shadow-sm focus:border-amber-600 focus:ring-amber-600" required>
-                                    <option value="">選択してください</option>
-                                    @foreach ($cancellationReasons as $reasonValue => $reasonLabel)
-                                        <option value="{{ $reasonValue }}" @selected(old('reason') === $reasonValue)>{{ $reasonLabel }}</option>
-                                    @endforeach
-                                </select>
-                                <x-input-error :messages="$errors->get('reason')" class="mt-2" />
-                            </div>
-
-                            <div>
-                                <label for="detail" class="block text-sm font-black text-amber-950">詳細 任意</label>
-                                <textarea id="detail" name="detail" rows="4" maxlength="1000" class="mt-2 w-full rounded-lg border-amber-300 text-slate-950 shadow-sm focus:border-amber-600 focus:ring-amber-600">{{ old('detail') }}</textarea>
-                                <x-input-error :messages="$errors->get('detail')" class="mt-2" />
-                            </div>
-
                             <button type="submit" class="rounded-lg bg-amber-700 px-6 py-3 text-sm font-black text-white shadow hover:bg-amber-800">
                                 解約へ進む
                             </button>

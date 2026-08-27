@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\SubscriptionCancellationFeedback;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -121,7 +120,7 @@ class SubscriptionPortalTest extends TestCase
             ->assertSessionHas('error', '契約管理画面を作成できませんでした。StripeダッシュボードでCustomer portalの設定を保存してください。');
     }
 
-    public function test_cancel_feedback_is_recorded_before_portal_redirect(): void
+    public function test_cancel_feedback_route_redirects_to_portal_without_reason(): void
     {
         config(['services.stripe.secret' => 'sk_test_example']);
 
@@ -143,15 +142,9 @@ class SubscriptionPortalTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->post(route('subscriptions.cancel-feedback'), [
-                'reason' => SubscriptionCancellationFeedback::REASON_MISSING_FEATURE,
-                'detail' => '追加機能がほしいです。',
-            ])
+            ->post(route('subscriptions.cancel-feedback'))
             ->assertRedirect('https://billing.stripe.test/session');
 
-        $this->assertDatabaseHas('subscription_cancellation_feedback', [
-            'user_id' => $user->id,
-            'reason' => SubscriptionCancellationFeedback::REASON_MISSING_FEATURE,
-        ]);
+        $this->assertDatabaseCount('subscription_cancellation_feedback', 0);
     }
 }

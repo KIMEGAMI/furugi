@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\ContactInquiry;
-use App\Models\SubscriptionCancellationFeedback;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -31,6 +30,7 @@ class AdminGrowthManagementTest extends TestCase
             ->assertOk()
             ->assertSee('成長管理', false)
             ->assertSee('問い合わせ履歴', false)
+            ->assertDontSee('解約理由', false)
             ->assertSee('whitespace-pre-line', false)
             ->assertSee('2行目も確認します。', false);
     }
@@ -67,7 +67,7 @@ class AdminGrowthManagementTest extends TestCase
         ]);
     }
 
-    public function test_cancel_feedback_is_recorded_before_portal_redirect(): void
+    public function test_cancel_feedback_route_no_longer_records_reason(): void
     {
         $user = User::factory()->create([
             'subscription_plan' => User::SUBSCRIPTION_ACTIVE,
@@ -77,15 +77,9 @@ class AdminGrowthManagementTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->post(route('subscriptions.cancel-feedback'), [
-                'reason' => SubscriptionCancellationFeedback::REASON_MISSING_FEATURE,
-                'detail' => 'メルカリの登録補助がほしいです。',
-            ])
+            ->post(route('subscriptions.cancel-feedback'))
             ->assertRedirect(route('subscriptions.index'));
 
-        $this->assertDatabaseHas('subscription_cancellation_feedback', [
-            'user_id' => $user->id,
-            'reason' => SubscriptionCancellationFeedback::REASON_MISSING_FEATURE,
-        ]);
+        $this->assertDatabaseCount('subscription_cancellation_feedback', 0);
     }
 }
